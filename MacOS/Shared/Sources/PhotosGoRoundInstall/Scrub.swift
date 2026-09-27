@@ -84,8 +84,13 @@ public enum Scrub {
         ]
     }
 
-    static func container(_ name: String, home: URL) -> URL {
-        home.appending(path: "Library/Containers/\(name)")
+    /// Where a library lives, and where one lived until 2026-09-27; both are
+    /// the library's, and a scrub empties both. `Storage`.
+    static func libraryFolders(_ name: String, home: URL) -> [URL] {
+        [
+            home.appending(path: "Library/Application Support/\(name)"),
+            MacHostEnvironment.retiredContainer(named: name, home: home),
+        ]
     }
 
     static func cache(_ name: String, home: URL) -> URL {
@@ -109,7 +114,7 @@ public enum Scrub {
         let libraries = variants.flatMap(libraries(for:))
         let surfaces = variants.flatMap(surfaceDomains(for:))
         let candidates =
-            libraries.flatMap { [container($0, home: home), cache($0, home: home), plist($0, home: home)] }
+            libraries.flatMap { libraryFolders($0, home: home) + [cache($0, home: home), plist($0, home: home)] }
             + surfaces.map { plist($0, home: home) }
         return Plan(
             variants: variants,
@@ -148,7 +153,7 @@ public enum Scrub {
         }
 
         for name in plan.libraries {
-            for directory in [container(name, home: home), cache(name, home: home)]
+            for directory in libraryFolders(name, home: home) + [cache(name, home: home)]
             where onDisk(directory) {
                 done += remove(directory)
             }
@@ -164,21 +169,16 @@ public enum Scrub {
         }
         _ = Shell.killall("cfprefsd")
 
-        // **Tried, never forced, and never looked at first.** Each is inside
-        // another app's sandbox container, where macOS refuses even to say
-        // whether a file exists — measured 2026-09-27, `ls` there answered
-        // "Operation not permitted" — so a look first would skip it silently.
-        // Trying is also what lets macOS ask. A refusal is reported, and
-        // nothing being there is not.
+        // **Tried, never forced, never looked at first, and never mentioned.**
+        // Each is inside another app's sandbox container, where macOS refuses
+        // even to say whether a file exists — measured 2026-09-27 — so a look
+        // first would skip it; trying is also what lets macOS ask. The
+        // saver's is inside `legacyScreenSaver`'s, which is Apple's, and is
+        // refused every time. Neither is worth a line: Syd, 2026-09-27, "do
+        // not worry about telling the user about the cached images for
+        // wallpaper and screensaver."
         for path in plan.protected {
-            do {
-                try FileManager.default.removeItem(at: path)
-                done.append("deleted \(path.path(percentEncoded: false))")
-            } catch CocoaError.fileNoSuchFile {
-                continue
-            } catch {
-                done.append("macOS would not allow deleting \(path.path(percentEncoded: false)): \(error.localizedDescription)")
-            }
+            try? FileManager.default.removeItem(at: path)
         }
         return done
     }
@@ -225,8 +225,7 @@ public enum Scrub {
         return contents.allSatisfy { $0.lastPathComponent == containerMetadata }
     }
 
-    /// The file `containermanagerd` leaves in a folder it has claimed.
-    static let containerMetadata = ".com.apple.containermanagerd.metadata.plist"
+    static var containerMetadata: String { MacHostEnvironment.containerMetadata }
 
     /// Agents launchd does not own that have one of these libraries' containers
     /// open — a `run-server.sh`, say. **Matched on the container, not the
@@ -234,7 +233,9 @@ public enum Scrub {
     static func handStarted(_ libraries: [String]) -> [Int32] {
         Launchctl.agentsOutsideLaunchd(named: AgentInstall.executableName).map(\.pid).filter { pid in
             let open = Shell.run("/usr/sbin/lsof", ["-p", String(pid)]).output
-            return libraries.contains { open.contains("/Library/Containers/\($0)/") }
+            return libraries.contains {
+                open.contains("/Library/Application Support/\($0)/") || open.contains("/Library/Containers/\($0)/")
+            }
         }
     }
 }

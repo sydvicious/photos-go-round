@@ -75,7 +75,7 @@ arguments at all:
 
 `--add-folder` does not walk subdirectories unless `--recursive` is given between
 it and the path, which applies to that folder alone. **Each build has exactly one
-library**, `~/Library/Containers/<identifier>` and the matching cache and
+library**, `~/Library/Application Support/<identifier>` and the matching cache and
 preference domain, and nothing chooses another. `<identifier>` carries the build
 configuration — `com.sydpolk.photosgoround`, `….debug`, `….claude` — so a
 release, a Debug and an agent's build never share a library.

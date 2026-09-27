@@ -76,7 +76,8 @@ Each phase leaves the tree working, and the products are taken smallest first.
   - **Verified on Syd's Mac, 2026-09-19**, from a clean slate: agent on 9428
     under `…server.debug`, `Photo-Go-Round Screensaver (Debug).saver`,
     `…wallpaper.debug.extension`, storage in
-    `~/Library/Containers/com.sydpolk.photogoround.debug.dev`, and an agent's
+    `~/Library/Containers/com.sydpolk.photogoround.debug.dev` (in
+    `~/Library/Application Support` since 2026-09-27), and an agent's
     Claude build registering beside Syd's Debug one without touching it.
 - **Phase 2 — The saver, end to end. Built 2026-09-19.** The least dangerous
   install, and the one that has already gone wrong, proves the whole shape.

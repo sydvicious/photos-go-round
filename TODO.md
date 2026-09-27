@@ -307,3 +307,7 @@ Syd, 2026-09-26: "This honestly is a surprise to me." The wallpaper extension as
 ## A "Check for Updates…" menu item
 
 Syd, 2026-09-26: add a "Check for Updates…" menu item. It depends on the whole infrastructure for shipping an app being in place first, so it waits for that.
+
+## More investigation of the screensaver icon
+
+Syd, 2026-09-27: "add to TODO to do some more investigation of the Screen Saver icon." `Screensaver Plan.md`, *The tile in the Screen Saver pane*, is what exists.

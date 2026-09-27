@@ -43,6 +43,7 @@ It is the last item on the *Before the first release* checklist.
 - **It removes the library, the cache and the preferences too.** Syd, 2026-09-27: "It should remove the library and preferences also." An uninstaller that leaves settings behind leaves the one thing a user would notice (`PLAN.md`, *Settings are the only data a user would miss*), and they are user-by-machine, never exported.
 - **One implementation of deleting a build's data.** `scrub-data.sh` does it in shell today; it moves into `PhotosGoRoundInstall`, so the uninstaller and the script share it.
 - **It uninstalls for the user who runs it, and no one else.** Syd, 2026-09-27: "I am deliberately not addressing other users who might run this; their data is stranded." Every other account's agent, registrations, library and preferences stay where they are.
+- **The screensaver's remembered picture is left where macOS protects it, and that is not an error.** It is inside `legacyScreenSaver`'s container, which is Apple's; the uninstaller is refused there every time (2026-09-27), and only a terminal with Full Disk Access gets through. Neither remembered picture is mentioned, deleted or left — Syd, 2026-09-27: "do not worry about telling the user about the cached images for wallpaper and screensaver."
 - **Container folders macOS keeps are left, and not mentioned.** Tried 2026-09-27: asking Finder to trash them (`NSWorkspace.recycle`) was refused without a password prompt, for a library's claimed container and the wallpaper extension's alike. Only Full Disk Access would do it. Moving the libraries to Application Support stops new ones being made; the wallpaper extension's is macOS's, as every sandboxed app's container is.
 - **It may ask the user to authenticate.** Syd, 2026-09-27. Deleting the wallpaper extension's container is the step likely to ask.
 - **Anything that will not stop gets an alert offering Force Quit.** Syd, 2026-09-27. The app first, and the agent if launchd cannot remove it; nothing is deleted underneath a running process.
@@ -133,7 +134,8 @@ launched, and a Finder alias cannot pass arguments anyway.
    `legacyScreenSaver`.
 4. **Deletes the build's data** — after step 3, because a live agent holds the
    database's WAL open and republishes its port. The container,
-   `~/Library/Containers/<name>`; the cache, `~/Library/Caches/<name>`; and the
+   `~/Library/Application Support/<name>` — and the retired `~/Library/Containers/<name>` —;
+   the cache, `~/Library/Caches/<name>`; and the
    preference domains `<name>`, `<name>.wallpaper` and `<name>.screensaver`,
    each by deleting its plist file and then restarting `cfprefsd` so it
    forgets its cached copy. *Not `removePersistentDomain`, which made

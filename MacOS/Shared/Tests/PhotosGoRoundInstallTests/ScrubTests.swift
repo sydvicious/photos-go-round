@@ -49,6 +49,14 @@ struct ScrubTests {
         #expect(plan.domains.count == 2 + 6)
     }
 
+    @Test("A library is looked for in Application Support and in its retired container")
+    func bothLibraryFolders() {
+        let plan = Scrub.plan(variants: [.debug], home: home, fileExists: { _ in true })
+        let found = Set(plan.found.map { $0.path(percentEncoded: false) })
+        #expect(found.contains(path("Library/Application Support/com.sydpolk.photosgoround.debug")))
+        #expect(found.contains(path("Library/Containers/com.sydpolk.photosgoround.debug")))
+    }
+
     /// **One build's scrub names nothing of another's.**
     @Test("Scrubbing one build names nothing of the others")
     func onlyThisBuild() {

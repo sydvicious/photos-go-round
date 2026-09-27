@@ -77,7 +77,7 @@ struct HostTests {
         // moves them separately, and nothing moves them by accident.
         let container = MacHostEnvironment.resolveContainer(override: nil, environment: [:])
         #expect(container.container.path(percentEncoded: false).hasSuffix(
-            "/Library/Containers/\(Storage.name())"))
+            "/Library/Application Support/\(Storage.name())"))
         let cache = MacHostEnvironment.defaultCacheRoot(
             container: container.container, origin: .build)
         #expect(cache.path(percentEncoded: false).hasSuffix("/Library/Caches/\(Storage.name())"))
