@@ -147,7 +147,7 @@ Syd, 2026-09-19: *"add a panel in the dashboard breaking down how many files hav
 
 ## A finished DMG
 
-`Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. `Scripts/release-build.sh` makes a plain one today.
+`Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. `Scripts/release-build.sh` makes a plain one today. **Planned 2026-09-27 in `Plans/Release DMG.md`.**
 
 ## A menu-bar app for shipping
 
@@ -303,10 +303,6 @@ Syd, 2026-09-26: "get rid of the disable sources option completely". Today a sou
 ## The wallpaper's separate picture pipeline
 
 Syd, 2026-09-26: "This honestly is a surprise to me." The wallpaper extension asks the agent through its own `AgentPicture`, times itself with its own `Rotation`, and keeps its own `LastPicture`, where the window and the screensaver share `PictureClient`, `Shuffle` and `PictureMemory` — so every empty-state behaviour on the `no-photos` branch was built twice, and the second copy is untested. `Wallpaper Plan.md`, *The real extension, inside the app*, said the extension would link the display library "rather than carrying the probe's private copies of `ServicePort` and the picture request".
-
-## The version, the build number and the git commit, parameterized
-
-Syd, 2026-09-26, after a second machine was running an older build and nothing in the app said so: parameterize `APP_MARKETING_VERSION` and `BUILD_NUMBER`, the way `~/dev/github/sydvicious/markdown-review` does, and put the git commit the build came from in the About box — **only while Option is held**, as the dashboard link is.
 
 ## A "Check for Updates…" menu item
 

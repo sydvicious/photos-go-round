@@ -12,7 +12,8 @@ import PhotosGoRoundAgentAPI
 /// **It removes what was installed, not what was built.** Build directories,
 /// the library, the cache and the preferences are left alone: uninstalling is
 /// not the same as throwing away the photographs somebody chose.
-/// `Scripts/scrub-data.sh` is what deletes a build's data.
+/// `Scrub` is what deletes a build's data, for `Scripts/scrub-data.sh` and the
+/// uninstaller on the DMG.
 ///
 /// Translated from `Scripts/uninstall.sh`, 2026-09-19.
 /// `Plans/Xcode - Separate Build and Run.md`, Phase 5.

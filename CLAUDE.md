@@ -75,7 +75,9 @@ when the two disagree. `Plans/Xcode - Separate Build and Run.md`.
 ## ⌘R installs; ⌘B does not. Pressing ⌘R is Syd's
 
 **Since 2026-09-19 no install runs on ⌘B.** All three aggregate targets are
-gone and the project has no shell script build phases at all. Each `Install …`
+gone, and the project's one shell script build phase installs nothing: since
+2026-09-27 the app target's *Record Git Commit* writes the commit into its
+`Info.plist`, with script sandboxing off for that target. Each `Install …`
 scheme builds its product and `pgr_install`, and its Run action does the
 installing — `pgr_install saver`, `agent`, or `wallpaper`. Building one to check
 that it compiles is now an ordinary thing to do.
@@ -105,7 +107,13 @@ not yours to run.
 
 To check something compiles, build the product scheme — `Photos-Go-Round`,
 `Photos-Go-Round Server`, `Photos-Go-Round Saver`, `Photos-Go-Round Wallpaper
-Host`. Hand Syd the Install scheme to run from his own Xcode.
+Host`, `Photos-Go-Round Uninstaller`. Hand Syd the Install scheme to run from his
+own Xcode.
+
+**Build the uninstaller; never run it.** Running `Uninstall Photos-Go-Round.app`
+uninstalls this build's agent, wallpaper and screensaver, deletes its library and
+preferences, and moves its app to the Trash. Its scheme has no Run action for
+that reason. `Plans/Release DMG.md`.
 
 `Scripts/install.sh`, `Scripts/uninstall.sh` and `Scripts/scrub-data.sh` are his
 for the same reason. Each takes `--variant release|debug|claude` or `--all`, and

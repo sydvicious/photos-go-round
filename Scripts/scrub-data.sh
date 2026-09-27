@@ -11,8 +11,15 @@
 # older versions of data files and current ones." So a variant's data is now
 # everything any version of that build has kept.
 #
-# **Names come from `--variant`, never from a path.** Every name below is
-# spelled from `Scripts/variants.sh`; nothing is taken from an argument, from
+# **A wrapper, not an implementation, since 2026-09-27.** The deleting moved into
+# `Scrub` in `PhotosGoRoundInstall`, driven by `pgr_install scrub`, because the
+# uninstaller on the DMG does the same thing and nothing in shell ships. Syd,
+# 2026-09-19: "there should not be multiple versions of the build scripts."
+# What follows describes `Scrub`; this script chooses variants and asks first.
+# `Plans/Release DMG.md`.
+#
+# **Names come from `--variant`, never from a path.** Every name is spelled
+# from `Storage` and `BuildVariant`; nothing is taken from an argument, from
 # PGR_CONTAINER or from PGR_BUILD_ROOT — the one command whose whole job is
 # deleting things is not one typo away from deleting something else.
 #
@@ -62,66 +69,10 @@ while [[ $# -gt 0 ]]; do
 done
 require_variants
 
-container_of() { echo "$HOME/Library/Containers/$1"; }
-cache_of()     { echo "$HOME/Library/Caches/$1"; }
-plist_of()     { echo "$HOME/Library/Preferences/$1.plist"; }
+PGR_INSTALL="$(pgr_install_path)"
 
-# A library is a container, a cache and a preference domain of one name.
-LIBRARIES=()
-# Domains that were only ever preferences: the screensaver's and wallpaper's.
-DOMAINS=()
-# The remembered pictures, inside containers macOS protects.
-PROTECTED=()
 for variant in "${VARIANTS[@]}"; do
-    suffix="$(identifier_suffix_of "$variant")"
-    build="com.sydpolk.photosgoround$suffix"
-    # Current, then the retired development library beside it.
-    LIBRARIES+=("$build" "$build.dev")
-    for surface in screensaver wallpaper; do
-        DOMAINS+=("$build.$surface" "$build.$surface.dev" "$build.$surface.prod")
-    done
-    PROTECTED+=(
-        "$HOME/Library/Containers/com.apple.ScreenSaver.Engine.legacyScreenSaver/Data/Library/Caches/com.sydpolk.photosgoround.saver$suffix"
-        "$HOME/Library/Containers/com.sydpolk.photosgoround.wallpaper$suffix.extension/Data/Library/Application Support"
-    )
-done
-
-# Everything of those names on disk, one path per entry.
-FOUND=()
-for domain in "${LIBRARIES[@]}"; do
-    for path in "$(container_of "$domain")" "$(cache_of "$domain")" "$(plist_of "$domain")"; do
-        [[ -e "$path" ]] && FOUND+=("$path")
-    done
-done
-for domain in "${DOMAINS[@]}"; do
-    path="$(plist_of "$domain")"
-    [[ -e "$path" ]] && FOUND+=("$path")
-done
-
-# **An agent with one of these containers open that launchd does not own** — a
-# `run-server.sh`, say. Matched on the container rather than the process name,
-# so an agent serving another build's library is never a candidate.
-hand_started_agents() {
-    local pids="" domain
-    for domain in "${LIBRARIES[@]}"; do
-        pids="$pids$(pgrep -f '/Photos-Go-Round Server( |$)' 2>/dev/null | while IFS= read -r pid; do
-            if lsof -p "$pid" 2>/dev/null | grep -qF "/Library/Containers/$domain/"; then echo "$pid"; fi
-        done)
-"
-    done
-    echo "$pids" | grep -v '^$' | sort -u || true
-}
-
-echo "data of the ${VARIANTS[*]} build(s) under $HOME/Library:"
-if (( ${#FOUND[@]} == 0 )); then
-    echo "    nothing in the library, cache or preferences"
-fi
-for path in "${FOUND[@]+"${FOUND[@]}"}"; do
-    echo "    $path ($(du -sh "$path" 2>/dev/null | cut -f1))"
-done
-echo "  and the remembered pictures, if macOS allows:"
-for path in "${PROTECTED[@]}"; do
-    echo "    $path"
+    "$PGR_INSTALL" scrub --variant "$variant" --dry-run
 done
 
 if (( DRY_RUN )); then
@@ -134,44 +85,6 @@ if (( ! ASSUME_YES )); then
     [[ "$reply" == [yY] ]] || { echo "left alone"; exit 1; }
 fi
 
-PGR_INSTALL="$(pgr_install_path)"
 for variant in "${VARIANTS[@]}"; do
-    "$PGR_INSTALL" stop --variant "$variant"
+    "$PGR_INSTALL" scrub --variant "$variant"
 done
-
-PIDS="$(hand_started_agents)"
-if [[ -n "$PIDS" ]]; then
-    # shellcheck disable=SC2086
-    kill $PIDS
-    for _ in $(seq 20); do
-        [[ -z "$(hand_started_agents)" ]] && break
-        sleep 0.25
-    done
-    if [[ -n "$(hand_started_agents)" ]]; then
-        echo "an agent started by hand did not stop; not deleting anything under it" >&2
-        exit 1
-    fi
-    echo "stopped the agent started by hand: ${PIDS//$'\n'/, }"
-fi
-
-for domain in "${LIBRARIES[@]}"; do
-    rm -rf "$(container_of "$domain")" "$(cache_of "$domain")"
-done
-for domain in "${LIBRARIES[@]}" "${DOMAINS[@]}"; do
-    defaults delete "$domain" 2>/dev/null || true
-    rm -f "$(plist_of "$domain")"
-done
-# cfprefsd caches a domain it has read, and hands the stale copy back to the
-# next process that asks. Deleting the file is not enough on its own.
-killall cfprefsd 2>/dev/null || true
-
-# **Tried, never forced.** Each of these is inside a sandbox container, and
-# macOS refuses a terminal without Full Disk Access; that is reported, and the
-# rest of the scrub stands.
-for path in "${PROTECTED[@]}"; do
-    if ! rm -rf "$path" 2>/dev/null; then
-        echo "  macOS would not let this terminal delete $path"
-    fi
-done
-
-echo "deleted the data; the agents are stopped until the next login or pgr_install start"
