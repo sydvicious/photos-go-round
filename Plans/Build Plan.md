@@ -187,7 +187,7 @@ Syd, 2026-09-15: "and also maintain separate scripts as well". A build phase ser
 # References
 
 - `PLAN.md` — *Builds with no warnings: no C++, and schemes rather than targets*; *`pgr_ctl`, the command-line tool*; *The agent: registration and permissions*; *Two Mac products, sandboxed and Pro*.
-- `TODO.md` — *Build products out of the repo*; *Build for arm64 only*; *Installing by launching the app*.
+- `TODO.md` — *Build products out of the repo*; *Build for arm64 only*; *A finished DMG*. `Release App Installer.md`.
 - `Wallpaper Plan.md` — *The real extension, inside the app*; *What the fourth probe found*.
 - `Screensaver Plan.md` — how the saver is built and installed today.
 - `Scripts/make-saver-bundle.sh`, `Scripts/run-server.sh` (`Scripts/photogoroundd` until 2026-09-22), `Scripts/install.sh`, `Scripts/uninstall.sh`, `Scripts/scrub-data.sh` (`Scripts/scrub-dev.sh` until 2026-09-24), `Scripts/variants.sh`. `make-agent-bundle.sh` was deleted 2026-09-19, `claude-agent.sh` 2026-09-24.

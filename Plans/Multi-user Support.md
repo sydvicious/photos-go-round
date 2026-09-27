@@ -2,7 +2,7 @@
 
 Several people can use Photos-Go-Round on one Mac, each with their own agent and library. Each agent serves only its own user: it holds a secret of that user's, publishes it beside its port, and refuses any request that does not carry it.
 
-**Complete, 2026-09-23.** All six phases are done, on branch `multi-user-support`. One problem it found is left as later work in `TODO.md`: *The wallpaper goes grey after switching users*.
+**Complete, 2026-09-23.** All six phases are done, on branch `multi-user-support`. One problem it found was left as later work in `TODO.md`, *The wallpaper goes grey after switching users*. Closed 2026-09-27 — Syd: "I have not seen [it] for a long time. We did a lot of work for this."
 
 # Rationale
 
@@ -34,7 +34,7 @@ The agent is per-user by design, installed in each user's `~/Library/LaunchAgent
     - A first launch in a fresh account missed the launch check, so the wallpaper and the screensaver were not installed. The check now waits 90 s, allows 5 s per attempt, and logs why it is waiting.
     - The agent stopped answering altogether while CacheDelete was slow: its free-space query held a process-wide lock. Free space now comes from `statfs(2)`.
     - With both fixes installed, the check still missed on Randy's next launch: it asked `/v1/dashboard`, the heaviest read there is. It now asks `GET /v1/alive`, which answers `204` and touches nothing.
-  - **Left as later work:** switching users leaves the other account's wallpaper grey when it comes back. In `TODO.md`, *The wallpaper goes grey after switching users*.
+  - **Left as later work:** switching users leaves the other account's wallpaper grey when it comes back. It went to `TODO.md`, *The wallpaper goes grey after switching users*. Closed 2026-09-27 — Syd: "I have not seen [it] for a long time. We did a lot of work for this."
 
 # Design Decisions
 
@@ -375,7 +375,7 @@ Step 11's first version had `PORT` in the URL for the reader to replace; pasted 
 
 **Not the installer's.** Randy's app did not launch until 11:23:22, and what it installs acts on its own session. **Not a leak either:** for a moment the log looked like `jazzman`'s extension reading Randy's port 21458; by user ID it was Randy's extension reading his own. Every agent and extension in the day's logs used its own account's port.
 
-**Open, and it matters here:** switching accounts is how several users share a Mac, so every switch can leave the account switched away from grey. Syd, 2026-09-23: "I really want the wallpapers and screensavers to survive user switching without the app running if possible." Two ways were weighed and neither chosen: the app watching for its session becoming active again (only while it runs), or the agent doing it (it runs whenever the user is logged in, but restarting WallpaperAgent is installing, which the agent does not do). The screensaver after a switch is not checked yet. `TODO.md`, *The wallpaper goes grey after switching users*.
+**Open, and it matters here:** switching accounts is how several users share a Mac, so every switch can leave the account switched away from grey. Syd, 2026-09-23: "I really want the wallpapers and screensavers to survive user switching without the app running if possible." Two ways were weighed and neither chosen: the app watching for its session becoming active again (only while it runs), or the agent doing it (it runs whenever the user is logged in, but restarting WallpaperAgent is installing, which the agent does not do). The screensaver after a switch is not checked yet. *Checked 2026-09-27 — Syd: "screensaver works after a switch".* `TODO.md`, *The wallpaper goes grey after switching users*. **Closed 2026-09-27 — Syd: "I have not seen [it] for a long time. We did a lot of work for this."** Neither way was chosen and there is no specific fix; Syd: "caching the last pictures seems to have done the trick" — the wallpaper extension's `LastPicture`, which keeps the last photograph each slot showed, desktop and screen saver, in the extension's own container, so a surface that starts again draws a photograph at once. And Syd: "I know we have done a huge amount of startup work since that observation" — `Startup Performance.md`, begun the same day, 2026-09-23, which made every surface show a photograph sooner after a start. Between them, nothing has been seen since.
 
 ## Testing
 

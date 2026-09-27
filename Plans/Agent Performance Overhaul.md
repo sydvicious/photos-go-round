@@ -1,8 +1,8 @@
 # Summary
 
 **Closed 2026-09-19.** Syd: "we are not doing Phase 7. I am closing this effort." Everything here is
-built and installed except the `NSLock`s outside the agent, which are the test doubles and the
-wallpaper extension's `PaneHandler`; Phase 7 was answered by measurement rather than built. The agent
+built and installed. The `NSLock`s outside the agent — the test doubles and the wallpaper
+extension's `PaneHandler` — stay: Syd, 2026-09-27, "the NSLocks that are left are fine". Phase 7 was answered by measurement rather than built. The agent
 does not go silent under load any more.
 
 Stop the agent going silent under load. The agent keeps resizing for its clients, one resize at a time on a `Resizer` actor of its own, and caches what it resizes again so the queue has less to do. It also gives every HTTP request its own actor on its own thread, holds the database's write lock only while it writes, and moves the refresh and the downloads onto actors of their own.
@@ -52,7 +52,7 @@ On 2026-09-16 the app and the screensaver lost the agent three times in one afte
   - **`PoolWait` stays.** Syd, 2026-09-18: "keep PoolWait." One sampler, one line a minute, and the thing that would say if this ever changes.
   - What the give-ups actually were is the item below.
 - **The resize budget is the p95 of measured renders, not a guess. Built 2026-09-19.** One second was set from the healthy case and was cutting one render in nine; 1.5 s is the p95 of 3,573 measured ones. See *The budget was measuring its own wall*.
-- **Nothing is left open here.** The two items this plan was holding were carried to `TODO.md` when it closed on 2026-09-19 — *The `NSLock`s outside the agent* (one in `PaneHandler`, 28 in test doubles) and *A disallow-list for images that will not decode*. Serving's own one-row writes are no longer the story either: since `ProcessType Adaptive` and the evictor, every long hold measured has been its own `COMMIT` with nothing waiting. **Everything in this plan is built and installed.**
+- **Nothing is left open here.** The two items this plan was holding were carried to `TODO.md` when it closed on 2026-09-19 — *The `NSLock`s outside the agent* (one in `PaneHandler`, 28 in test doubles) and *A disallow-list for images that will not decode*. The first was closed 2026-09-27 with the locks kept — Syd: "the NSLocks that are left are fine". Serving's own one-row writes are no longer the story either: since `ProcessType Adaptive` and the evictor, every long hold measured has been its own `COMMIT` with nothing waiting. **Everything in this plan is built and installed.**
 
 # Design Decisions
 

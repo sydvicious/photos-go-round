@@ -59,7 +59,7 @@ a page you can open.
 - **`/private` is a support page and need not be API-formal.** Syd, 2026-09-19.
   It answers HTML for a person, not JSON for a program.
 - **`/v2` does not grow here.** It grows when a client needs it, which is
-  `Installing by launching the app` and the menu-bar plan's business, not this
+  `Release App Installer.md`'s and the menu-bar plan's business, not this
   one.
 - **The handlers call `PhotoGoRoundKit`, which the agent already links.**
   *Claude's.* Not `pgr_ctl`, which is a binary; the Kit is where the operation
@@ -269,7 +269,7 @@ Tests log under `com.sydpolk.photogoround.tests`, as everything else does.
   `Plans/Service Port Plan.md` — which port a variant binds.
 - `Plans/Build Plan.md` — *What "install" means, per product*, and the Release
   story this assumes.
-- `TODO.md` — *Installing by launching the app*, *A menu-bar app for shipping*,
+- `Release App Installer.md`, and `TODO.md`'s *A menu-bar app for shipping*,
   which are what will pull `/v2` forward.
 - Indeed's "Poodlepants", which is what Syd is describing. Not looked up; the
   description in this document is his.

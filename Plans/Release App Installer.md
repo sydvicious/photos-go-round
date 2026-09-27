@@ -188,6 +188,12 @@ for Photos.
   development installer and shares `PhotoGoRoundInstall` with the app.
 - **"Is it installed" is by path and time, never by version number.** A rebuild
   keeps its version. *Claude's choice.*
+- **The window gets no Install Agent or Launch Agent buttons.** Asked for
+  2026-09-09 as what the empty state should offer when nothing is being served.
+  Superseded, Syd, 2026-09-27: every launch installs and restarts the agent,
+  and the Help menu's Install Agent does it again, so a button in the window
+  would repeat what opening the app just did. The window says "Starting…"
+  until the agent answers, and nothing underneath.
 - **A replaced appex is caught by `ctime`, not by code hash.** The public API
   reports the file's hash, not the running code's. Measured 2026-09-21.
   *Claude's choice.*

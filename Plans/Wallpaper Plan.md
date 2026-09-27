@@ -57,7 +57,7 @@ The wallpaper is the other half of the original complaint: Apple's picker chokes
 - **"The app runs it."** For now. **"I am pretty sure that the wallpaper process will end up its own binary"**, **"which will call the agent for the image."**
 - **"build it in the app first."**
 - **"the agent MUST be installed in ~/Library/LaunchAgents; this needs to support multiple users on the same machine"** — **"at least the database and plist"**, and **"the binary stays in the app bundle."** The wallpaper binary follows the same shape when it arrives.
-- **The app is not sandboxed, and that stays true for this work.** Whether it can be is TODO.md's *Sandboxing, and whether the App Store is reachable* — "but not for now."
+- **The app is not sandboxed, and that stays true for this work.** Whether it can be is `PLAN.md`'s *Whether the App Store is reachable* — "but not for now."
 - **"the app should not need to see the agent's container."** And of the app not seeing the agent's `--container`: **"it's not a gap; it's a design decision."** The wallpaper's files live somewhere of its own.
 - **"let's put it in Application Support for now; we will probably have to move it if we want to sandbox."** `~/Library/Application Support/com.sydpolk.photogoround.wallpaper.{dev|prod}/`, named like the wallpaper's preference domains and resolved from the deployment by the wallpaper itself; `MacHostEnvironment` gains nothing.
 
@@ -314,7 +314,7 @@ Syd, 2026-09-14: "appearing the wallpaper pane itself", and "I really want this 
 
 **"Only if it can work"** is read as: it works with SIP on, signed the way a shipped build is signed. Something that works only with SIP off, or only ad-hoc on one Mac, cannot ship, and Syd will not be asked to turn SIP off.
 
-**Sandboxing, and the App Store.** Syd, 2026-09-14: "reverse-engineering the wallpaper extension API will mean we can't sandbox this." Claude's reading was put to him separately: the one Apple extension whose entitlements were read is itself signed with `com.apple.security.app-sandbox`, so an extension on this point runs sandboxed rather than preventing it; what the private entitlement and private frameworks rule out — from general knowledge, not measured — is the App Store, whose review refuses non-public API. Syd: "you are right about the App Store; that is what I meant." **So the extension route costs the App Store**, and Developer ID direct, which `PLAN.md` already chose, has no review. The decision lives in TODO.md's *Sandboxing, and whether the App Store is reachable*, and until it is made both wallpapers stay: "We will continue to support both until I decide on trying to sandbox or not."
+**Sandboxing, and the App Store.** Syd, 2026-09-14: "reverse-engineering the wallpaper extension API will mean we can't sandbox this." Claude's reading was put to him separately: the one Apple extension whose entitlements were read is itself signed with `com.apple.security.app-sandbox`, so an extension on this point runs sandboxed rather than preventing it; what the private entitlement and private frameworks rule out — from general knowledge, not measured — is the App Store, whose review refuses non-public API. Syd: "you are right about the App Store; that is what I meant." **So the extension route costs the App Store**, and Developer ID direct, which `PLAN.md` already chose, has no review. The decision lives in `PLAN.md`'s *Whether the App Store is reachable*, and until it is made both wallpapers stay: "We will continue to support both until I decide on trying to sandbox or not."
 
 ## The development extension point
 
@@ -807,7 +807,7 @@ Syd, 2026-09-14: "the logging for fetches from the system wallpaper panel should
 
 - **Both on for one display — answered: not supported.** The pane's wallpaper and the app's would each set that display's desktop: whichever set last shows, and two cards are spent for one picture. It is *The bundle, like the saver's*' "two hosts must not both run the loop" in a new form. Syd, 2026-09-14: "I am ok with not supporting app and system wallpapers and the two systems fighting each other." So nothing detects it, hands over between them, or warns. *That answers the pane's wallpaper against the app's only; the app against a LaunchAgent bundle, route C, is still open under* The bundle, like the saver's.
 - **Route A's fetches.** A folder the pane rotates is also fed from the agent; whether those fetches are `system-wallpaper` too is open.
-- **Where the pane's wallpaper keeps its state.** Whether it shares the per-display change times and the *Shuffle All* interval in `com.sydpolk.photogoround.wallpaper.{dev|prod}` or has its own is open — and a sandboxed extension may not be able to read that domain at all, which is what the saver found inside `legacyScreenSaver` (TODO.md, *An Options button for the screensaver*).
+- **Where the pane's wallpaper keeps its state.** Whether it shares the per-display change times and the *Shuffle All* interval in `com.sydpolk.photogoround.wallpaper.{dev|prod}` or has its own is open — and a sandboxed extension may not be able to read that domain at all, which is what the saver found inside `legacyScreenSaver` (TODO.md, *Settings inside the wallpaper extension and the screensaver bundle*).
 
 ## macOS 27 and later
 
@@ -1066,7 +1066,7 @@ Named here first, then brought into line on 2026-09-10 at Syd's request — "ple
 - **`PLAN.md`, *Alternatives considered and rejected*,** says "The agent is what makes the wallpaper schedule real." Only in the sense that it serves the pictures.
 - **`Sources/pgr_ctl/ServiceCommand.swift`** and **`MacOS/Desktop/FEATURES.md`, *The app brings its own agent***, describe `SMAppService.agent` with the plist inside the bundle — "no writing into `~/Library/LaunchAgents`". That is the opposite of the per-user plist Syd specified on 2026-09-10.
 - **TODO.md, *Design the wallpaper***, lists "Who owns the loop" as open. It is answered. Its "Decided, 2026-09-09" entry puts the files in `<container>/wallpapers/` and says `HostEnvironment` should give the path out; both are reversed by "the app should not need to see the agent's container."
-- **TODO.md, *Sandboxing, and whether the App Store is reachable***, does not mention the wallpaper. *2026-09-14: Syd's "reverse-engineering the wallpaper extension API will mean we can't sandbox this" — corrected to "you are right about the App Store; that is what I meant" — belongs there too, as does "We will continue to support both until I decide on trying to sandbox or not."; see* Getting into System Settings › Wallpaper. Sandboxing it would move its files out of `Application Support` and into a real container — Syd: "we will probably have to move it if we want to sandbox."
+- **`PLAN.md`, *Whether the App Store is reachable***, carries the wallpaper since 2026-09-27: the extension costs the App Store rather than the sandbox, and both wallpapers stay until Syd decides whether to sandbox. Sandboxing it would move its files out of `Application Support` and into a real container — Syd: "we will probably have to move it if we want to sandbox."
 - **TODO.md, *A wallpaper bundle, so the wallpaper runs without the app***, written earlier on 2026-09-14, does not know that the bundle is meant for the Wallpaper pane, that the probe comes first, or that the saver's script is the model Syd expects. Not changed; Syd asked for this file only.
 
 ## Debug builds under their own identity
@@ -1201,7 +1201,7 @@ The gates:
 # References
 
 - `PLAN.md` — Phase 7; *One display mode in v1*; *Every surface has a defined empty state*; *Wallpaper mechanics and their limits*; *Wallpaper is asserted continuously, never set once*; *Consequences of one shared queue*; *The empty state*; *Beyond 0.1* (*Display styles*, *Timing and transitions*, *TODO: separate pools of sources*).
-- `TODO.md` — *Design the wallpaper*; *Sandboxing, and whether the App Store is reachable*; *Installing by launching the app*; *A menu-bar app for shipping*; *What System Settings › Wallpaper needs from us*.
+- `TODO.md` — *Design the wallpaper*; *A menu-bar app for shipping*; *What System Settings › Wallpaper needs from us*. `PLAN.md` — *Whether the App Store is reachable*. `Release App Installer.md`.
 - `Scripts/wallpaper-probe.swift` — the Phase 1 probe: `show`, `fill`, `redraw`, `restore`.
 - `Sources/PhotoGoRoundDisplay/Wallpaper.swift`, `Tests/PhotoGoRoundDisplayTests/WallpaperTests.swift`, `MacOS/Desktop/Sources/AppDelegate.swift` — Phase 1 as built. *Removed 2026-09-16; `Shared/Sources/PhotoGoRoundDisplay/WallpaperPreferences.swift` and its tests are what remain.*
 - `Screensaver Plan.md` — the surface this one follows, and *Moving Shuffle and PictureLayerView* for why shared code goes in the display library.

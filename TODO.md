@@ -10,9 +10,7 @@ Things to look into, deferred out of the phase list. Each one earns its own plan
 
 Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist for final release".
 
-- [ ] **The dashboard over HTTPS, with a self-signed certificate.** *The dashboard over HTTPS*, below.
-- [ ] **Check Login Items shows the new app icon.** It showed a blank one before the icon existed; unverified since.
-- [ ] **A finished DMG.** *Installing by launching the app*, below.
+- [ ] **A finished DMG.** *A finished DMG*, below.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
@@ -78,22 +76,6 @@ is the design working, not a fault.
   the eviction lines give the churn, and the `SERVE:` lines say whether a dealt card ever arrived
   without its bytes.
 
-## The `NSLock`s outside the agent
-
-Syd, 2026-09-17: "I flatout don't want NSLocks." Phase 5 of the agent performance overhaul took the
-agent and the kit from sixteen to **zero**, with four documented exceptions that could not be actors.
-What it did not touch is everything else, and the plan closed 2026-09-19 still holding this.
-
-- **One in shipping code:** `MacOS/Wallpaper/Sources/PaneHandler.swift:524`, a `static let
-  lock`. The only one left in anything that runs on a person's Mac.
-- **Twenty-eight in test doubles**, across `MacOS/Shared/Tests/PhotoGoRoundKitTests`, `MacOS/Agent/Tests`,
-  `Shared/Tests/PhotoGoRoundDisplayTests` and `MacOS/Desktop/Tests` — the recording spies that collect what a
-  `@Sendable` closure was called with. `Mutex` is the like-for-like replacement; most are four-line
-  classes.
-- **Not urgent, and worth saying why it is here at all:** none of these is a measured problem. The
-  agent's were removed because a lock held across an `await` is a stall nobody can see, and these
-  are neither on the serving path nor in the agent. This is a consistency item.
-
 ## A disallow-list for images that will not decode
 
 Syd, 2026-09-16: "The client needs to log when the decode fails. Later, we might keep track of which
@@ -135,9 +117,9 @@ Syd, 2026-09-16: "Is there a way to have a custom section for our screensaver?" 
 - **Not looked into.** What is known, from the wallpaper work: the `.saver` is listed by System Settings itself, and `WallpaperAgent` hosts it as `ScreenSaverWallpaper` with provider `com.sydpolk.photogoround.saver`. The wallpaper extension's section *did* appear in the Screen Saver list on 2026-09-15, so an extension on `com.apple.wallpaper` can put a section there — `Wallpaper Plan.md`, *The real extension, inside the app*, the Screen Saver list notes.
 - *Claude's reading, not measured:* a custom section probably means the screensaver answering the pane as an extension, as the wallpaper does, rather than as a `.saver` bundle.
 
-## The tag line: "Your photos, shuffled"
+## The tag line: "Your Photos, shuffled"
 
-Syd, 2026-09-16: "change the tag lines for both wallpaper and screensaver to "Your photos, shuffled"."
+Syd, 2026-09-16: "change the tag lines for both wallpaper and screensaver to "Your photos, shuffled"." **Capitalized 2026-09-27:** "Your Photos, shuffled".
 
 - **The wallpaper's** is the pane item's `localizedDescription` in `MacOS/Wallpaper/Sources/PaneModels.swift`, now "Photographs from your library, shuffled".
 - **The screensaver has none in its sources.** A search for the wallpaper's wording and for "your library" and "your photo" under `MacOS/` finds no description for the `.saver`; where System Settings would show one for it is not known.
@@ -163,46 +145,16 @@ Syd, 2026-09-19: *"add a panel in the dashboard breaking down how many files hav
 - **Related:** *Statistics about resized copies, where they belong*, which wants the same panel to split originals from copies. If both land it is one table — a row per source, a column per thing counted — rather than two panels.
 - Anything added to the dashboard or `pgr_ctl` is documented in `Documentation/photogoroundd.md` or `pgr_ctl.md`, and tested.
 
-## An Options button for the screensaver
+## A finished DMG
 
-Some savers show one in System Settings. `ScreenSaverView` provides it through `hasConfigureSheet` and `configureSheet`, both of which `PGRScreenSaverView` currently answers `false` and `nil`.
-
-- **The blocker to establish first is where a setting would be written.** The Phase 1 spike found the saver cannot even *read* the agent's preference domain from inside `legacyScreenSaver`'s sandbox — `UserDefaults(suiteName:)` returns a suite that opens cleanly and is empty. It certainly cannot write one. *Answered 2026-09-16: through the agent, over HTTP. See* Settings inside the wallpaper extension and the screensaver bundle *below.*
-- **The available route is the agent.** Every other client changes things over HTTP; a settings endpoint does not exist yet. See `PLAN.md`, *The database is private to the service*.
-- **Whether the sheet is presented at all is untested.** `hasConfigureSheet` is queried — it appears in the call sequence on `FB9835060` — so the button probably shows. Whether the sheet displays is unknown, and the preview instance being 0x0 is a reason to check rather than assume.
-- **What would go in it** is also open: dwell, fit, an upscale cap. All are `PLAN.md`'s *Beyond 0.1* today, and *Everything user-settable is a user default* is held back with them.
-- **Parked until there is a real setting**, which means until *Settings endpoints* below exists. A sheet with nothing configurable in it is a button that disappoints.
-- When it is built, it can hold what needs no persistence even before then: agent status, the port and whether it was found through the suite or the file, the version, and a pointer to the app's Settings panel — which the empty state carried underneath its words until 2026-09-26, when Syd asked for "No secondary lines of text."
-
-## Sandboxing, and whether the App Store is reachable
-
-`PLAN.md`'s *Platform and distribution* says Developer ID direct, on the grounds that "a sandboxed app cannot install a `.saver` bundle, so App Store distribution and a screensaver are mutually exclusive." That is the decision to re-examine rather than the answer.
-
-- **Answered 2026-09-25: no.** The mechanism exists and review policy forbids it. A store app could hand its bundled `.saver` to System Settings, which is what Launch Services binds `.saver` files to, but App Store Review Guideline 2.4.5(ii) says Mac App Store apps "must also be self-contained, single app installation bundles and cannot install code or resources in shared locations", and `~/Library/Screen Savers` is one; a developer who tried reported a rejection. 2.4.5(iii), no code running at login without consent, is a second wall for the agent. The store's own "screensaver" apps confirm it: Apple's search API lists about a dozen, and every one is either a full-screen window on the app's own idle timer (Aquarium Live HD: "replaces the system screensaver by default, or in-app screensaver timer can be set"), a hotkey for the saver already selected (Screensaver Now), or a slideshow whose real screensaver is a separate download from the developer's site (ArtSaverApp: a "companion screensaver (going into System Settings)", not in the store app). Painted Rooms says outright that third-party apps cannot replace the system screensaver. So `PLAN.md`'s note stands, and by this item's own terms the rest of it is moot. *The screensaver's tile in System Settings, done 2026-09-24, changes nothing here: two PNG files in the bundle, no private API — `Screensaver Plan.md`, The tile in the Screen Saver pane.*
-- **The agent is the harder half, not the saver.** It is unsandboxed by design: it opens SQLite and the cache directly, binds a localhost listener, holds the Photos TCC grant, and registers as a LaunchAgent through `SMAppService`. Sandboxing it means an App Group container for the database and cache, `com.apple.security.network.server` for the listener, `network.client` for everything that asks, and re-testing every path that touches a file. *2026-09-10: it registers as a per-user plist in `~/Library/LaunchAgents`, not through `SMAppService`.*
-- **`pgr_ctl` is not a constraint here.** It is a debugging tool and need not ship at all, so a sandboxed build simply leaves it out and it keeps the direct database access that is the rig's whole premise. The consequence worth knowing is that the shipped configuration would then be one nothing exercises from a terminal — a fact to hold, not a problem to solve.
-- Worth noting the widget already forces part of this: an app extension is sandboxed on macOS whether we like it or not, which is why the agent serves over HTTP rather than sharing a store.
-- **The wallpaper's files would move.** They are in `~/Library/Application Support/com.sydpolk.photogoround.wallpaper.{dev|prod}/` for now; Syd, 2026-09-10: "we will probably have to move it if we want to sandbox." See `Wallpaper Plan.md`, *The file on disk*.
-- **The animated-preview item that was here is withdrawn, 2026-09-09: we already have one.** It said that if the App Store were unreachable, private API would be on the table for getting a fully animated preview like Apple's own savers have. The premise was a wrong reading — the pane runs an ordinary live instance of our saver and it animates and cycles photographs. Nothing needs reverse-engineering. The general point survives in a smaller form: shipping Developer ID direct means no review, so private API is not disqualifying if some *other* need for it appears.
-
-## Installing by launching the app
-
-What is left after `Plans/Release App Installer.md`, which built the app as the installer on 2026-09-21: every build carries the agent, the extension and the screensaver, installs and restarts its agent at launch, and a Release launch registers the wallpaper and links the saver.
-
-- **A finished DMG.** Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. `Scripts/release-build.sh` makes a plain one today.
-- **The window needs Install Agent and Launch Agent buttons.** Syd, 2026-09-09. They are what the empty state should offer when nothing is being served, rather than words.
-- **The empty state's agent wording is a placeholder that is wrong in one of the two places it appears.** It reads "Open the Photo-Go-Round application to start it", which is right on the screensaver and absurd in the window, because the window *is* the application. The buttons above are what the window should show instead. Until then the text stands, knowingly.
-  - **Changed 2026-09-16.** Syd: "fix the wording. it's stupid." Now "Waiting for Photos" with nothing underneath, in the window, the screensaver and the About box. Launchd starts the agent at login, so "open the app to start it" was wrong on the screensaver too, and an agent still starting up is not "not running". The buttons are still what would go underneath.
-  - **Changed 2026-09-26.** "Starting…" in the window and the screensaver — Syd: "*Waiting for Photos* should be gone" — and no line underneath anything. The About box keeps "Waiting for Photos": "keep the about box as it is."
-- **A missing agent and a wedged one are one state to the user** — implemented 2026-09-09, one message on screen and the distinction kept in the log. The buttons inherit that: whatever they offer has to cover both starting an agent that is not there and dealing with one that is running and not answering.
-- **The first run has a race nothing has exercised.** The saver finds the port by reading `~/Library/Preferences/<domain>.plist` directly, because the sandbox will not hand it the domain. On a genuinely first launch that file may not exist yet, and `cfprefsd` buffers writes, so there is a window after the agent starts where the saver still says nothing is running. It self-heals on the next request; whether that is acceptable as somebody's first impression is a first-launch decision. See `Screensaver Plan.md`, *Not yet decided*.
+`Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. `Scripts/release-build.sh` makes a plain one today.
 
 ## A menu-bar app for shipping
 
 Syd, 2026-09-10: *"make a menubar app for final shipping of this. The full desktop app is useful, but we are probably not going to ship it."* **Needs its own plan document.**
 
 - **The window stays**, as the development instrument it already is — `PLAN.md`, *The Mac app as instrument panel*. It just probably is not what ships.
-- **Everything that currently hangs off the app needs a home in it**: the Settings panel for sources, the Install Agent and Launch Agent buttons from *Installing by launching the app* above, the wallpaper's pause control, and the About box.
+- **Everything that currently hangs off the app needs a home in it**: the Settings panel for sources, the Help menu's Install and Uninstall items, the wallpaper's pause control, and the About box.
 - **The empty state's wording points at "the Photo-Go-Round application"**, which would then mean the menu-bar item.
 - **It may be the wallpaper's host, or sit beside a separate wallpaper binary.** `Wallpaper Plan.md` Phase 2 expects the wallpaper to be its own binary, installed per user in `~/Library/LaunchAgents`; a menu-bar app is the other common shape for a rotator. Which one runs the wallpaper is decided there.
 - How it starts at login — a login item, or a per-user LaunchAgent like the agent — is open.
@@ -210,23 +162,13 @@ Syd, 2026-09-10: *"make a menubar app for final shipping of this. The full deskt
 
 ## Metrics in the database
 
-Serve counts and timings belong in the deck, not only in the unified log. **Needs its own plan when it is picked up.**
+Serve counts and timings belong in the database, not only in the unified log. **Needs its own plan when it is picked up.**
 
 - **The 2026-09-08 overnight run is the argument.** The screensaver's own per-photograph line is `.info`, which is memory-only, so it had evaporated by morning; the run could only be counted because the *agent's* serve line happens to be `.notice`. `Log.swift` says this outright — "state transitions worth reconstructing after the fact must be `.notice` or higher" — and the count that mattered was on the wrong side of it. The saver's line is still `.info` today.
 - Raising that line to `.notice` is the cheap alternative and a poor one: ~3,400 lines a night of something entirely routine, burying the lines that are not.
 - **There are hooks already.** The `consumer` table carries a `seenAt` heartbeat, and `pgr_ctl` already runs the deck's statistical checks — so there is a place to write and a rig to read with.
 - Worth recording: serves per consumer per interval, latency, cache hit or miss, non-200s, and what the queue depth was at the time.
 - **The cost is a migration and a write on the serve path**, which is the hot path — 3,034 serves in nine hours from one surface, and every surface shares it.
-
-## The dashboard over HTTPS
-
-Syd, 2026-09-14: *"add a TODO item to have the dashboard accessible via https"*. Nothing is designed. `PLAN.md`, *The agent's dashboard*, is what exists.
-
-- **The listener is loopback only, and that is marked settled.** `HTTPListener.start` sets `requiredInterfaceType = .loopback`, because "nothing off this machine has any reason to reach this listener." Loopback traffic never leaves the machine, so HTTPS there protects nothing on the wire. **So first decide what this is for.** If it is to reach the dashboard from another machine, that reverses the loopback decision, and the reversal gets recorded in `PLAN.md`.
-- **One listener serves everything.** The dashboard's routes sit beside `/v1/next`, the source routes, and `/v2/photos`. Either TLS covers every client, and `PictureClient`, `pgr_ctl`'s `InspectCommands`, and the screensaver's port discovery all change, or the dashboard gets a second listener of its own.
-- **The certificate is the hard part.** `NWProtocolTLS.Options` needs a `sec_identity`. A self-signed one gets a browser warning unless it is trusted in the keychain, and the agent takes a new port on every launch. Where the identity comes from, where it is stored per deployment, and who trusts it are all open.
-- **Anything off the machine needs authentication too.** The same listener accepts `POST`, `PATCH`, and `DELETE` on sources. Encryption alone would let anyone on the network change them.
-- The About box builds its link as `http://localhost:<port>/dashboard` (`DashboardLink`, pinned by `DashboardLinkTests`), and the agent prints the same address at launch. Both follow whatever is decided.
 
 ## Settings endpoints, and preferences as a black box
 
@@ -254,25 +196,9 @@ Carried out of `Plans/Xcode - Separate Build and Run.md` when it closed, 2026-09
 
 Seen 2026-09-23 on Syd's MacBook Pro, load 78–100 after boot. The lock-screen screensaver started at 19:28:26, 21 s before the agent was listening (`nothing is listening on 20172`); then two serves took 4.4 s and 4.1 s inside the agent, past the saver's 5 s bound (`not answering … within 5 seconds`), so each picture was served after the saver stopped listening and its card was spent. By 19:32 serving took 1.1 s and photos showed. Probably also what plex showed after its restart, though plex's saver logged nothing at all.
 
-## The wallpaper goes grey after switching users
-
-Found in Phase 6 of `Plans/Multi-user Support.md`, 2026-09-23. Switching from `jazzman` to `randyarbuckle` with fast user switching terminated `jazzman`'s wallpaper extension (SIGTERM, ten seconds into the switch, before Randy's app launched). Back in `jazzman`, WallpaperAgent tried to reach it six times, failed each time with `NSCocoaErrorDomain` 4099, and never relaunched it — a grey desktop, the Golden Gate as the preview. Help › Install Wallpaper brings it back. The screensaver after a switch is not checked yet.
-
-Syd: "I really want the wallpapers and screensavers to survive user switching without the app running if possible."
-
 ## Audit every test for the product rename
 
 Syd, 2026-09-23: "audit ALL of the tests for the product rename." Photo-Go-Round became Photos-Go-Round on 2026-09-22.
-
-## Settings are the only data a user would miss
-
-Syd, 2026-09-19, while deciding what a clean slate could throw away: *"the only thing in my data that would be actually missed by users if it disappeared is the settings"*. **Needs its own plan if it is picked up.**
-
-- **Everything else is derived.** The database re-enumerates from the sources, the cache refetches, the deck's shuffle position is not precious. Proven the same day: the whole library, cache and both containers were deleted and rebuilt from four sources in minutes.
-- **So backup, migration and upgrade have one thing to protect** — the preference domains — and may treat the container and the cache as disposable. That is a much smaller problem than backing up a library.
-- **It is also what makes a version upgrade safe to test**: throwing away storage costs time, not data, as long as the domains survive.
-- Where they live is now `com.sydpolk.photogoround[.debug|.claude][.dev]`, plus the surfaces' own `.screensaver.*` and `.wallpaper.*` domains. `BuildVariant.swift`, and `Plans/Xcode - Separate Build and Run.md`.
-- **Not decided:** whether anything should export them, and whether the app should offer it.
 
 ## A private support page at `/private`
 
@@ -294,7 +220,11 @@ Syd, 2026-09-16: *"explore putting settings directly into both the wallpaper ext
 **This is the next thing after the wallpaper, and it lives here rather than in a plan.** Syd, 2026-09-19: "the next phase is putting the options directly in the system settings panel", and that it "belongs in *Settings inside the wallpaper extension and the screensaver bundle*" — because the same work covers the screensaver's configure sheet too, so neither surface's plan owns it. `Wallpaper Plan.md` Phase 2 is met and that plan does not carry a phase for this.
 
 - **The wallpaper half is what goes first**, and Syd named it twice. 2026-09-15: "The next stage would be to put a sources panel and timing slider directly into the extension." `Wallpaper Plan.md`, *The real extension, inside the app*.
-- **The saver half is *An Options button for the screensaver* above**, and inherits everything open there.
+- **The saver half is an Options button in the Screen Saver pane.** Some savers show one. `ScreenSaverView` provides it through `hasConfigureSheet` and `configureSheet`, both of which `PGRScreenSaverView` currently answers `false` and `nil`.
+  - **Whether the sheet is presented at all is untested.** `hasConfigureSheet` is queried — it appears in the call sequence on `FB9835060` — so the button probably shows. Whether the sheet displays is unknown, and the preview instance being 0x0 is a reason to check rather than assume.
+  - **What would go in it** is open: dwell, fit, an upscale cap. All are `PLAN.md`'s *Beyond 0.1* today, and *Everything user-settable is a user default* is held back with them.
+  - **Parked until there is a real setting**, which means until *Settings endpoints* above exists. A sheet with nothing configurable in it is a button that disappoints.
+  - When it is built, it can hold what needs no persistence even before then: agent status, the port and whether it was found through the suite or the file, the version, and a pointer to the app's Settings panel — which the empty state carried underneath its words until 2026-09-26, when Syd asked for "No secondary lines of text."
 - **The two routes into System Settings are unlike each other.** The saver's is public: `hasConfigureSheet` and `configureSheet`, a sheet of our own. The wallpaper's is the private one the extension already uses: the pane draws whatever the extension answers to `WallpaperAgent`'s `provideSettingsViewModels`, and the extension can call back with `updateSettingsViewModels`, read from Phosphene and not yet called by us. Whether those view models can carry a slider or a list, rather than a section and its items, is unknown and the first thing to find out.
 - **The extension should have read-write to its own preferences.** Syd, 2026-09-16. Its own domain is `com.sydpolk.photogoround.wallpaper.{dev|prod}`, where the *Shuffle All* choice lives. Today it reads that domain through `temporary-exception.shared-preference.read-only`, and `Rotation.swift` says a slider "replaces the reading, not the writing". That line goes when this is done.
 - **The screensaver should have read-write to its preferences.** Syd, 2026-09-16. **The obstacle is that the saver has no entitlements of its own.** It runs inside `legacyScreenSaver`, under the host's sandbox, and the host names no exception for our domains; that is why the suite reads empty and the port is read from the `.plist` as a file. `Screensaver Plan.md`, *The question the entitlements do not answer*.

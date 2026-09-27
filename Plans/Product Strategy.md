@@ -23,7 +23,7 @@ The App Store takes only what passes review, and the full Mac integration cannot
 # Background
 
 - `PLAN.md`, *Two Mac products, sandboxed and Pro* (2026-09-15), has a sandboxed App Store version and a Pro version sold from Syd's own site. This plan refines it: the App Store product is now the widgets app, and a desktop app is a third Mac product.
-- `TODO.md`, *A menu-bar app for shipping*, and *Sandboxing, and whether the App Store is reachable*.
+- `TODO.md`, *A menu-bar app for shipping*; `PLAN.md`, *Whether the App Store is reachable*.
 
 # Detailed discussions
 

@@ -22,8 +22,8 @@ to ask "does this compile?" of an install target without changing the machine �
 which is why `CLAUDE.md` has to forbid agents from building those schemes at
 all, after one of them replaced Syd's installed saver on 2026-09-17. Separating
 the two also moves the install logic somewhere the app can reach it, which is
-the prerequisite `Installing by launching the app` and `A menu-bar app for
-shipping` both need: a menu-bar app cannot shell out to `Scripts/install-*.sh`
+the prerequisite `Installing by launching the app` (built 2026-09-21, `Release
+App Installer.md`) and `A menu-bar app for shipping` both need: a menu-bar app cannot shell out to `Scripts/install-*.sh`
 from inside its bundle.
 
 # Phases
@@ -191,7 +191,7 @@ Each phase leaves the tree working, and the products are taken smallest first.
   replace pgr_install", and "I don't care about pgr_install" being on his PATH.
   So it is scaffolding with a known end: the module it drives is the lasting
   half, and the binary exists to give ⌘R something runnable until the app can do
-  the job. `TODO.md`, *Installing by launching the app*.
+  the job. `Release App Installer.md`, which made the app do it 2026-09-21.
 - **The install schemes run `pgr_install`; the three aggregate targets are
   deleted.** An aggregate target has no runnable product, so it cannot be the
   thing ⌘R runs. Their only content is the script phase this plan replaces.
@@ -306,7 +306,7 @@ dependent and was never worth establishing.
 **A `PathRunnable` pointing straight at a shell script.** The Run action can
 launch an arbitrary path, so the existing scripts could have been the runnable
 with no Swift at all. This is the cheapest thing that works, and it was rejected
-because it does nothing for `Installing by launching the app`: a menu-bar app
+because it does nothing for the app as installer (`Release App Installer.md`): a menu-bar app
 still cannot use a shell script from inside its bundle, so the install would be
 written twice.
 
@@ -800,7 +800,7 @@ it can be drawn:
 ## What this does not build
 
 - **The menu-bar app links nothing yet.** This plan makes the module exist and
-  gives it one caller. `Installing by launching the app` and `A menu-bar app for
+  gives it one caller. `Release App Installer.md` and `A menu-bar app for
   shipping` are separate plans and stay so.
 - **The dev and shipping installs are not the same job**, and this plan does not
   pretend they will be. Bootstrapping a LaunchAgent plist that points into a
@@ -848,8 +848,9 @@ it can be drawn:
 - `Plans/Wallpaper Plan.md` — *Debug builds under their own identity*, which is
   why the extension install reads the identifier from the bundle it is given.
 - `TODO.md` — *Build and install as separate steps, so ⌘B builds and ⌘R runs*
-  (the item this plan closes), *Installing by launching the app*, and *A
-  menu-bar app for shipping*.
+  (the item this plan closes), and *A menu-bar app for shipping*.
+- `Plans/Release App Installer.md` — the app as the installer, which this
+  plan's module made possible.
 - `CLAUDE.md` — *Never build an `Install …` scheme, and never run
   `Scripts/install-*.sh`*, and the 2026-09-17 incident that produced it.
 - `Documentation/Installing.md`, `Documentation/pgr_ctl.md`.
