@@ -112,8 +112,8 @@ own Xcode.
 
 **Build the uninstaller; never run it.** Running `Uninstall Photos-Go-Round.app`
 uninstalls this build's agent, wallpaper and screensaver, deletes its library and
-preferences, and moves its app to the Trash. Its scheme has no Run action for
-that reason. `Plans/Release DMG.md`.
+preferences, and moves its app to the Trash. Its scheme's Run action is Syd's to
+press, like an `Install …` scheme's. `Plans/Release DMG.md`.
 
 `Scripts/install.sh`, `Scripts/uninstall.sh` and `Scripts/scrub-data.sh` are his
 for the same reason. Each takes `--variant release|debug|claude` or `--all`, and

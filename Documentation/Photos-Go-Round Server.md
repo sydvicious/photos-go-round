@@ -279,7 +279,7 @@ rather than an error — a fresh library replies this way until the first fetch
 lands. **When the agent knows why, it says so** in `X-PGR-Empty`, and the window
 and the screensaver answer at once rather than after three empty answers:
 `no-sources` when no source is enabled — none added, or every one turned off —
-shown as *Please Add Photos*; and `no-photos` when nothing could be shown and
+shown as *Please add Photos*; and `no-photos` when nothing could be shown and
 nothing is still coming — every source that is there has finished a scan and
 holds nothing, and no offline source has anything cached — shown as *No Photos
 Available*. Either takes down the picture on screen.

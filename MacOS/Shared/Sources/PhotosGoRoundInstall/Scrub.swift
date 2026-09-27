@@ -115,7 +115,7 @@ public enum Scrub {
             variants: variants,
             libraries: libraries,
             domains: libraries + surfaces,
-            found: candidates.filter(fileExists),
+            found: candidates.filter { fileExists($0) && !isEmptiedContainer($0) },
             protected: variants.flatMap { protectedPaths(for: $0, home: home) })
     }
 
@@ -150,36 +150,83 @@ public enum Scrub {
         for name in plan.libraries {
             for directory in [container(name, home: home), cache(name, home: home)]
             where onDisk(directory) {
-                try FileManager.default.removeItem(at: directory)
-                done.append("deleted \(directory.path(percentEncoded: false))")
+                done += remove(directory)
             }
         }
+        // **The file, and then `cfprefsd`; never `removePersistentDomain`.**
+        // Measured 2026-09-27: emptying a domain through `UserDefaults` made
+        // `cfprefsd` write an empty plist for it moments later — back after
+        // it was deleted, and new for domains that never had one. Restarting
+        // `cfprefsd` drops the copy it cached, which is all that was needed.
         for domain in plan.domains {
-            UserDefaults.standard.removePersistentDomain(forName: domain)
             let file = plist(domain, home: home)
-            if onDisk(file) {
-                try FileManager.default.removeItem(at: file)
-                done.append("deleted \(file.path(percentEncoded: false))")
-            }
+            if onDisk(file) { done += remove(file) }
         }
-        // `cfprefsd` caches a domain it has read and hands the stale copy back
-        // to the next process that asks. Deleting the file is not enough.
         _ = Shell.killall("cfprefsd")
 
-        // **Tried, never forced.** Each is inside a sandbox container; macOS
-        // may ask, or refuse. A refusal is reported and the rest stands.
-        for path in plan.protected where onDisk(path) {
+        // **Tried, never forced, and never looked at first.** Each is inside
+        // another app's sandbox container, where macOS refuses even to say
+        // whether a file exists — measured 2026-09-27, `ls` there answered
+        // "Operation not permitted" — so a look first would skip it silently.
+        // Trying is also what lets macOS ask. A refusal is reported, and
+        // nothing being there is not.
+        for path in plan.protected {
             do {
                 try FileManager.default.removeItem(at: path)
                 done.append("deleted \(path.path(percentEncoded: false))")
+            } catch CocoaError.fileNoSuchFile {
+                continue
             } catch {
-                done.append("macOS would not let this delete \(path.path(percentEncoded: false))")
+                done.append("macOS would not allow deleting \(path.path(percentEncoded: false)): \(error.localizedDescription)")
             }
         }
-
-        done.append("deleted the data; the agents are stopped until the next login or pgr_install start")
         return done
     }
+
+    /// Deletes a file or a directory, and reports rather than throws.
+    ///
+    /// **A directory macOS will not remove is emptied instead.** Measured
+    /// 2026-09-27: `~/Library/Containers/com.sydpolk.photosgoround.debug` had
+    /// been claimed by `containermanagerd` — its identifier in the folder's
+    /// extended attributes and a `.com.apple.containermanagerd.metadata.plist`
+    /// inside — and removing the folder failed with "Operation not permitted"
+    /// while everything in it went. The library is what matters; an empty
+    /// folder macOS keeps is said, not treated as a failure.
+    static func remove(_ url: URL) -> [String] {
+        let path = url.path(percentEncoded: false)
+        let files = FileManager.default
+        do {
+            try files.removeItem(at: url)
+            return ["deleted \(path)"]
+        } catch {
+            guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true,
+                let contents = try? files.contentsOfDirectory(at: url, includingPropertiesForKeys: nil)
+            else {
+                return ["could not delete \(path): \(error.localizedDescription)"]
+            }
+            var refused: [String] = []
+            for item in contents where item.lastPathComponent != containerMetadata {
+                do { try files.removeItem(at: item) } catch { refused.append(item.lastPathComponent) }
+            }
+            return refused.isEmpty
+                ? ["emptied \(path); macOS keeps the folder itself"]
+                : ["could not delete \(refused.joined(separator: ", ")) in \(path)"]
+        }
+    }
+
+    /// A folder holding nothing but `containermanagerd`'s metadata: what an
+    /// earlier scrub left of a container macOS would not let go. **Not data**,
+    /// so it is not found — otherwise the uninstaller would offer to remove
+    /// settings that are already gone, every time it opened.
+    static func isEmptiedContainer(_ url: URL) -> Bool {
+        guard let contents = try? FileManager.default.contentsOfDirectory(
+            at: url, includingPropertiesForKeys: nil)
+        else { return false }
+        return contents.allSatisfy { $0.lastPathComponent == containerMetadata }
+    }
+
+    /// The file `containermanagerd` leaves in a folder it has claimed.
+    static let containerMetadata = ".com.apple.containermanagerd.metadata.plist"
 
     /// Agents launchd does not own that have one of these libraries' containers
     /// open — a `run-server.sh`, say. **Matched on the container, not the

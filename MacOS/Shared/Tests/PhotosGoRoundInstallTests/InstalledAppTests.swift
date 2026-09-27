@@ -37,6 +37,13 @@ struct InstalledAppTests {
         #expect(app?.lastPathComponent == "Photos-Go-Round.app")
     }
 
+    @Test("Only an app directly in /Applications may be trashed")
+    func trashable() {
+        #expect(InstalledApp.isTrashable(URL(filePath: "/Applications/Photos-Go-Round.app")))
+        #expect(!InstalledApp.isTrashable(URL(filePath: "/Users/me/DerivedData/Build/Products/Debug/Photos-Go-Round.app")))
+        #expect(!InstalledApp.isTrashable(URL(filePath: "/Applications/Tools/Photos-Go-Round.app")))
+    }
+
     @Test("Something that is not a plist names no app")
     func notAPlist() {
         #expect(InstalledApp.fromAgentPlist(Data("not a plist".utf8)) == nil)

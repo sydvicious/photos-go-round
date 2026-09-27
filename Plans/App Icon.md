@@ -64,6 +64,14 @@ It is the Photos-Go-Round app target's icon: a resource of that target, with
 `ASSETCATALOG_COMPILER_APPICON_NAME = PhotosGoRound` in all three
 configurations. The agent and the Wallpaper Host have no icon of their own.
 
+**The uninstaller has its own, since 2026-09-27**: `Artwork/Uninstaller.icon`,
+the same fill and the same two layers with a third on top — `1 Circle
+Slash.svg`, a red circle-slash with a white edge over the lower-right corner,
+opaque rather than glass. Syd: "Should look like the existing icon, but in the
+lower right corner, superimpose a circle-slash over it." Its layers are copies,
+so **a change to the app icon's layers has to be copied into it too.**
+`ASSETCATALOG_COMPILER_APPICON_NAME = Uninstaller` on the uninstaller target.
+
 ## The wallpaper pane's picture
 
 The wallpaper extension's item in System Settings shows the icon's ring and

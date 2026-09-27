@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- The uninstaller's mark: Photos-Go-Round's icon with a circle-slash over
+       its lower-right corner. Syd, 2026-09-27. A white edge under the red so it
+       reads against the light background and the photographs alike. -->
+  <g fill="none" stroke-linecap="round">
+    <circle cx="730" cy="730" r="190" stroke="#ffffff" stroke-width="84"/>
+    <line x1="596" y1="596" x2="864" y2="864" stroke="#ffffff" stroke-width="84"/>
+    <circle cx="730" cy="730" r="190" stroke="#e0282e" stroke-width="56"/>
+    <line x1="596" y1="596" x2="864" y2="864" stroke="#e0282e" stroke-width="56"/>
+  </g>
+</svg>

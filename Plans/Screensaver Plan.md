@@ -246,12 +246,12 @@ Listed under *Not yet decided*.
 
 Built 2026-09-26. `PLAN.md`, *The empty state*, has the whole of it; what reaches the saver:
 
-- **Four sets of words, one line each, every word capitalized.** *Starting…* while the agent is not answering; *Please Add Photos* when no source is enabled; *No Photos Available* when there is nothing to show; a photograph otherwise. *Waiting for Photos* is gone. Syd: "everything should say *Starting...* until the agent responds", and "No secondary lines of text."
-- **The agent's `204` says why when it knows**, so *Please Add Photos* and *No Photos Available* go up on the first answer rather than after three. A cold start is still a bare `204` and still waits.
+- **Four sets of words, one line each, every word capitalized** — *except "Please add Photos", since 2026-09-27: Syd, "'Please Add Photos' -> 'Please add Photos'".* *Starting…* while the agent is not answering; *Please add Photos* when no source is enabled; *No Photos Available* when there is nothing to show; a photograph otherwise. *Waiting for Photos* is gone. Syd: "everything should say *Starting...* until the agent responds", and "No secondary lines of text."
+- **The agent's `204` says why when it knows**, so *Please add Photos* and *No Photos Available* go up on the first answer rather than after three. A cold start is still a bare `204` and still waits.
 - **Either takes the photograph down at its next scheduled change** — the one exception to *a picture already showing is never taken down*. `PictureLayerView.show(nil)` clears now, where it used to do nothing.
 - **And the remembered picture is deleted**, so a start after a reboot does not open on a photograph that cannot be served while a cold agent starts. `PictureMemory.forget()`; Syd's choice. `Startup Performance.md`, *The remembered picture*.
 - **80% of the width at every size**, so the preview in the pane is readable — see *The preview is live* above.
-- **The application opens its Settings for *Please Add Photos*; the saver does not.** It has nothing to open.
+- **The application opens its Settings for *Please add Photos*; the saver does not.** It has nothing to open.
 
 ## One instance per display
 

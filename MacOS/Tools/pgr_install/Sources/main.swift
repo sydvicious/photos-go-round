@@ -207,6 +207,7 @@ do {
         }
         Console.banner("deleting the \(variant.description)'s data")
         for line in try Scrub.apply(plan) { Console.note(line) }
+        Console.note("the agent is stopped until the next login or pgr_install start")
 
     case "start":
         let variant = options.variant ?? .current

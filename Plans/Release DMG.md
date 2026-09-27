@@ -43,9 +43,12 @@ It is the last item on the *Before the first release* checklist.
 - **It removes the library, the cache and the preferences too.** Syd, 2026-09-27: "It should remove the library and preferences also." An uninstaller that leaves settings behind leaves the one thing a user would notice (`PLAN.md`, *Settings are the only data a user would miss*), and they are user-by-machine, never exported.
 - **One implementation of deleting a build's data.** `scrub-data.sh` does it in shell today; it moves into `PhotosGoRoundInstall`, so the uninstaller and the script share it.
 - **It uninstalls for the user who runs it, and no one else.** Syd, 2026-09-27: "I am deliberately not addressing other users who might run this; their data is stranded." Every other account's agent, registrations, library and preferences stay where they are.
+- **Container folders macOS keeps are left, and not mentioned.** Tried 2026-09-27: asking Finder to trash them (`NSWorkspace.recycle`) was refused without a password prompt, for a library's claimed container and the wallpaper extension's alike. Only Full Disk Access would do it. Moving the libraries to Application Support stops new ones being made; the wallpaper extension's is macOS's, as every sandboxed app's container is.
 - **It may ask the user to authenticate.** Syd, 2026-09-27. Deleting the wallpaper extension's container is the step likely to ask.
 - **Anything that will not stop gets an alert offering Force Quit.** Syd, 2026-09-27. The app first, and the agent if launchd cannot remove it; nothing is deleted underneath a running process.
+- **The uninstaller's icon is the app's with a red circle-slash over its lower-right corner.** Syd, 2026-09-27. `Artwork/Uninstaller.icon`: the app icon's two layers, and a third on top, `1 Circle Slash.svg`, opaque, with a white edge so it reads against both the background and the photographs.
 - **It installs nothing at launch.** It does not link the app's launch-time install, so opening it cannot restart the agent it is about to remove.
+- **It trashes the app only if it is in `/Applications`.** Syd, 2026-09-27: "I think you should only delete the app itself if it is /Applications." A build in DerivedData, or a copy kept elsewhere, is left where it is; it is still asked to quit.
 - **The app it trashes is the one the agent's plist points into**, not whatever LaunchServices finds by bundle identifier, which every build shares. *Claude's.*
 - **The About document is RTF.** It opens in TextEdit on every Mac, and needs no generator in the build. *Claude's.*
 - **The DMG step is its own script**, `Scripts/make-dmg.sh`, so it can wrap any exported app, including one from Organizer. *Claude's.*
@@ -106,12 +109,13 @@ launched, and a Finder alias cannot pass arguments anyway.
 
 ### What it does, in order
 
-1. **Says what it will remove, and asks.** One window: the agent, the wallpaper,
-   the screensaver, the library and settings, and the app at its path, each with
-   whether it is there. It says plainly that the settings and the chosen sources
-   go too. An
-   "Uninstall" button and a "Cancel" button. Nothing is removed before the
-   button.
+1. **Says what it will remove, and asks.** One window: the app, its background
+   service, the wallpaper, the screensaver, and its settings, one line each,
+   dimmed when it is not here. No explanatory small print — Syd, 2026-09-27:
+   "Get rid of all of that explanatory small text." The Uninstall button is
+   disabled when there is nothing to remove. When it is done the window says
+   only "Photos-Go-Round has been removed.", with an OK button; the report in a
+   console font appears only when something was refused.
 2. **Quits the app if it is running.** `NSRunningApplication` for the app's
    bundle identifier, filtered to the one at the path it is about to trash —
    every build shares the identifier, so a running Debug app must not be asked
@@ -131,10 +135,11 @@ launched, and a Finder alias cannot pass arguments anyway.
    database's WAL open and republishes its port. The container,
    `~/Library/Containers/<name>`; the cache, `~/Library/Caches/<name>`; and the
    preference domains `<name>`, `<name>.wallpaper` and `<name>.screensaver`,
-   each removed with `UserDefaults.removePersistentDomain(forName:)` so
-   `cfprefsd` forgets it, then its plist file deleted. The wallpaper
+   each by deleting its plist file and then restarting `cfprefsd` so it
+   forgets its cached copy. *Not `removePersistentDomain`, which made
+   `cfprefsd` write the file back empty — measured 2026-09-27.* The wallpaper
    extension's own sandbox container, below. The same for every retired name
-   the build has used, as `scrub-data.sh` does. Syd, 2026-09-27:
+   the build has used, as `scrub-data.sh` does. **A folder macOS will not remove is emptied instead** — measured 2026-09-27, the Debug container had been claimed by `containermanagerd`, and removing the folder was refused while everything in it went. Every refusal is reported and the rest carries on. Syd, 2026-09-27:
    "It should remove the library and preferences also."
 5. **Moves the app to the Trash**, with `FileManager.trashItem`, so it can be
    put back. Never a permanent delete.

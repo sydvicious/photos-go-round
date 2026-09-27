@@ -47,7 +47,7 @@ struct EmptyStateSizingTests {
 
     @Test("The still is the size it was asked for, black, with white words on it")
     func stillIsWordsOnBlack() throws {
-        let image = try #require(EmptyStateWords.still("Please Add Photos", pixels: CGSize(width: 1920, height: 1080)))
+        let image = try #require(EmptyStateWords.still("Please add Photos", pixels: CGSize(width: 1920, height: 1080)))
 
         #expect(image.width == 1920)
         #expect(image.height == 1080)
@@ -66,7 +66,7 @@ struct EmptyStateSizingTests {
 
     @Test("A still of no size is nothing")
     func emptyStillIsNil() {
-        #expect(EmptyStateWords.still("Please Add Photos", pixels: .zero) == nil)
+        #expect(EmptyStateWords.still("Please add Photos", pixels: .zero) == nil)
     }
 }
 
@@ -85,9 +85,9 @@ struct EmptyStateWordsChangeTests {
         view.layoutSubtreeIfNeeded()
         #expect(view.drawnWords == "Starting…")
 
-        view.show(words: "Please Add Photos")
+        view.show(words: "Please add Photos")
         view.layoutSubtreeIfNeeded()
-        #expect(view.drawnWords == "Please Add Photos")
+        #expect(view.drawnWords == "Please add Photos")
     }
 }
 

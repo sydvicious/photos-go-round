@@ -10,7 +10,7 @@ import Testing
 /// A bare `204` means *nothing right now*, and a client waits a streak of them
 /// before it says anything. When the agent knows the answer outright it says
 /// so on the header, and the surface puts its words up at once. Syd,
-/// 2026-09-26: *Please Add Photos* with no sources, and *No Photos Available*
+/// 2026-09-26: *Please add Photos* with no sources, and *No Photos Available*
 /// when there is truly nothing to show — offline sources contributing what the
 /// cache holds of them, and nothing else.
 @Suite("Why an answer is empty", .timeLimit(.minutes(2)))

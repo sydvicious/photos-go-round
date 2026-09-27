@@ -44,13 +44,22 @@ final class UninstallerModel {
     struct Item: Identifiable {
         var id: String { name }
         var name: String
-        var detail: String
         var isPresent: Bool
     }
 
     private(set) var phase: Phase = .ready
     private(set) var items: [Item] = []
     private(set) var report: [String] = []
+
+    /// Whether anything went wrong on the way to done: something macOS would
+    /// not let go, or a Force Quit that was cancelled. **The report is shown
+    /// only then** — Syd, 2026-09-27: "only print other text in that console
+    /// font if there was an error."
+    var hadTrouble: Bool {
+        report.contains { line in
+            ["could not", "macOS would not", "stopped:"].contains { line.hasPrefix($0) }
+        }
+    }
 
     /// Read before anything is removed: the app is found from the agent's plist,
     /// which the uninstall deletes.
@@ -69,27 +78,25 @@ final class UninstallerModel {
         scrubPlan = Scrub.plan(variants: [variant])
         items = [
             Item(
-                name: "The Photos-Go-Round app",
-                detail: app?.path(percentEncoded: false) ?? "not found",
-                isPresent: app != nil),
+                name: "Photos-Go-Round.app",
+                isPresent: app.map { InstalledApp.isTrashable($0) } ?? false),
             Item(
-                name: "Its background service",
-                detail: uninstallPlan.agents.contains(where: \.isPresent) ? "installed" : "not installed",
+                name: "Photos-Go-Round background service",
                 isPresent: uninstallPlan.agents.contains(where: \.isPresent)),
             Item(
-                name: "The wallpaper in System Settings",
-                detail: uninstallPlan.registrations.isEmpty ? "not registered" : "registered",
+                name: "Photos-Go-Round Wallpaper",
                 isPresent: !uninstallPlan.registrations.isEmpty),
             Item(
-                name: "The screensaver",
-                detail: uninstallPlan.savers.isEmpty ? "not installed" : "installed",
+                name: "Photos-Go-Round Screensaver",
                 isPresent: !uninstallPlan.savers.isEmpty),
             Item(
-                name: "Its settings, and its record of the photos you chose",
-                detail: scrubPlan.found.isEmpty ? "none found" : "\(scrubPlan.found.count) items",
+                name: "Your settings",
                 isPresent: !scrubPlan.found.isEmpty),
         ]
     }
+
+    /// False when none of it is here, so the Uninstall button has nothing to do.
+    var hasAnythingToRemove: Bool { items.contains(where: \.isPresent) }
 
     var isStuck: Bool {
         if case .stuck = phase { return true }
@@ -138,9 +145,9 @@ final class UninstallerModel {
             case .uninstall:
                 let plan = uninstallPlan
                 do {
-                    report += try await Task.detached { try Uninstall.apply(plan) }.value
+                    report += try await Task.detached { try Uninstall.apply(plan, keepsData: false) }.value
                 } catch {
-                    phase = .failed(String(describing: error))
+                    phase = .failed(Self.words(for: error))
                     return
                 }
                 next = .scrub
@@ -156,13 +163,13 @@ final class UninstallerModel {
                     phase = .stuck(.handStarted(pids: pids))
                     return
                 } catch {
-                    phase = .failed(String(describing: error))
+                    phase = .failed(Self.words(for: error))
                     return
                 }
                 next = .trash
 
             case .trash:
-                if let app {
+                if let app, InstalledApp.isTrashable(app) {
                     do {
                         try FileManager.default.trashItem(at: app, resultingItemURL: nil)
                         report.append("moved \(app.path(percentEncoded: false)) to the Trash")
@@ -177,6 +184,17 @@ final class UninstallerModel {
                 return
             }
         }
+    }
+
+    /// A Cocoa error's own sentence, and this module's errors' descriptions —
+    /// never `NSError`'s dump of its user info, which is what the window showed
+    /// on 2026-09-27.
+    static func words(for error: any Error) -> String {
+        let cocoa = error as NSError
+        if cocoa.domain == NSCocoaErrorDomain || cocoa.domain == NSPOSIXErrorDomain {
+            return cocoa.localizedDescription
+        }
+        return String(describing: error)
     }
 
     /// Asks this build's app to quit, and waits a few seconds for it. Returns

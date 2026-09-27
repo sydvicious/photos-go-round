@@ -44,6 +44,17 @@ public enum InstalledApp {
         return label == variant.agentLabel
     }
 
+    /// Whether the uninstaller may move this app to the Trash: **only one in
+    /// `/Applications` itself.** Syd, 2026-09-27: "I think you should only
+    /// delete the app itself if it is /Applications." A build in DerivedData,
+    /// or a copy somebody keeps elsewhere, is theirs.
+    public static func isTrashable(
+        _ app: URL, applications: URL = URL(filePath: "/Applications", directoryHint: .isDirectory)
+    ) -> Bool {
+        app.standardizedFileURL.deletingLastPathComponent().path(percentEncoded: false)
+            == applications.standardizedFileURL.path(percentEncoded: false)
+    }
+
     /// This build's installed app: the one its agent's plist points into, and
     /// failing that `/Applications/Photos-Go-Round.app` if that is this build.
     /// Nil means there is nothing to trash.

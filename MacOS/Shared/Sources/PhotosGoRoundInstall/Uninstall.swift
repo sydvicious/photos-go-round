@@ -175,8 +175,10 @@ public enum Uninstall {
             variants: variants)
     }
 
+    /// `keepsData` is false for the uninstaller, which runs `Scrub` next, so
+    /// it does not end by saying the library is untouched.
     @discardableResult
-    public static func apply(_ plan: Plan) throws -> [String] {
+    public static func apply(_ plan: Plan, keepsData: Bool = true) throws -> [String] {
         var done: [String] = []
 
         if plan.parts.contains(.agent) {
@@ -246,7 +248,7 @@ public enum Uninstall {
             }
         }
 
-        done.append("the library, cache and preferences are untouched")
+        if keepsData { done.append("the library, cache and preferences are untouched") }
         return done
     }
 }

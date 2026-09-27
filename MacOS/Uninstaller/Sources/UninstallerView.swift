@@ -8,14 +8,19 @@ struct UninstallerView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Uninstall Photos-Go-Round")
                 .font(.title2.bold())
+                .frame(maxWidth: .infinity, alignment: .center)
 
             switch model.phase {
             case .ready, .working, .stuck:
                 found
+            case .done where !model.hadTrouble:
+                Text("Photos-Go-Round has been removed.")
             case .done:
-                outcome(title: "Photos-Go-Round has been removed.")
+                Text("Photos-Go-Round was removed, except for what is listed here.")
+                outcome
             case .failed(let reason):
-                outcome(title: "The uninstall stopped: \(reason)")
+                Text("The uninstall stopped: \(reason)")
+                outcome
             }
 
             HStack {
@@ -25,19 +30,23 @@ struct UninstallerView: View {
                 Spacer()
                 switch model.phase {
                 case .ready:
-                    Button("Cancel", role: .cancel) { NSApp.terminate(nil) }
+                    Button("Cancel", role: .cancel) { UninstallerDelegate.quit() }
                         .keyboardShortcut(.cancelAction)
                     Button("Uninstall", role: .destructive) { model.uninstall() }
                         .keyboardShortcut(.defaultAction)
+                        .disabled(!model.hasAnythingToRemove)
                 case .working, .stuck:
                     Button("Uninstall") {}.disabled(true)
                 case .done, .failed:
-                    Button("Quit") { NSApp.terminate(nil) }
+                    Button("OK") { UninstallerDelegate.quit() }
                         .keyboardShortcut(.defaultAction)
                 }
             }
         }
         .padding(20)
+        // Return is OK's, and Uninstall's before that. **Selection is only on the
+        // report**: text made selectable across the whole window took the focus,
+        // and with it Return — Syd, 2026-09-27: "enter or return should hit ok."
         .alert(
             "Something did not shut down",
             isPresented: .constant(model.isStuck),
@@ -51,42 +60,25 @@ struct UninstallerView: View {
     }
 
     private var found: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This removes Photos-Go-Round for your account on this Mac:")
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(model.items) { item in
-                    HStack(alignment: .firstTextBaseline) {
-                        Image(systemName: item.isPresent ? "checkmark.circle" : "circle.dashed")
-                            .foregroundStyle(item.isPresent ? Color.primary : .secondary)
-                        VStack(alignment: .leading) {
-                            Text(item.name)
-                            Text(item.detail)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textSelection(.enabled)
-                        }
-                    }
-                }
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(model.items) { item in
+                // Dimmed when it is not here, so there is nothing of it to remove.
+                Label(item.name, systemImage: item.isPresent ? "checkmark.circle" : "circle.dashed")
+                    .foregroundStyle(item.isPresent ? Color.primary : .secondary)
             }
-            Text("Your settings and your choice of albums and folders go too. Your photographs themselves are not touched.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-            Text("macOS may ask for your password to remove the wallpaper's saved picture.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
         }
     }
 
-    private func outcome(title: String) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-            ScrollView {
-                Text(model.report.joined(separator: "\n"))
-                    .font(.caption.monospaced())
-                    .textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .frame(maxHeight: 200)
+    /// **One block of text, selectable as a whole**, so all of it can be
+    /// copied at once — Syd, 2026-09-27: "I need to be able to select and copy
+    /// text out of that panel."
+    private var outcome: some View {
+        ScrollView {
+            Text(model.report.joined(separator: "\n"))
+                .font(.callout.monospaced())
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .frame(maxHeight: 280)
     }
 }
