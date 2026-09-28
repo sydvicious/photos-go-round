@@ -33,9 +33,9 @@ final class UninstallerModel {
             case .app:
                 "Photos-Go-Round did not shut down when it was asked to. Force it to quit, or cancel and quit it yourself."
             case .agent:
-                "Photos-Go-Round's background service did not shut down. Force it to quit, or cancel and nothing more is removed."
+                "The Photos-Go-Round Service did not shut down. Force it to quit, or cancel and nothing more is removed."
             case .handStarted:
-                "A copy of Photos-Go-Round's background service is still running. Force it to quit, or cancel and nothing more is removed."
+                "A copy of the Photos-Go-Round Service is still running. Force it to quit, or cancel and nothing more is removed."
             }
         }
     }
@@ -81,7 +81,7 @@ final class UninstallerModel {
                 name: "Photos-Go-Round.app",
                 isPresent: app.map { InstalledApp.isTrashable($0) } ?? false),
             Item(
-                name: "Photos-Go-Round background service",
+                name: "Photos-Go-Round Service",
                 isPresent: uninstallPlan.agents.contains(where: \.isPresent)),
             Item(
                 name: "Photos-Go-Round Wallpaper",

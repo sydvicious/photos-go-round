@@ -4,10 +4,15 @@ Turn the plain DMG that `Scripts/release-build.sh` makes into a finished one. It
 carries the app, an `/Applications` link, a double-clickable uninstaller and an
 "About Photos-Go-Round" document, arranged in the window.
 
+**Phases 1 to 3 built 2026-09-27**, and the first finished image made from the
+`Release DMG` target: `Photos-Go-Round 0.1 (1).dmg`, notarized and stapled.
+Phase 4 — installing from it and uninstalling with it, here and on Plex — is
+Syd's.
+
 # Rationale
 
-A DMG is the first thing another person sees of Photos-Go-Round, and today it is
-a bare Finder window with two icons in it. Installing is already one drag,
+A DMG is the first thing another person sees of Photos-Go-Round, and until
+2026-09-27 it was a bare Finder window with two icons in it. Installing is already one drag,
 because the app installs everything else at launch (`Release App Installer.md`).
 Removing it is not: the agent, the wallpaper registration and the screensaver
 link outlive a dragged-away app, and the only ways to remove them are the Help
@@ -16,26 +21,29 @@ It is the last item on the *Before the first release* checklist.
 
 # Phases
 
-- **Phase 1: the uninstaller.** A new app target, `Uninstall Photos-Go-Round`,
+- **Phase 1: the uninstaller.** *Built 2026-09-27.* A new app target, `Uninstall Photos-Go-Round`,
   embedded in `Photos-Go-Round.app` and copied onto the DMG.
   - A target and a scheme of its own in `Photos-Go-Round.xcodeproj`, built with `xcodebuild` in all three configurations like every other product.
   - Links `PhotosGoRoundInstall` and runs `Uninstall.plan` for its own build variant.
   - Then deletes that build's data: the library, the cache, the preferences — the agent's, the wallpaper's and the screensaver's — and the wallpaper extension's own container.
   - The deleting moves out of `Scripts/scrub-data.sh` into `PhotosGoRoundInstall`, and the script becomes a wrapper, as `uninstall.sh` is.
-  - Asks, then moves the installed app to the Trash.
+  - Asks, then moves the installed app to the Trash — only from `/Applications`.
   - Embedded in `Contents/Helpers`, beside the agent, so one archive signs and notarizes it.
   - `release-build.sh` checks it for the Developer ID signature and the hardened runtime.
   - Claude builds it in the `Claude` configuration to check it compiles, and never runs it.
-- **Phase 2: the About document.** `About Photos-Go-Round.rtf`, kept in the repository and edited in TextEdit.
-  - Claude drafts it; Syd rewrites it.
-  - Covers what it is, installing, what the first launch does, Photos access, and uninstalling.
+- **Phase 2: the About document.** *Built 2026-09-27.* `About Photos-Go-Round.rtf`, kept in the repository and edited in TextEdit.
+  - Claude drafted it; Syd rewrote it extensively.
+  - Covers what it is, why, installing, choosing photos, choosing it in System Settings, uninstalling, and requirements.
 - **Phase 3: the layout.** A new `Scripts/make-dmg.sh` wraps an exported app in the finished DMG, and `release-build.sh` calls it.
   - Finder AppleScript sets the window and the icon positions. No background picture and no custom volume icon.
-  - Converted to compressed read-only, then signed, notarized and stapled as today.
-- **Phase 4: run it.** Syd runs `release-build.sh`, opens the DMG, installs from it, and uninstalls with the uninstaller — on his Mac and on Plex.
+  - Converted to compressed read-only, then signed, notarized and stapled as before.
+  - The `Release DMG` Xcode target builds it all: archive, notarize, `make-dmg.sh`, notarize the image, and show it in Finder.
+  - *Built and run 2026-09-27, from the `Release DMG` target:* `Photos-Go-Round 0.1 (1).dmg`, signed with Developer ID, notarized and stapled, accepted by Gatekeeper as "Notarized Developer ID", with the Finder layout saved in it. The first run failed on `release-build.sh`'s own signature check, which read `codesign -dv` for Authority lines that only `-dvv` prints; fixed. The window was then made narrower and taller.
+- **Phase 4: run it.** Syd builds `Release DMG`, opens the image, installs from it, and uninstalls with the uninstaller — on his Mac and on Plex.
 
 # Design Decisions
 
+- **The service is always called "Photos-Go-Round Service" where a user reads it.** Syd, 2026-09-27: it "should always be called 'Photos-Go-Round Service'" — in the About document, the uninstaller, and the Help menu's Install and Uninstall items.
 - **The uninstaller is a build target in the Xcode project.** Syd, 2026-09-27: "since the uninstaller is itself an app, it should be a build target in the xcode project." The app target embeds its product in `Contents/Helpers` with a Copy Files phase, as it embeds the agent.
 - **The uninstaller is a signed app, not a script.** A `.command` script cannot be notarized, so Gatekeeper refuses it when it comes off a downloaded DMG.
 - **It runs `Uninstall.plan`, not a copy of it.** Syd, 2026-09-19: "there should not be multiple versions of the build scripts"; the Help menu and `uninstall.sh` already share it.
@@ -43,7 +51,7 @@ It is the last item on the *Before the first release* checklist.
 - **It removes the library, the cache and the preferences too.** Syd, 2026-09-27: "It should remove the library and preferences also." An uninstaller that leaves settings behind leaves the one thing a user would notice (`PLAN.md`, *Settings are the only data a user would miss*), and they are user-by-machine, never exported.
 - **One implementation of deleting a build's data.** `scrub-data.sh` does it in shell today; it moves into `PhotosGoRoundInstall`, so the uninstaller and the script share it.
 - **It uninstalls for the user who runs it, and no one else.** Syd, 2026-09-27: "I am deliberately not addressing other users who might run this; their data is stranded." Every other account's agent, registrations, library and preferences stay where they are.
-- **The screensaver's remembered picture is left where macOS protects it, and that is not an error.** It is inside `legacyScreenSaver`'s container, which is Apple's; the uninstaller is refused there every time (2026-09-27), and only a terminal with Full Disk Access gets through. Neither remembered picture is mentioned, deleted or left — Syd, 2026-09-27: "do not worry about telling the user about the cached images for wallpaper and screensaver."
+- **The wallpaper's and the screensaver's remembered pictures are deleted if macOS allows, and never mentioned.** Syd, 2026-09-27: "do not worry about telling the user about the cached images for wallpaper and screensaver." The saver's is inside `legacyScreenSaver`'s container, which is Apple's, and the uninstaller is refused there every time; only a terminal with Full Disk Access gets through. The wallpaper extension's went, the same day.
 - **Container folders macOS keeps are left, and not mentioned.** Tried 2026-09-27: asking Finder to trash them (`NSWorkspace.recycle`) was refused without a password prompt, for a library's claimed container and the wallpaper extension's alike. Only Full Disk Access would do it. Moving the libraries to Application Support stops new ones being made; the wallpaper extension's is macOS's, as every sandboxed app's container is.
 - **It may ask the user to authenticate.** Syd, 2026-09-27. Deleting the wallpaper extension's container is the step likely to ask.
 - **Anything that will not stop gets an alert offering Force Quit.** Syd, 2026-09-27. The app first, and the agent if launchd cannot remove it; nothing is deleted underneath a running process.
@@ -52,10 +60,12 @@ It is the last item on the *Before the first release* checklist.
 - **It trashes the app only if it is in `/Applications`.** Syd, 2026-09-27: "I think you should only delete the app itself if it is /Applications." A build in DerivedData, or a copy kept elsewhere, is left where it is; it is still asked to quit.
 - **The app it trashes is the one the agent's plist points into**, not whatever LaunchServices finds by bundle identifier, which every build shares. *Claude's.*
 - **The About document is RTF.** It opens in TextEdit on every Mac, and needs no generator in the build. *Claude's.*
+- **An Xcode target makes the release: `Release DMG`, wrapping `release-build.sh`.** When it finishes, Finder shows the image in its folder — Syd: "it would be great if the build target would open the enclosing folder in the finder." Syd, 2026-09-27: "I also want an Xcode target. It could just wrap the script." An aggregate target with one script phase, run with a cleared environment so the build's own settings do not reach the archive inside it; its scheme only builds. Syd's to build, since it uploads to Apple.
 - **The DMG step is its own script**, `Scripts/make-dmg.sh`, so it can wrap any exported app, including one from Organizer. *Claude's.*
 - **Finder lays the window out**, not a checked-in `.DS_Store` or a third-party DMG tool. No dependencies, and the result is whatever Finder itself would save.
 - **The DMG and its volume are named with the version and the build**, `Photos-Go-Round 0.1 (1).dmg`, read from the app's own `Info.plist` so the name can never disagree with what is inside. Syd, 2026-09-27: "the title of the disk image needs to include them."
-- **Every build records the git commit it came from, and the About box shows it with Option held.** Syd, 2026-09-27: "every build phase", and "I need to be able to get to it on any variant I am running." The app target's *Record Git Commit* phase writes `PGRGitCommit` — `git describe --always --dirty` — into the built `Info.plist` before signing, in all three configurations. It is the project's only script phase, and that target runs with script sandboxing off so `git` can read `.git`.
+- **Every build records the git commit it came from, and the About box shows it with Option held.** Syd, 2026-09-27: "every build phase", and "I need to be able to get to it on any variant I am running." The app target's *Record Git Commit* phase writes `PGRGitCommit` — `git describe --always --dirty` — into the built `Info.plist` before signing, in all three configurations. It and the `Release DMG` target's are the project's two script phases, each with script sandboxing off — this one so `git` can read `.git`.
+- **`Scripts/bump-version.sh` moves them, run on each new branch.** Syd, 2026-09-27: "a script to update the version and build numbers, and remind me to run it when creating a new branch." The build number goes up by one every time and never resets; `--minor`, `--major` or `--version x.y` also move the version. Syd, 2026-09-27: "keep the build number never resetting."
 - **Every product takes its version and build from `Config/Version.xcconfig`.** The agent's and the screensaver's `Info.plist` hardcoded `0.1` and `1` until 2026-09-27.
 - **No background picture and no custom volume icon.** Syd, 2026-09-27: "no background picture in the dmg", and "no custom icon".
 - **The About document lives in `Packaging/DMG/`.** It is source, so it is in the repository; nothing generated is. *Claude's.*
@@ -110,8 +120,8 @@ launched, and a Finder alias cannot pass arguments anyway.
 
 ### What it does, in order
 
-1. **Says what it will remove, and asks.** One window: the app, its background
-   service, the wallpaper, the screensaver, and its settings, one line each,
+1. **Says what it will remove, and asks.** One window: the app, the Photos-Go-Round
+   Service, the wallpaper, the screensaver, and its settings, one line each,
    dimmed when it is not here. No explanatory small print — Syd, 2026-09-27:
    "Get rid of all of that explanatory small text." The Uninstall button is
    disabled when there is nothing to remove. When it is done the window says
@@ -143,9 +153,10 @@ launched, and a Finder alias cannot pass arguments anyway.
    extension's own sandbox container, below. The same for every retired name
    the build has used, as `scrub-data.sh` does. **A folder macOS will not remove is emptied instead** — measured 2026-09-27, the Debug container had been claimed by `containermanagerd`, and removing the folder was refused while everything in it went. Every refusal is reported and the rest carries on. Syd, 2026-09-27:
    "It should remove the library and preferences also."
-5. **Moves the app to the Trash**, with `FileManager.trashItem`, so it can be
-   put back. Never a permanent delete.
-6. **Says what it did**, one line per piece.
+5. **Moves the app to the Trash — only one in `/Applications`** — with
+   `FileManager.trashItem`, so it can be put back. Never a permanent delete.
+6. **Says what it did** — but only when something went wrong. Otherwise the
+   window says "Photos-Go-Round has been removed." and nothing more.
 
 ### Deleting the data, and sharing it with `scrub-data.sh`
 
@@ -165,7 +176,7 @@ rule `scrub-data.sh` states for itself, since deleting is its whole job.
 `scrub-data.sh` leaves the agent stopped but installed. The uninstaller has
 already uninstalled it by then, so there is nothing to leave.
 
-**The wallpaper extension's own container goes too.** Syd, 2026-09-27: "yes, delete the extension's container too." The extension keeps its last picture (`LastPicture`) and its standard defaults in its sandbox container, `~/Library/Containers/<wallpaperExtensionIdentifier>` — `com.sydpolk.photosgoround.wallpaper.extension`, with `.debug` or `.claude` before `.extension` for the other builds — so `Scrub` removes it after the extension is unregistered and its process stopped. macOS owns that directory, and deleting another app's container from outside it may raise the "would like to access data from other apps" prompt. **Asking the user to authenticate is acceptable.** Syd, 2026-09-27: "it's ok to require the user the authenticate." So a prompt here, or a password, is expected rather than a failure to design around. If the user declines, the uninstaller says so, names the path, and carries on; nothing else depends on it. Since `Scrub` is shared, `scrub-data.sh` deletes it too.
+**The wallpaper extension's own container goes too.** Syd, 2026-09-27: "yes, delete the extension's container too." The extension keeps its last picture (`LastPicture`) and its standard defaults in its sandbox container, `~/Library/Containers/<wallpaperExtensionIdentifier>` — `com.sydpolk.photosgoround.wallpaper.extension`, with `.debug` or `.claude` before `.extension` for the other builds — so `Scrub` removes it after the extension is unregistered and its process stopped. macOS owns that directory, and deleting another app's container from outside it may raise the "would like to access data from other apps" prompt. **Asking the user to authenticate is acceptable.** Syd, 2026-09-27: "it's ok to require the user the authenticate." So a prompt here, or a password, is expected rather than a failure to design around. If the user declines, the uninstaller carries on and says nothing of it; nothing else depends on it. Since `Scrub` is shared, `scrub-data.sh` deletes it too.
 
 ### Which app it trashes
 
@@ -179,7 +190,9 @@ The agent's plist is the better witness. It is at
 `ProgramArguments` point at `…/Photos-Go-Round.app/Contents/Helpers/Photos-Go-Round
 Server.app/…`. The app to trash is the one that path is inside. If there is no
 plist, the uninstaller falls back to `/Applications/Photos-Go-Round.app` if it is
-there and is this build — and otherwise trashes nothing and says so.
+there and is this build — and otherwise trashes nothing. **Either way, only an
+app directly in `/Applications` is trashed**; one anywhere else is asked to quit
+and left where it is.
 
 Read the plist before step 3 removes it.
 
@@ -229,15 +242,19 @@ RTF over the alternatives:
 - **RTF** opens in TextEdit on every Mac, looks like a document, and Syd can
   edit it directly. What is checked in is what ships.
 
-Name: `About Photos-Go-Round.rtf`. Content, drafted by Claude:
+Name: `About Photos-Go-Round.rtf`, in `Packaging/DMG/`. Drafted by Claude and
+rewritten by Syd, 2026-09-27. As it stands:
 
-- What Photos-Go-Round is, in two sentences.
-- Installing: drag it to Applications, open it once. What that first launch
-  does — the agent, the wallpaper in System Settings › Wallpaper, the
-  screensaver in System Settings › Screen Saver.
-- Photos access: Settings › Choose Collections › Allow Access….
-- Uninstalling: open the uninstaller from this disk image. It removes everything, the settings and the chosen sources included.
-- The version, and where to find out more.
+- What Photos-Go-Round is, and why — built for large numbers of photos from
+  many sources.
+- Installing: drag it to Applications and open it once, which sets up the
+  Photos-Go-Round Service, Wallpaper and Screensaver.
+- Choosing photos: Settings…, **Select Collections…** and **Allow Access…** for
+  Photos, **Add Picture Folder…** and **Add Picture Files…** for files.
+- Choosing it in System Settings -> Wallpaper, and -> Wallpaper -> Screensaver,
+  where it is at the bottom of the list under **Other** and **Show more**.
+- Uninstalling: the uninstaller on the disk image.
+- Requirements: macOS 27. No version number, so it does not go stale.
 
 ## The layout
 
@@ -245,18 +262,24 @@ Name: `About Photos-Go-Round.rtf`. Content, drafted by Claude:
 
 The standard way, which `create-dmg` and most hand-rolled scripts share:
 
-1. `hdiutil create -format UDRW -srcfolder <staging> -volname "Photos-Go-Round"`
+1. `hdiutil create -format UDRW -srcfolder <staging> -volname "Photos-Go-Round 0.1 (1)"`
    — writable, sized to fit plus room for Finder's `.DS_Store`.
-2. `hdiutil attach -readwrite -noverify -noautoopen` and note the mount point.
+2. `diskutil image attach`, noting the device and the mount point. *`hdiutil
+   attach` until 2026-09-27, when macOS 27 called it deprecated on every run.*
+   Not `--nobrowse`: Finder has to see the volume to arrange it.
 3. `osascript` telling Finder to open the disk, set icon view, hide the toolbar
-   and status bar, set the window bounds and icon size, set the position of
-   each item, update, and close. Closing is what makes Finder write `.DS_Store`.
-4. `sync`, `hdiutil detach`.
+   and status bar, set the window bounds and icon size, and set the position of
+   each item; then close it, open it again, update, pause and close. **Closed
+   and opened again**: the first run closed it once, and Finder kept neither the
+   window's size nor its place.
+4. Delete the volume's `.fseventsd`, then `sync` and detach.
 5. `hdiutil convert -format UDZO` to the final compressed, read-only image.
-6. `codesign`, notarize, staple — as `release-build.sh` does now.
+6. `codesign`, notarize, staple — in `release-build.sh`.
 
-The first run asks Syd to let Terminal control Finder. It is a one-time
-Automation grant, and it is his to give.
+The first run asks Syd to let Finder be controlled — by Terminal, or by Xcode
+when it runs from the `Release DMG` target. A one-time Automation grant, his to
+give. The path bar along the bottom of a DMG window is the viewer's own Finder
+setting, not the image's.
 
 ### Why not a checked-in `.DS_Store`
 
@@ -274,20 +297,24 @@ tools too. What they do is the six steps above.
 
 ### Positions
 
-Window about 640 × 400 points. App at left and Applications at right on the
-first row; the uninstaller and the About document on a
-second, smaller row. Final numbers are set by looking at it.
+Window 480 × 520 points. Syd, 2026-09-27: "too much space at the top of this
+view, and it needs to be much narrower", then "quite a bit taller so that dynamic
+text in large mode has a hope of showing something." *640 × 420, then 480 × 350,
+until then.* 96-point icons. The app at (120, 80) and Applications at (360, 80);
+the uninstaller at (120, 250) and the About document at (360, 250), leaving room
+under the second row for a two-line name at a large text size.
 
 ### `make-dmg.sh`
 
 Takes an exported, stapled app and an output path. Finds the uninstaller inside
 the app, stages the app, the `/Applications` link, the uninstaller and the About
-document, and runs the steps above. `release-build.sh` calls it where it runs
-`hdiutil create` today. On its own, it can wrap an app exported from
+document, and runs the steps above. `release-build.sh` calls it. On its own, it can wrap an app exported from
 Organizer's *Direct Distribution*. Signing and notarizing the DMG stay in
 `release-build.sh`, so `make-dmg.sh` needs no credentials.
 
 Syd's to run, like `release-build.sh`: it drives Finder on his screen.
+`--no-layout` skips Finder and makes the same image unarranged, which is what an
+agent may run to check the contents, and what a CI runner would need.
 
 ## Open questions
 
@@ -301,8 +328,11 @@ Syd's to run, like `release-build.sh`: it drives Finder on his screen.
 - `Plans/Release App Installer.md` — *Uninstall*; the Help menu.
 - `Plans/Xcode - Separate Build and Run.md` — why install logic lives in
   `PhotosGoRoundInstall`.
-- `Scripts/release-build.sh`, `Scripts/uninstall.sh`.
-- `MacOS/Shared/Sources/PhotosGoRoundInstall/Uninstall.swift`,
+- `Scripts/release-build.sh`, `Scripts/make-dmg.sh`, `Scripts/bump-version.sh`,
+  `Scripts/uninstall.sh`, `Scripts/scrub-data.sh`.
+- `Packaging/DMG/About Photos-Go-Round.rtf`, `Artwork/Uninstaller.icon`.
+- `MacOS/Uninstaller/Sources/`; `MacOS/Shared/Sources/PhotosGoRoundInstall/Uninstall.swift`,
+  `Scrub.swift`, `InstalledApp.swift`;
   `MacOS/Desktop/Sources/Installer.swift`.
-- `man hdiutil`, `man tiffutil`, `man stapler`.
+- `man hdiutil`, `man diskutil`, `man stapler`.
 - Apple, *Notarizing macOS software before distribution*.

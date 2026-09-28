@@ -117,7 +117,8 @@ extension LaunchInstall.Product {
     /// For a menu item.
     var title: String {
         switch self {
-        case .agent: "Agent"
+        // Syd, 2026-09-27: it "should always be called 'Photos-Go-Round Service'".
+        case .agent: "Photos-Go-Round Service"
         case .wallpaper: "Wallpaper"
         case .saver: "Screensaver"
         }

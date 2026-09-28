@@ -529,7 +529,7 @@ struct SourcesModelTests {
         // panel has never read a list, so this is what the empty state draws
         // instead of claiming there are no sources.
         #expect(!model.hasRead)
-        #expect(model.readFailure?.contains("agent is not running") == true)
+        #expect(model.readFailure?.contains("Photos-Go-Round Service is not running") == true)
         #expect(model.trouble == nil)
     }
 

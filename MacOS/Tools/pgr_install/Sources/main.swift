@@ -201,11 +201,11 @@ do {
         }
         let plan = Scrub.plan(variants: [variant])
         if options.dryRun {
-            Console.banner("would delete the \(variant.description)'s data")
+            Console.banner("would delete the \(variant.rawValue) build's data")
             for step in plan.describedSteps { Console.note(step) }
             break
         }
-        Console.banner("deleting the \(variant.description)'s data")
+        Console.banner("deleting the \(variant.rawValue) build's data")
         for line in try Scrub.apply(plan) { Console.note(line) }
         Console.note("the agent is stopped until the next login or pgr_install start")
 

@@ -147,7 +147,7 @@ Syd, 2026-09-19: *"add a panel in the dashboard breaking down how many files hav
 
 ## A finished DMG
 
-`Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. `Scripts/release-build.sh` makes a plain one today. **Planned 2026-09-27 in `Plans/Release DMG.md`.**
+`Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. **Built 2026-09-27**, `Plans/Release DMG.md`: the `Release DMG` target makes `Photos-Go-Round 0.1 (1).dmg`, notarized, with the uninstaller and the About document. What is left is Phase 4: install from it and uninstall with it, here and on Plex.
 
 ## A menu-bar app for shipping
 

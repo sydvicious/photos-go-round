@@ -75,9 +75,10 @@ when the two disagree. `Plans/Xcode - Separate Build and Run.md`.
 ## ⌘R installs; ⌘B does not. Pressing ⌘R is Syd's
 
 **Since 2026-09-19 no install runs on ⌘B.** All three aggregate targets are
-gone, and the project's one shell script build phase installs nothing: since
+gone, and the project's two shell script build phases install nothing. Since
 2026-09-27 the app target's *Record Git Commit* writes the commit into its
-`Info.plist`, with script sandboxing off for that target. Each `Install …`
+`Info.plist`, and the `Release DMG` target runs `Scripts/release-build.sh`, each
+with script sandboxing off. Each `Install …`
 scheme builds its product and `pgr_install`, and its Run action does the
 installing — `pgr_install saver`, `agent`, or `wallpaper`. Building one to check
 that it compiles is now an ordinary thing to do.
@@ -118,6 +119,13 @@ press, like an `Install …` scheme's. `Plans/Release DMG.md`.
 `Scripts/install.sh`, `Scripts/uninstall.sh` and `Scripts/scrub-data.sh` are his
 for the same reason. Each takes `--variant release|debug|claude` or `--all`, and
 none has a default.
+
+**The `Release DMG` scheme, `Scripts/release-build.sh` and `Scripts/make-dmg.sh`
+are Syd's too.** Building `Release DMG` archives Release and uploads it to
+Apple's notary service; `make-dmg.sh` drives Finder on his screen. An agent may
+run `make-dmg.sh --no-layout` on a `Claude` build to check the image's contents,
+into its own directory — never the arranged image, and never `Release DMG`.
+`Plans/Release DMG.md`.
 
 ## Launching a built app installs. Never launch one
 

@@ -138,7 +138,7 @@ private struct DashboardLinkLine: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            Text("Agent Dashboard")
+            Text("Photos-Go-Round Service Dashboard")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
@@ -164,7 +164,7 @@ private struct DashboardLinkLine: View {
                 Text("Waiting for Photos")
                     .font(.callout)
             case .unreadable(let reason):
-                Text("The agent's port could not be read: \(reason)")
+                Text("The Photos-Go-Round Service's port could not be read: \(reason)")
                     .font(.callout)
             }
         }

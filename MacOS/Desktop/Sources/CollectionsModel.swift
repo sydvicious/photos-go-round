@@ -307,7 +307,7 @@ final class CollectionsModel {
                 // come adrift from what the agent has, which is a fault to
                 // surface rather than a row to pass over.
                 guard let source = existing.first(where: { $0.locator == locator }) else {
-                    trouble = "Could not remove one collection: the agent no longer lists it."
+                    trouble = "Could not remove one collection: the Photos-Go-Round Service no longer lists it."
                     Log.sources.error(
                         "picker: no source for locator \(locator, privacy: .public) — not removed")
                     continue

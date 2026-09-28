@@ -434,17 +434,20 @@ final class SourcesModel {
 
     /// Words for a failure, chosen so the first thing a person reads tells them
     /// whether this is their problem or the agent's.
+    ///
+    /// **"Photos-Go-Round Service", never "agent".** Syd, 2026-09-27: it "should
+    /// always be called 'Photos-Go-Round Service'" where a person reads it.
     static func explain(_ error: any Error) -> String {
         switch error {
         case SourceService.Failure.noAgent:
-            "Photos-Go-Round's agent is not running, so there is nothing to ask."
+            "The Photos-Go-Round Service is not running, so there is nothing to ask."
         case SourceService.Failure.unreachable(let reason):
-            "The agent published an address but did not answer: \(reason)"
+            "The Photos-Go-Round Service published an address but did not answer: \(reason)"
         // **Not "the agent is not running".** It is, and it took the
         // connection; something inside it is stuck. Sending somebody to start
         // an agent that is already started is worse than saying nothing.
         case SourceService.Failure.silent(let limit):
-            "The agent accepted the connection and said nothing for \(limit.spokenSeconds). "
+            "The Photos-Go-Round Service accepted the connection and said nothing for \(limit.spokenSeconds). "
                 + "It is running but not answering."
         case SourceService.Failure.notFound(let paths):
             paths.count == 1
@@ -453,13 +456,13 @@ final class SourcesModel {
         case SourceService.Failure.refused(_, let reason):
             reason
         case SourceService.Failure.unreadable:
-            "The agent's answer could not be read."
+            "The Photos-Go-Round Service's answer could not be read."
         case SourceService.Failure.noSecret:
-            "The agent has published an address but not its secret yet. It may still be starting."
+            "The Photos-Go-Round Service has published an address but not its secret yet. It may still be starting."
         // Not "the agent is not running": something is answering on the port,
         // and it is not this account's.
         case SourceService.Failure.notOurs:
-            "The agent on this port refused this account's secret. It is not this account's agent."
+            "The Photos-Go-Round Service on this port refused this account's secret. It is not this account's."
         default:
             error.localizedDescription
         }
