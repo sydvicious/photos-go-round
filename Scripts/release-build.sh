@@ -25,6 +25,7 @@ DERIVED_DATA="${PGR_BUILD_ROOT:-$HOME/Library/Developer/Xcode/DerivedData/Photos
 BUILD_DIR="$DERIVED_DATA/release"
 PROFILE="pgr-notary"
 NOTARIZE=1
+ALLOW_DIRTY=0
 
 usage() {
     cat <<'HELPTEXT'
@@ -40,6 +41,8 @@ OPTIONS
   --keychain-profile <name>   The notarytool credentials to submit with.
                               Default: pgr-notary.
   --no-notarize               Sign and package, but upload nothing to Apple.
+  --allow-dirty               Build even with uncommitted changes. The About box
+                              then shows the commit with -dirty on it.
                               Gatekeeper refuses the result on any other Mac.
   -h, --help                  This.
 
@@ -61,10 +64,24 @@ while [[ $# -gt 0 ]]; do
         --output) BUILD_DIR="$2"; shift 2 ;;
         --keychain-profile) PROFILE="$2"; shift 2 ;;
         --no-notarize) NOTARIZE=0; shift ;;
+        --allow-dirty) ALLOW_DIRTY=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
 done
+
+# **Committed first, or not at all.** Every build records its commit for the
+# About box, and one built from uncommitted changes says "-dirty": a release
+# should name a commit anyone can check out. Syd, 2026-09-27: "I need to commit
+# before doing a release dmg run, so the commit hash in the about box does not
+# say '-dirty'." Tracked files only, which is what `git describe --dirty` looks
+# at, so a new file not yet added does not stop it.
+if [[ $ALLOW_DIRTY -eq 0 ]] && ! git -C "$REPO" diff --quiet HEAD --; then
+    echo "uncommitted changes; commit them first, so the release is a commit:" >&2
+    git -C "$REPO" status --short --untracked-files=no >&2
+    echo "(or pass --allow-dirty, and the About box will say -dirty)" >&2
+    exit 1
+fi
 
 case "$BUILD_DIR" in
     "$REPO"|"$REPO"/*) echo "refusing to build inside the repository: $BUILD_DIR" >&2; exit 2 ;;

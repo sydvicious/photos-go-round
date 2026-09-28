@@ -311,3 +311,7 @@ Syd, 2026-09-26: add a "Check for Updates…" menu item. It depends on the whole
 ## More investigation of the screensaver icon
 
 Syd, 2026-09-27: "add to TODO to do some more investigation of the Screen Saver icon." `Screensaver Plan.md`, *The tile in the Screen Saver pane*, is what exists.
+
+## The commit hash on the dashboard
+
+Syd, 2026-09-27: "add a TODO.md to add the commit hash to the agent dashboard." The app already records it — `PGRGitCommit` in its `Info.plist`, from the *Record Git Commit* phase — and shows it in the About box with Option held; the service's own bundle does not carry it yet. `Plans/Release DMG.md`.
