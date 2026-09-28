@@ -102,6 +102,10 @@ public enum BuildVariant: String, Sendable, CaseIterable {
     /// `~/Library/Screen Savers` and what System Settings lists.
     public var saverBundleName: String { "Photos-Go-Round Screensaver" + nameSuffix }
 
+    /// The screensaver bundle's identifier — `SAVER_ID_SUFFIX` in the project —
+    /// which names the cache it keeps inside `legacyScreenSaver`'s container.
+    public var saverIdentifier: String { "com.sydpolk.photosgoround.saver" + identifierSuffix }
+
     /// The wallpaper extension's bundle identifier, which is what `pluginkit`
     /// registers and what an install must never remove on another build's
     /// behalf. `Plans/Wallpaper Plan.md`, *Debug builds under their own

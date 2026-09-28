@@ -89,7 +89,7 @@ public final class Shuffle {
         /// should say *Starting...* until the agent responds. Once the agent
         /// responds, it should display one of the messages", and "*Waiting for
         /// Photos* should be gone." Once it answers, what it says — a picture,
-        /// *Please Add Photos*, *No Photos Available* — replaces it.
+        /// *Please add Photos*, *No Photos Available* — replaces it.
         ///
         /// **Every word capitalized.** Syd, 2026-09-26, dropping the sentence
         /// case he asked for on 2026-09-21 ("Initial capitals, small everywhere
@@ -105,7 +105,7 @@ public final class Shuffle {
         public var words: String {
             switch self {
             case .noPhotos: "No Photos Available"
-            case .noSources: "Please Add Photos"
+            case .noSources: "Please add Photos"
             case .noAgent, .silent: "Starting…"
             }
         }
@@ -379,7 +379,7 @@ public final class Shuffle {
                 takeDown(for: .noPhotos)
                 return .fixed(whenEmpty)
             case .empty:
-                // *Please Add Photos* is no longer true the moment the agent
+                // *Please add Photos* is no longer true the moment the agent
                 // stops saying it: a source was added and is being scanned. The
                 // streak decides what is said next, from nothing. *No Photos
                 // Available* stays until the streak says it again or a picture

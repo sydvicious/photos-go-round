@@ -199,7 +199,7 @@ struct ShuffleTests {
     /// nowhere left for one to go. Syd, 2026-09-26.
     @Test("The words")
     func theWords() {
-        #expect(Shuffle.Trouble.noSources.words == "Please Add Photos")
+        #expect(Shuffle.Trouble.noSources.words == "Please add Photos")
         #expect(Shuffle.Trouble.noPhotos.words == "No Photos Available")
         #expect(Shuffle.Trouble.noAgent("x").words == "Starting…")
     }
@@ -307,8 +307,8 @@ struct ShuffleTests {
     // MARK: - When the agent says why
 
     /// The agent knows there are no sources outright, so there is no streak to
-    /// wait out. Syd, 2026-09-26: "Please Add Photos".
-    @Test("No sources says Please Add Photos on the first answer")
+    /// wait out. Syd, 2026-09-26: "Please Add Photos"; 2026-09-27: "Please add Photos".
+    @Test("No sources says Please add Photos on the first answer")
     func noSourcesIsSaidAtOnce() async throws {
         let source = Stub(.noSources)
         let shuffle = Self.shuffle(source)
@@ -318,7 +318,7 @@ struct ShuffleTests {
 
         #expect(source.callCount == 1, "it waited for a streak")
         #expect(shuffle.trouble == .noSources)
-        #expect(shuffle.trouble?.words == "Please Add Photos")
+        #expect(shuffle.trouble?.words == "Please add Photos")
         #expect(shuffle.trouble?.isAgentTrouble == false)
     }
 
@@ -385,7 +385,7 @@ struct ShuffleTests {
 
     /// Once a source is added the agent stops saying *no sources*, and the
     /// queue is filling. The words go, and the next picture puts one up.
-    @Test("A source being added takes Please Add Photos back down")
+    @Test("A source being added takes Please add Photos back down")
     func addingASourceClearsNoSources() async throws {
         let source = Stub(.noSources)
         let shuffle = Self.shuffle(source)

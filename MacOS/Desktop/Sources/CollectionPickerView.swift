@@ -39,7 +39,7 @@ struct CollectionPickerView: View {
             // **The read failure, and only here.** This is the one branch with
             // nothing else on screen, so the words are the whole answer rather
             // than an interruption over a list that is still good.
-            message(model.readFailure ?? "Asking the agent what is in your library…")
+            message(model.readFailure ?? "Asking the Photos-Go-Round Service what is in your library…")
         } else if model.visible.isEmpty {
             message("This photo library has no collections.")
         } else {
@@ -238,7 +238,7 @@ struct CollectionPickerView: View {
             Text("Photos-Go-Round has no access to your photo library.")
                 .font(.headline)
             if authorization == "notDetermined" {
-                Text("The agent will ask, and macOS will show the prompt.")
+                Text("The Photos-Go-Round Service will ask, and macOS will show the prompt.")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                 Button("Allow Access…") { Task { await model.requestAccess() } }

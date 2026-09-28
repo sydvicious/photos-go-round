@@ -74,7 +74,7 @@ which is what a long unattended run wants.
 
 **Each build has exactly one library, and nothing chooses another.** Syd,
 2026-09-24: "They should be completely separate builds with completely separate
-assets." Its container is `~/Library/Containers/<identifier>`, its cache
+assets." Its container is `~/Library/Application Support/<identifier>`, its cache
 `~/Library/Caches/<identifier>`, and its preference domain `<identifier>` — all
 three named alike, so a person reading any of them can find the other two. Until
 that day each build also had a `.dev` library beside its real one, and a flag
@@ -132,7 +132,8 @@ agent is running.
 
 `--container` *dir*
 Storage root, holding `photosgoround.sqlite` and its WAL sidecars. Defaults to
-the build's own, `~/Library/Containers/<identifier>`.
+the build's own, `~/Library/Application Support/<identifier>`. *`~/Library/Containers/<identifier>` until 2026-09-27;
+an old library there is not moved, and `scrub-data.sh` empties it.*
 
 `-d`, `--database` *file*
 The database file, overriding its default position inside the storage root.
@@ -279,7 +280,7 @@ rather than an error — a fresh library replies this way until the first fetch
 lands. **When the agent knows why, it says so** in `X-PGR-Empty`, and the window
 and the screensaver answer at once rather than after three empty answers:
 `no-sources` when no source is enabled — none added, or every one turned off —
-shown as *Please Add Photos*; and `no-photos` when nothing could be shown and
+shown as *Please add Photos*; and `no-photos` when nothing could be shown and
 nothing is still coming — every source that is there has finished a scan and
 holds nothing, and no offline source has anything cached — shown as *No Photos
 Available*. Either takes down the picture on screen.
@@ -658,7 +659,7 @@ favour, always.
 
 |                | storage root | cache root |
 | --- | --- | --- |
-| default, every build | `~/Library/Containers/<identifier>` | `~/Library/Caches/<identifier>` |
+| default, every build | `~/Library/Application Support/<identifier>` | `~/Library/Caches/<identifier>` |
 | container named | as given | `<container>/cache` |
 
 **One library per build, and the build decides it.** Storage, cache and

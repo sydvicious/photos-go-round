@@ -49,7 +49,7 @@ enum Rotation {
         /// The empty state's words, drawn: the agent is answering and has
         /// nothing. **Asked past within `recheck`**, not a whole interval —
         /// Syd's rotation can be twelve hours, and a desktop still saying
-        /// *Please Add Photos* half a day after a source was added would be
+        /// *Please add Photos* half a day after a source was added would be
         /// the stale answer this exists to replace.
         case message
         /// Nothing arrived: no agent, or a bare empty answer.

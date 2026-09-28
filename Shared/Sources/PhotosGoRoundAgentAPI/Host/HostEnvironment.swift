@@ -42,6 +42,16 @@ public protocol HostEnvironment: Sendable {
 /// **Under the user's home directory, since 2026-09-19.** Syd: "all of the
 /// datafiles have to run in the users home directory so that this will work for
 /// two different users on the same machine."
+///
+/// **In `~/Library/Application Support`, since 2026-09-27**, not
+/// `~/Library/Containers`, where it was from 2026-09-19. That folder is where
+/// macOS keeps sandboxed apps' data, and `containermanagerd` claimed the
+/// libraries there as containers: once claimed, a folder could be emptied but
+/// never removed, by the uninstaller or by Finder. The agent is not sandboxed,
+/// and Application Support is where an unsandboxed app's data goes. **An old
+/// library is not moved.** Syd, 2026-09-27: "you did not have to move the old
+/// library, and you shouldn't." A new build starts a library of its own; the
+/// old container is `Scrub`'s to empty. `Plans/Release DMG.md`.
 public enum Storage {
     /// The bundle identifier, and the root every build's storage name grows
     /// from. Public so the surfaces' own domains are spelled from this rather
@@ -77,7 +87,7 @@ public enum ContainerOrigin: String, Sendable {
     /// `PGR_CONTAINER` or `PGR_DATABASE`, which pins the roots without touching
     /// the command line.
     case environment
-    /// The build's own: `~/Library/Containers/<name>`, beside
+    /// The build's own: `~/Library/Application Support/<name>`, beside
     /// `~/Library/Caches/<name>` and the preference domain `<name>`.
     case build = "the build's own"
 }
@@ -163,8 +173,18 @@ public struct MacHostEnvironment: HostEnvironment {
         // One directory name for all three of container, cache and preference
         // domain, so a person reading any of them can find the other two.
         let name = preferenceDomain(variant: variant)
-        return (URL.homeDirectory.appending(path: "Library/Containers/\(name)"), .build)
+        return (URL.homeDirectory.appending(path: "Library/Application Support/\(name)"), .build)
     }
+
+    /// Where a build's library was kept from 2026-09-19 to 2026-09-27, and may
+    /// still be on a Mac that ran a build from then.
+    public static func retiredContainer(named name: String, home: URL = URL.homeDirectory) -> URL {
+        home.appending(path: "Library/Containers/\(name)")
+    }
+
+    /// The file `containermanagerd` leaves in a folder it has claimed, which is
+    /// macOS's and is never moved or deleted.
+    public static let containerMetadata = ".com.apple.containermanagerd.metadata.plist"
 
     static func defaultCacheRoot(
         container: URL, origin: ContainerOrigin, variant: BuildVariant = .current

@@ -15,7 +15,7 @@ Three products run outside the app: the agent, the wallpaper extension and the s
 - registers the wallpaper if it is not registered;
 - links the screensaver if nothing is at its name.
 
-**The Help menu**, in any build: Install Agent, Install Wallpaper, Install Screensaver — each installs whatever is there — and Uninstall for each, which removes this build's copy and never another configuration's.
+**The Help menu**, in any build: Install Photos-Go-Round Service, Install Wallpaper, Install Screensaver — each installs whatever is there — and Uninstall for each, which removes this build's copy and never another configuration's.
 
 The window shows a spinner and what it is doing, and the controls are disabled, while any of it runs.
 

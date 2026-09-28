@@ -34,6 +34,15 @@ struct AboutView: View {
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
 
+            // **With Option held, like the dashboard link.** Syd, 2026-09-26,
+            // after a second Mac ran an older build and nothing said so.
+            if DashboardDisclosure.shared.inAbout, let commit = Bundle.main.gitCommit {
+                Text("commit: \(commit)")
+                    .font(.callout.monospaced())
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
             if DashboardDisclosure.shared.inAbout {
                 DashboardLinkView(preferences: preferences)
                     .padding(.top, 8)
@@ -129,7 +138,7 @@ private struct DashboardLinkLine: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            Text("Agent Dashboard")
+            Text("Photos-Go-Round Service Dashboard")
                 .font(.callout)
                 .foregroundStyle(.secondary)
 
@@ -155,7 +164,7 @@ private struct DashboardLinkLine: View {
                 Text("Waiting for Photos")
                     .font(.callout)
             case .unreadable(let reason):
-                Text("The agent's port could not be read: \(reason)")
+                Text("The Photos-Go-Round Service's port could not be read: \(reason)")
                     .font(.callout)
             }
         }
@@ -190,6 +199,13 @@ extension Bundle {
         let version = object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
         let build = object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
         return "\(version) (\(build))"
+    }
+
+    /// The git commit this build came from, `-dirty` when the checkout had
+    /// uncommitted changes. Written into the built `Info.plist` by the app
+    /// target's *Record Git Commit* phase, in every configuration.
+    var gitCommit: String? {
+        object(forInfoDictionaryKey: "PGRGitCommit") as? String
     }
 
     var copyright: String? {

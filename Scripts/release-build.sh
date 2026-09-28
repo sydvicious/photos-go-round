@@ -50,7 +50,7 @@ NEEDS, ONCE PER MAC
         --apple-id "sydvicious@mac.com" --team-id "R5PQPZARC5"
 
 RESULT
-  <output>/Photos-Go-Round-<version>.dmg, and the stapled app beside it in
+  <output>/Photos-Go-Round <version> (<build>).dmg, and the stapled app beside it in
   <output>/export. Launching the app installs and restarts its agent, as every
   build does.
 HELPTEXT
@@ -81,7 +81,7 @@ fi
 ARCHIVE="$BUILD_DIR/Photos-Go-Round.xcarchive"
 EXPORT_DIR="$BUILD_DIR/export"
 APP="$EXPORT_DIR/Photos-Go-Round.app"
-rm -rf "$ARCHIVE" "$EXPORT_DIR" "$BUILD_DIR/dmg"
+rm -rf "$ARCHIVE" "$EXPORT_DIR"
 mkdir -p "$BUILD_DIR"
 
 echo "==> Archiving Release"
@@ -115,10 +115,13 @@ xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$EXPORT_DIR" \
 echo "==> Checking signatures"
 codesign --verify --deep --strict "$APP"
 SERVER="$APP/Contents/Helpers/Photos-Go-Round Server.app"
-for bundle in "$APP" "$SERVER" \
+UNINSTALLER="$APP/Contents/Helpers/Uninstall Photos-Go-Round.app"
+for bundle in "$APP" "$SERVER" "$UNINSTALLER" \
         "$APP/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex" \
         "$APP/Contents/Resources/Photos-Go-Round Screensaver.saver"; do
-    info="$(codesign -dv "$bundle" 2>&1)"
+    # `-dvv`: `-dv` prints no Authority lines, so a check of its output never
+    # passed — found 2026-09-27, on the first run from the Release DMG target.
+    info="$(codesign -dvv "$bundle" 2>&1)"
     grep -q "Authority=Developer ID Application" <<<"$info" \
         || { echo "not signed with Developer ID: $bundle" >&2; exit 1; }
     grep -q "flags=.*runtime" <<<"$info" \
@@ -152,16 +155,17 @@ if [[ $NOTARIZE -eq 1 ]]; then
     xcrun stapler staple "$APP"
 fi
 
+# **From the app, not from Version.xcconfig**, so the image can never be named
+# differently from the build inside it. Syd, 2026-09-27: "the title of the disk
+# image needs to include them. 'Photos-Go-Round 0.1 (1).dmg', for example."
 VERSION="$(defaults read "$APP/Contents/Info.plist" CFBundleShortVersionString)"
-DMG="$BUILD_DIR/Photos-Go-Round-$VERSION.dmg"
+BUILD="$(defaults read "$APP/Contents/Info.plist" CFBundleVersion)"
+TITLE="Photos-Go-Round $VERSION ($BUILD)"
+DMG="$BUILD_DIR/$TITLE.dmg"
 echo "==> Packaging $(basename "$DMG")"
-mkdir -p "$BUILD_DIR/dmg"
-ditto "$APP" "$BUILD_DIR/dmg/Photos-Go-Round.app"
-ln -s /Applications "$BUILD_DIR/dmg/Applications"
-rm -f "$DMG"
-hdiutil create -volname "Photos-Go-Round" -srcfolder "$BUILD_DIR/dmg" \
-    -ov -format UDZO "$DMG" -quiet
-rm -rf "$BUILD_DIR/dmg"
+# The app, /Applications, the uninstaller and the About document, laid out by
+# Finder. `Scripts/make-dmg.sh`; `Plans/Release DMG.md`, Phase 3.
+"$REPO/Scripts/make-dmg.sh" "$APP" "$DMG" >/dev/null
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 
 if [[ $NOTARIZE -eq 1 ]]; then

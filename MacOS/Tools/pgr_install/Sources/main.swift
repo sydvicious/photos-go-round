@@ -30,6 +30,7 @@ USAGE
   pgr_install start [--variant <name>]
   pgr_install stop [--variant <name>]
   pgr_install uninstall [--agent] [--saver] [--wallpaper] [--variant <name>] [--dry-run]
+  pgr_install scrub --variant <name> [--dry-run]
 
 OPTIONS
   --from <path>   The built bundle. Defaults to $BUILT_PRODUCTS_DIR's copy.
@@ -45,7 +46,8 @@ OPTIONS
                   release, debug or claude: whose agent start and stop act on,
                   and whose copies uninstall removes. start and stop default to
                   the configuration this pgr_install was built as; uninstall
-                  defaults to every configuration's.
+                  defaults to every configuration's. scrub has no default:
+                  deleting a library says whose.
   -h, --help      This.
 
 NOTES
@@ -190,6 +192,22 @@ do {
         }
         Console.banner("removing: \(parts.map(\.rawValue).sorted().joined(separator: ", "))")
         for line in try Uninstall.apply(plan) { Console.note(line) }
+
+    case "scrub":
+        // **No default.** Every other verb can guess whose; the one that
+        // deletes a library has to be told.
+        guard let variant = options.variant else {
+            throw Fault("scrub needs --variant release, debug or claude")
+        }
+        let plan = Scrub.plan(variants: [variant])
+        if options.dryRun {
+            Console.banner("would delete the \(variant.rawValue) build's data")
+            for step in plan.describedSteps { Console.note(step) }
+            break
+        }
+        Console.banner("deleting the \(variant.rawValue) build's data")
+        for line in try Scrub.apply(plan) { Console.note(line) }
+        Console.note("the agent is stopped until the next login or pgr_install start")
 
     case "start":
         let variant = options.variant ?? .current

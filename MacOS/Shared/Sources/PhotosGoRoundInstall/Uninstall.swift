@@ -12,7 +12,8 @@ import PhotosGoRoundAgentAPI
 /// **It removes what was installed, not what was built.** Build directories,
 /// the library, the cache and the preferences are left alone: uninstalling is
 /// not the same as throwing away the photographs somebody chose.
-/// `Scripts/scrub-data.sh` is what deletes a build's data.
+/// `Scrub` is what deletes a build's data, for `Scripts/scrub-data.sh` and the
+/// uninstaller on the DMG.
 ///
 /// Translated from `Scripts/uninstall.sh`, 2026-09-19.
 /// `Plans/Xcode - Separate Build and Run.md`, Phase 5.
@@ -174,8 +175,10 @@ public enum Uninstall {
             variants: variants)
     }
 
+    /// `keepsData` is false for the uninstaller, which runs `Scrub` next, so
+    /// it does not end by saying the library is untouched.
     @discardableResult
-    public static func apply(_ plan: Plan) throws -> [String] {
+    public static func apply(_ plan: Plan, keepsData: Bool = true) throws -> [String] {
         var done: [String] = []
 
         if plan.parts.contains(.agent) {
@@ -245,7 +248,7 @@ public enum Uninstall {
             }
         }
 
-        done.append("the library, cache and preferences are untouched")
+        if keepsData { done.append("the library, cache and preferences are untouched") }
         return done
     }
 }

@@ -42,7 +42,7 @@ for Photos.
 - **Phase 4 — The app installs.** *Built 2026-09-21.*
   - `LaunchInstall.run`, in Syd's order: the agent, then nothing until it
     answers, then the wallpaper, then — Release only — the screensaver.
-  - A Help menu: Install and Uninstall for Agent, Wallpaper and Screensaver.
+  - A Help menu: Install and Uninstall for Agent, Wallpaper and Screensaver. *The agent's are "Install Photos-Go-Round Service" and "Uninstall Photos-Go-Round Service" since 2026-09-27; `PLAN.md`, A user reads "Photos-Go-Round Service".*
   - The spinner and the lockout in both windows; a line per product in the
     `install` log category.
   - The per-user port; `pgr_install start`, `stop` and `--variant`;
@@ -191,7 +191,7 @@ for Photos.
 - **The window gets no Install Agent or Launch Agent buttons.** Asked for
   2026-09-09 as what the empty state should offer when nothing is being served.
   Superseded, Syd, 2026-09-27: every launch installs and restarts the agent,
-  and the Help menu's Install Agent does it again, so a button in the window
+  and the Help menu's Install Photos-Go-Round Service does it again, so a button in the window
   would repeat what opening the app just did. The window says "Starting…"
   until the agent answers, and nothing underneath.
 - **A replaced appex is caught by `ctime`, not by code hash.** The public API
@@ -303,7 +303,9 @@ the Design Decisions said before, in order, so the reversals stay readable:
 copy phase only when `DEPLOYMENT_POSTPROCESSING` is on, which is Archive and
 `xcodebuild install`. Ordinary builds in any configuration skip it. That gives
 the archive-only embed without a script phase, which the project has none of
-since 2026-09-19 and should keep having none of.
+since 2026-09-19 and should keep having none of. *It has two since 2026-09-27,
+neither of which embeds or installs anything: the app's Record Git Commit and
+the `Release DMG` target's. `Release DMG.md`.*
 
 **What it costs:** a build run with ⌘R from Xcode is not an archive, so it
 carries nothing and installs nothing, in any configuration. **Accepted 2026-09-21** — Syd: "archived only is fine." The

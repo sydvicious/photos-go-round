@@ -71,7 +71,7 @@ at once without sharing a database. **Defaults to the configuration `pgr_ctl`
 itself was built as**, which is the agent you are most likely running.
 
 `--container <dir>`
-Storage root. Defaults to `~/Library/Containers/<identifier>` for the build above.
+Storage root. Defaults to `~/Library/Application Support/<identifier>` for the build above.
 
 `-d`, `--database <path>`
 Database file. Defaults to `<container>/photosgoround.sqlite`.

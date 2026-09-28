@@ -6,6 +6,18 @@
 	objectVersion = 90;
 	objects = {
 
+/* Begin PBXAggregateTarget section */
+		AA0000000000000000000940 /* Release DMG */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = AA0000000000000000000942 /* Build configuration list for PBXAggregateTarget "Release DMG" */;
+			buildPhases = (
+				AA0000000000000000000941 /* Make the Release DMG */,
+			);
+			name = "Release DMG";
+			productName = "Release DMG";
+		};
+/* End PBXAggregateTarget section */
+
 /* Begin PBXBuildFile section */
 		AA0000000000000000000013 /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000011 /* PhotosGoRoundAgentAPI */; };
 		AA0000000000000000000014 /* PhotosGoRoundDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000012 /* PhotosGoRoundDisplay */; };
@@ -28,6 +40,10 @@
 		AA0000000000000000000451 /* PhotosGoRoundInstall in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000452 /* PhotosGoRoundInstall */; };
 		AA0000000000000000000461 /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000462 /* PhotosGoRoundAgentAPI */; };
 		AA0000000000000000000800 /* PhotosGoRound.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PhotosGoRound.icon */; };
+		AA0000000000000000000901 /* PhotosGoRoundInstall in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000911 /* PhotosGoRoundInstall */; };
+		AA0000000000000000000902 /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000912 /* PhotosGoRoundAgentAPI */; };
+		AA0000000000000000000903 /* Uninstall Photos-Go-Round.app in Embed Uninstaller */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000931 /* Uninstaller.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000932 /* Uninstaller.icon */; };
 		AA0000000000000000000A02 /* PhotosGoRoundDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000A03 /* PhotosGoRoundDisplay */; };
 /* End PBXBuildFile section */
 
@@ -67,6 +83,13 @@
 			remoteGlobalIDString = AA00000000000000000000A0;
 			remoteInfo = "Photos-Go-Round Saver";
 		};
+		AA0000000000000000000904 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000920;
+			remoteInfo = "Photos-Go-Round Uninstaller";
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -105,6 +128,15 @@
 			);
 			name = "Embed Screensaver";
 		};
+		AA0000000000000000000905 /* Embed Uninstaller */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = Helpers;
+			dstSubfolder = Contents;
+			files = (
+				AA0000000000000000000903 /* Uninstall Photos-Go-Round.app in Embed Uninstaller */,
+			);
+			name = "Embed Uninstaller";
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -127,6 +159,8 @@
 		AA0000000000000000000621 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		AA0000000000000000000622 /* TODO.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = TODO.md; sourceTree = "<group>"; };
 		AA0000000000000000000801 /* PhotosGoRound.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = PhotosGoRound.icon; sourceTree = "<group>"; };
+		AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Uninstall Photos-Go-Round.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000932 /* Uninstaller.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Uninstaller.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -273,6 +307,11 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000922 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -328,6 +367,13 @@
 				AA000000000000000000030B /* Console in Frameworks */,
 			);
 		};
+		AA0000000000000000000924 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				AA0000000000000000000901 /* PhotosGoRoundInstall in Frameworks */,
+				AA0000000000000000000902 /* PhotosGoRoundAgentAPI in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -365,6 +411,7 @@
 				AA00000000000000000000F1 /* Photos-Go-Round Wallpaper Host.app */,
 				AA0000000000000000000441 /* Photos-Go-Round Screensaver$(SAVER_NAME_SUFFIX).saver */,
 				AA0000000000000000000442 /* Photos-Go-Round Wallpaper.appex */,
+				AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -451,6 +498,7 @@
 				AA0000000000000000000604 /* Screensaver */,
 				AA0000000000000000000605 /* Shared */,
 				AA0000000000000000000609 /* Tools */,
+				AA0000000000000000000923 /* Uninstaller */,
 				AA0000000000000000000611 /* Wallpaper */,
 			);
 			path = MacOS;
@@ -479,8 +527,17 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000801 /* PhotosGoRound.icon */,
+				AA0000000000000000000932 /* Uninstaller.icon */,
 			);
 			path = Artwork;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000923 /* Uninstaller */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000922 /* Sources */,
+			);
+			path = Uninstaller;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -496,6 +553,8 @@
 				AA0000000000000000000421 /* Embed Agent */,
 				AA0000000000000000000422 /* Embed Wallpaper Extension */,
 				AA0000000000000000000423 /* Embed Screensaver */,
+				AA0000000000000000000905 /* Embed Uninstaller */,
+				AA0000000000000000000930 /* Record Git Commit */,
 			);
 			buildRules = (
 			);
@@ -503,6 +562,7 @@
 				AA0000000000000000000431 /* PBXTargetDependency */,
 				AA0000000000000000000432 /* PBXTargetDependency */,
 				AA0000000000000000000433 /* PBXTargetDependency */,
+				AA0000000000000000000906 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000000000000000000081 /* Sources */,
@@ -672,6 +732,28 @@
 			productReference = AA0000000000000000000301 /* pgr_install */;
 			productType = "com.apple.product-type.tool";
 		};
+		AA0000000000000000000920 /* Photos-Go-Round Uninstaller */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000927 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Uninstaller" */;
+			buildPhases = (
+				AA0000000000000000000926 /* Sources */,
+				AA0000000000000000000924 /* Frameworks */,
+				AA0000000000000000000925 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000922 /* Sources */,
+			);
+			name = "Photos-Go-Round Uninstaller";
+			packageProductDependencies = (
+				AA0000000000000000000911 /* PhotosGoRoundInstall */,
+				AA0000000000000000000912 /* PhotosGoRoundAgentAPI */,
+			);
+			productName = "Photos-Go-Round Uninstaller";
+			productReference = AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -711,6 +793,8 @@
 				AA00000000000000000000C0 /* Photos-Go-Round Server */,
 				AA00000000000000000000E0 /* Photos-Go-Round Wallpaper */,
 				AA00000000000000000000F0 /* Photos-Go-Round Wallpaper Host */,
+				AA0000000000000000000920 /* Photos-Go-Round Uninstaller */,
+				AA0000000000000000000940 /* Release DMG */,
 				AA0000000000000000000063 /* Photos-Go-RoundTests */,
 			);
 		};
@@ -738,7 +822,56 @@
 			files = (
 			);
 		};
+		AA0000000000000000000925 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+				AA0000000000000000000931 /* Uninstaller.icon in Resources */,
+			);
+		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		AA0000000000000000000930 /* Record Git Commit */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Record Git Commit";
+			shellPath = /bin/sh;
+			shellScript = (
+				"# The git commit this build came from, for the About box with Option held.",
+				"# Every configuration, so any variant says which commit it is. Written into the",
+				"# built Info.plist after Xcode has processed it and before it is signed.",
+				"# Plans/Release DMG.md.",
+				"commit=\"$(/usr/bin/git -C \"$SRCROOT\" describe --always --dirty --abbrev=10 2>/dev/null || echo unknown)\"",
+				"plist=\"$TARGET_BUILD_DIR/$INFOPLIST_PATH\"",
+				"/usr/libexec/PlistBuddy -c \"Delete :PGRGitCommit\" \"$plist\" 2>/dev/null || true",
+				"/usr/libexec/PlistBuddy -c \"Add :PGRGitCommit string $commit\" \"$plist\"",
+				"",
+			);
+			showEnvVarsInLog = 0;
+		};
+		AA0000000000000000000941 /* Make the Release DMG */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			name = "Make the Release DMG";
+			shellPath = /bin/sh;
+			shellScript = (
+				"# Builds, signs and notarizes a Release, and packages it in its disk image:",
+				"# Scripts/release-build.sh. So building this target is making a release, and it",
+				"# is Syd's to build — it uploads to Apple's notary service. Plans/Release DMG.md.",
+				"#",
+				"# The environment is cleared first. This build's own settings — SDKROOT,",
+				"# CONFIGURATION and the rest — would otherwise reach the archive the script runs.",
+				"# The script's last line is the image; Finder then shows it. Syd, 2026-09-27:",
+				"# \"it would be great if the build target would open the enclosing folder.\"",
+				"set -eo pipefail",
+				"DMG=\"$(/usr/bin/env -i HOME=\"$HOME\" USER=\"$USER\" LOGNAME=\"$LOGNAME\" TMPDIR=\"$TMPDIR\" \\",
+				"    PATH=\"/usr/bin:/bin:/usr/sbin:/sbin\" \"$SRCROOT/Scripts/release-build.sh\" | tee /dev/stderr | tail -n 1)\"",
+				"/usr/bin/open -R \"$DMG\"",
+				"",
+			);
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		000000000000000120000000 /* Sources */ = {
@@ -781,6 +914,11 @@
 			files = (
 			);
 		};
+		AA0000000000000000000926 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -808,6 +946,11 @@
 			isa = PBXTargetDependency;
 			target = AA00000000000000000000A0 /* Photos-Go-Round Saver */;
 			targetProxy = AA0000000000000000000413 /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000906 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000920 /* Photos-Go-Round Uninstaller */;
+			targetProxy = AA0000000000000000000904 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -851,6 +994,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = R5PQPZARC5;
 				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -932,6 +1076,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = R5PQPZARC5;
 				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -972,9 +1117,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = PhotosGoRound;
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Desktop/Resources/Photos-Go-Round.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
@@ -1013,9 +1158,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = PhotosGoRound;
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Desktop/Resources/Photos-Go-Round.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
@@ -1053,7 +1198,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
@@ -1073,7 +1217,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
@@ -1093,7 +1236,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = NO;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Screensaver/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
@@ -1117,7 +1259,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = NO;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Screensaver/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
@@ -1141,7 +1282,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Agent/Resources/Photos-Go-Round Server.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
@@ -1162,7 +1302,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Agent/Resources/Photos-Go-Round Server.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
@@ -1183,7 +1322,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
@@ -1202,7 +1340,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
@@ -1221,7 +1358,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Wallpaper/Resources/Photos-Go-Round Wallpaper.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Extension-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../../../../Frameworks";
@@ -1243,7 +1379,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Wallpaper/Resources/Photos-Go-Round Wallpaper.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Extension-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../../../../Frameworks";
@@ -1264,7 +1399,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Host-Info.plist";
@@ -1286,7 +1420,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Host-Info.plist";
@@ -1343,6 +1476,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = R5PQPZARC5;
 				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1392,9 +1526,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = PhotosGoRound;
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Desktop/Resources/Photos-Go-Round.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_PREVIEWS = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
@@ -1432,7 +1566,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
@@ -1452,7 +1585,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = NO;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Screensaver/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@loader_path/../Frameworks";
@@ -1476,7 +1608,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Agent/Resources/Photos-Go-Round Server.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
@@ -1497,7 +1628,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
@@ -1516,7 +1646,6 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "MacOS/Wallpaper/Resources/Photos-Go-Round Wallpaper.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Extension-Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../../../../Frameworks";
@@ -1537,7 +1666,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = "MacOS/Wallpaper/Resources/Host-Info.plist";
@@ -1559,7 +1687,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_NAME = pgr_install;
@@ -1574,7 +1701,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_NAME = pgr_install;
@@ -1589,7 +1715,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = R5PQPZARC5;
 				ENABLE_APP_SANDBOX = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				PRODUCT_NAME = pgr_install;
@@ -1597,6 +1722,105 @@
 				SUPPORTED_PLATFORMS = macosx;
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AA0000000000000000000928 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Uninstaller;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Uninstall Photos-Go-Round";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_NAME = "Uninstall Photos-Go-Round";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_UPCOMING_FEATURE_NONISOLATED_NONSENDING_BY_DEFAULT = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000929 /* Claude configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Uninstaller;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Uninstall Photos-Go-Round";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_NAME = "Uninstall Photos-Go-Round";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_UPCOMING_FEATURE_NONISOLATED_NONSENDING_BY_DEFAULT = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Claude;
+		};
+		AA000000000000000000092A /* Release configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = Uninstaller;
+				CODE_SIGN_STYLE = Automatic;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "Uninstall Photos-Go-Round";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_NAME = "Uninstall Photos-Go-Round";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_UPCOMING_FEATURE_NONISOLATED_NONSENDING_BY_DEFAULT = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AA0000000000000000000943 /* Debug configuration for PBXAggregateTarget "Release DMG" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000944 /* Claude configuration for PBXAggregateTarget "Release DMG" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Claude;
+		};
+		AA0000000000000000000945 /* Release configuration for PBXAggregateTarget "Release DMG" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;
 		};
@@ -1684,6 +1908,24 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		AA0000000000000000000927 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Uninstaller" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000928 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */,
+				AA0000000000000000000929 /* Claude configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */,
+				AA000000000000000000092A /* Release configuration for PBXNativeTarget "Photos-Go-Round Uninstaller" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000942 /* Build configuration list for PBXAggregateTarget "Release DMG" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000943 /* Debug configuration for PBXAggregateTarget "Release DMG" */,
+				AA0000000000000000000944 /* Claude configuration for PBXAggregateTarget "Release DMG" */,
+				AA0000000000000000000945 /* Release configuration for PBXAggregateTarget "Release DMG" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -1755,6 +1997,14 @@
 			productName = PhotosGoRoundInstall;
 		};
 		AA0000000000000000000462 /* PhotosGoRoundAgentAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundAgentAPI;
+		};
+		AA0000000000000000000911 /* PhotosGoRoundInstall */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundInstall;
+		};
+		AA0000000000000000000912 /* PhotosGoRoundAgentAPI */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PhotosGoRoundAgentAPI;
 		};

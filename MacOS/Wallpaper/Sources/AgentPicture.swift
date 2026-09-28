@@ -211,7 +211,7 @@ enum AgentPicture {
     }
 
     /// **The empty state, as a picture**, when the agent says why it has
-    /// nothing: *Please Add Photos* or *No Photos Available*, the window's own
+    /// nothing: *Please add Photos* or *No Photos Available*, the window's own
     /// words. Syd, 2026-09-26: the wallpaper hands the pane pictures and cannot
     /// draw words, so it is given a picture of them — black, as the letterbox
     /// is, at the desktop's size. Still rather than moving: it is a wallpaper.
