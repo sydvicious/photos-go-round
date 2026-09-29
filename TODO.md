@@ -149,6 +149,20 @@ Syd, 2026-09-19: *"add a panel in the dashboard breaking down how many files hav
 
 `Plans/Release App Installer.md` built the app as the installer on 2026-09-21; the DMG that carries it is what is left. Syd, 2026-09-23: it should carry a double-clickable uninstaller and an "About …" document, with the icons arranged in a pleasing way, which he recalls took AppleScript last time. **Built 2026-09-27**, `Plans/Release DMG.md`: the `Release DMG` target makes `Photos-Go-Round 0.1 (1).dmg`, notarized, with the uninstaller and the About document. What is left is Phase 4: install from it and uninstall with it, here and on Plex.
 
+## Release the way every app now releases
+
+Syd, 2026-09-28: "This is the way all of my app releases should work." The flow is the global `app-release` skill, and `MarkdownPreviewApp` is its reference implementation. This project predates it and differs in three ways:
+
+- **The release tags nothing.** It should tag the commit it built `release-<version>-build-<build>`, once the DMG exists, and refuse to start unless on a clean main with the tag not yet taken.
+- **The release can start dirty.** It checks tracked files only, and `--allow-dirty` overrides even that. It should refuse on any `git status --porcelain` output, untracked files included, with no override — Syd, 2026-09-28: "the release script should refuse to start if the repo is dirty."
+- **`bump-version.sh` branches and merges, and pushes nothing.** It should refuse to start unless on a clean main (untracked files count), then commit `Config/Version.xcconfig` straight to main, tag it `v<x.y>-<build>` as it does now, and push main and its tags to origin with `--follow-tags`.
+
+Nothing else changes: the Finder layout, the uninstaller, the About document and the `pgr-notary` profile all stay.
+
+## A shared repo for the build and release scripts
+
+Syd, 2026-09-28: "we might need to make a separate repo for build/release scripts." `Scripts/release-build.sh` and `Scripts/bump-version.sh` exist here and, adapted, in `MarkdownPreviewApp`, and every new app gets another copy (the global `app-release` skill), so each fix has to be made once per app. Undecided: how an app consumes them — a submodule, a checkout at a known path, or copies synced from one source — and what stays per app: the name, project and scheme, the version-config path, the releases folder, and the post-export checks (here the helpers, the extensions, the Photos entitlement, and the Finder layout of the DMG). The same item is in `MarkdownPreviewApp`'s `TODO.md`; do it once for both, and after *Release the way every app now releases* above, so there is one flow to share.
+
 ## A menu-bar app for shipping
 
 Syd, 2026-09-10: *"make a menubar app for final shipping of this. The full desktop app is useful, but we are probably not going to ship it."* **Needs its own plan document.**
