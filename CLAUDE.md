@@ -148,11 +148,13 @@ exports, signs and uploads nothing. An agent may run it on a `Claude` build of
 its own, with `--no-timestamp` and the development identity, to check that it
 still signs every bundle; it changes that build's signatures and nothing else.
 
-**A release is kept in `~/iCloud/dev/Photos-Go-Round Releases`.** Since
-2026-10-09 `release-build.sh` copies its image there, and refuses a version and
-build already there. Look in that folder before saying a version has not been
-released: on 2026-10-09 a 0.5 (2) had been there since September, a second was
-built, and the old one was installed in its place.
+**A release is kept in `~/iCloud/dev/Photos-Go-Round Releases`, and tagged
+`release-<version>-build-<build>`.** Since 2026-10-09 `release-build.sh` copies
+its image there and tags the commit it built, from a clean `main` only, and
+refuses a version and build that already has either. Look in that folder and at
+the tags before saying a version has not been released: on 2026-10-09 a 0.5 (2)
+had been in the folder since September with no tag, a second was built, and the
+old one was installed in its place. Releases before 0.6 have no release tag.
 
 ## Launching a built app installs. Never launch one
 

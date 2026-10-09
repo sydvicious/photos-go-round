@@ -65,7 +65,7 @@ It is the last item on the *Before the first release* checklist.
 - **The DMG step is its own script**, `Scripts/make-dmg.sh`, so it can wrap any exported app, including one from Organizer. *Claude's.*
 - **Finder lays the window out**, not a checked-in `.DS_Store` or a third-party DMG tool. No dependencies, and the result is whatever Finder itself would save.
 - **The DMG and its volume are named with the version and the build**, `Photos-Go-Round 0.1 (1).dmg`, read from the app's own `Info.plist` so the name can never disagree with what is inside. Syd, 2026-09-27: "the title of the disk image needs to include them."
-- **A release is built only from a committed tree.** Syd, 2026-09-27: "I need to commit before doing a release dmg run, so the commit hash in the about box does not say '-dirty'." `release-build.sh` stops before archiving if any tracked file has uncommitted changes, and lists them; `--allow-dirty` overrides it. New files not yet added do not stop it, as they do not make `git describe --dirty` say dirty.
+- **A release is built only from a committed tree.** Syd, 2026-09-27: "I need to commit before doing a release dmg run, so the commit hash in the about box does not say '-dirty'." `release-build.sh` stops before anything is built if the repo is dirty, and lists what is. Since 2026-10-09 that means any change at all, untracked files included, in every mode and with nothing to override it: Syd, 2026-09-28, "the release script should refuse to start if the repo is dirty." Untracked files count because Xcode compiles whatever is in a synchronized folder. Until then it looked at tracked files only, and `--allow-dirty` overrode even that.
 - **Every build records the git commit it came from, and the About box shows it with Option held.** Syd, 2026-09-27: "every build phase", and "I need to be able to get to it on any variant I am running." The app target's *Record Git Commit* phase writes `PGRGitCommit` — `git describe --always --dirty` — into the built `Info.plist` before signing, in all three configurations. It and the `Release DMG` target's are the project's two script phases, each with script sandboxing off — this one so `git` can read `.git`.
 - **`Scripts/bump-version.sh` moves them, and records it in git.** *Since 2026-09-27, from a clean `main`: a branch `version-<x.y>-<build>`, a commit, a merge into `main`, and a tag `v<x.y>-<build>` on the merge — Syd: "make a branch, update the version, commit the branch, then merge to main, and tag the commit." Nothing is pushed; Syd pushes. It was first run on each new work branch.* Syd, 2026-09-27: "a script to update the version and build numbers, and remind me to run it when creating a new branch." The build number goes up by one every time and never resets; `--minor`, `--major` or `--version x.y` also move the version. Syd, 2026-09-27: "keep the build number never resetting."
 - **Every product takes its version and build from `Config/Version.xcconfig`.** The agent's and the screensaver's `Info.plist` hardcoded `0.1` and `1` until 2026-09-27.
@@ -109,6 +109,17 @@ copies nothing.
 builds anything, reading them from `Config/Version.xcconfig`; the build number
 is moved first, with `Scripts/bump-version.sh`. It asks again of the name the
 built app gives the image, and never copies over one that is there.
+
+**It tags the commit it built**, `release-<version>-build-<build>`, once the
+image is in the releases folder. Syd, 2026-10-09: "the release script should
+make the tag". The tag is how the repo says a version and build have been
+released. A release is made from `main`, and one whose tag is already taken is
+refused with the rest, before anything is built; the built app's version and
+build are checked against the tag's before the image is packaged. Nothing is
+pushed. `--no-notarize` builds from any branch and makes no tag. The way of it
+is `MarkdownPreviewApp`'s release script, which is the reference for how every
+app releases; what this one still does differently is in `TODO.md`, *Release
+the way every app now releases*.
 
 Every build of the app carries the agent, the wallpaper extension, the
 screensaver and the widget extension, installs and restarts the agent at every

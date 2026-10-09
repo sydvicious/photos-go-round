@@ -1,11 +1,23 @@
 #!/bin/bash
 #
-# Builds a Release "Photos-Go-Round.app" that can be handed to another person:
-# signed with Developer ID, notarized, stapled, and wrapped in a DMG that is
-# signed, notarized and stapled in turn.
+# Makes a release. **main always carries the version of the next release**, so
+# from main this builds a Release "Photos-Go-Round.app" that can be handed to
+# another person: signed with Developer ID, notarized, stapled, and wrapped in a
+# DMG that is signed, notarized and stapled in turn. It copies the DMG to the
+# releases folder, and then tags the commit it built
+# release-<version>-build-<build>.
 #
-# Syd's to run, not an agent's: it builds the Release identity, and it uploads
-# the build to Apple's notary service. It launches nothing and installs nothing.
+# **It does not bump.** A release may take several candidates before one ships,
+# so bump-version.sh stays separate: with no options for the next candidate,
+# which needs a new build number (this refuses a version and build already
+# released), and with --minor once a release has shipped.
+#
+# Nothing is pushed. With --no-notarize it only builds and packages, from any
+# branch, and neither copies nor tags. It never starts from a dirty repo.
+#
+# Syd's to run, not an agent's: it builds the Release identity, it uploads the
+# build to Apple's notary service, and it tags. It launches nothing and installs
+# nothing.
 #
 # Needs, once per Mac:
 #   - a Developer ID Application certificate for team R5PQPZARC5 in the login
@@ -29,11 +41,11 @@ PROFILE="pgr-notary"
 # then the image stayed in DerivedData, and one was lost the day he cleared it.
 RELEASES_DIR="$HOME/iCloud/dev/Photos-Go-Round Releases"
 NOTARIZE=1
-ALLOW_DIRTY=0
 
 usage() {
     cat <<'HELPTEXT'
-Builds a Developer ID signed, notarized Release of Photos-Go-Round in a DMG.
+Releases Photos-Go-Round: a Developer ID signed, notarized DMG, and a tag on
+the commit it was built from. It does not bump; bump-version.sh does that.
 
 USAGE
   ./Scripts/release-build.sh [options]
@@ -46,11 +58,11 @@ OPTIONS
                               ~/iCloud/dev/Photos-Go-Round Releases
   --keychain-profile <name>   The notarytool credentials to submit with.
                               Default: pgr-notary.
-  --no-notarize               Sign and package, but upload nothing to Apple and
-                              copy nothing to the releases folder.
-  --allow-dirty               Build even with uncommitted changes. The About box
-                              then shows the commit with -dirty on it.
-                              Gatekeeper refuses the result on any other Mac.
+  --no-notarize               Sign and package, but upload nothing to Apple,
+                              copy nothing to the releases folder, and do not
+                              tag. Works from any branch, but still only from
+                              a clean repo. Gatekeeper refuses the result on
+                              any other Mac.
   -h, --help                  This.
 
 NEEDS, ONCE PER MAC
@@ -59,14 +71,23 @@ NEEDS, ONCE PER MAC
     xcrun notarytool store-credentials "pgr-notary" \
         --apple-id "sydvicious@mac.com" --team-id "R5PQPZARC5"
 
+NEEDS, EVERY RELEASE
+  A clean main (no changes, and no untracked files that are not ignored), with a
+  version and build not yet released: neither an image in <releases> nor a tag
+  release-<version>-build-<build>. Each is refused before anything is built.
+
 RESULT
-  <releases>/Photos-Go-Round <version> (<build>).dmg. The image it was copied from
-  stays in <output>, with the stapled app beside it in <output>/export. A release
-  whose image is already in <releases> is refused before anything is built: move
-  the build number first, with Scripts/bump-version.sh.
+  <releases>/Photos-Go-Round <version> (<build>).dmg, and the tag
+  release-<version>-build-<build> on the commit it was built from. The image it
+  was copied from stays in <output>, with the stapled app beside it in
+  <output>/export. Nothing is pushed.
 
   Launching the app installs its agent, as every build does, unless one of the
   same or a greater version is already installed and running.
+
+AFTERWARDS
+  Another candidate:          ./Scripts/bump-version.sh
+  It shipped:                 ./Scripts/bump-version.sh --minor
 HELPTEXT
 }
 
@@ -76,22 +97,21 @@ while [[ $# -gt 0 ]]; do
         --releases) RELEASES_DIR="$2"; shift 2 ;;
         --keychain-profile) PROFILE="$2"; shift 2 ;;
         --no-notarize) NOTARIZE=0; shift ;;
-        --allow-dirty) ALLOW_DIRTY=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac
 done
 
-# **Committed first, or not at all.** Every build records its commit for the
-# About box, and one built from uncommitted changes says "-dirty": a release
-# should name a commit anyone can check out. Syd, 2026-09-27: "I need to commit
-# before doing a release dmg run, so the commit hash in the about box does not
-# say '-dirty'." Tracked files only, which is what `git describe --dirty` looks
-# at, so a new file not yet added does not stop it.
-if [[ $ALLOW_DIRTY -eq 0 ]] && ! git -C "$REPO" diff --quiet HEAD --; then
-    echo "uncommitted changes; commit them first, so the release is a commit:" >&2
-    git -C "$REPO" status --short --untracked-files=no >&2
-    echo "(or pass --allow-dirty, and the About box will say -dirty)" >&2
+# **Never from a dirty repo**, in any mode: what is built has to be a commit
+# anyone can check out, and the About box shows that commit. Syd, 2026-09-27: "I
+# need to commit before doing a release dmg run, so the commit hash in the about
+# box does not say '-dirty'", and 2026-09-28: "the release script should refuse
+# to start if the repo is dirty." Untracked files count too, because Xcode
+# compiles whatever is in a synchronized folder whether git knows about it or
+# not. Ignored files do not. There is no way to override it.
+if [[ -n "$(git -C "$REPO" status --porcelain)" ]]; then
+    echo "the repo is dirty; commit or remove these first:" >&2
+    git -C "$REPO" status --short >&2
     exit 1
 fi
 
@@ -105,9 +125,21 @@ if [[ $NOTARIZE -eq 1 ]]; then
     NEXT_VERSION="$(sed -n 's/^MARKETING_VERSION *= *//p' "$REPO/Config/Version.xcconfig")"
     NEXT_BUILD="$(sed -n 's/^CURRENT_PROJECT_VERSION *= *//p' "$REPO/Config/Version.xcconfig")"
     TAKEN="$RELEASES_DIR/Photos-Go-Round $NEXT_VERSION ($NEXT_BUILD).dmg"
-    if [[ -e "$TAKEN" ]]; then
-        echo "already released: $TAKEN" >&2
-        echo "move the build number first: Scripts/bump-version.sh" >&2
+    # **The tag is how the repo says what has been released.** Syd, 2026-10-09:
+    # "the release script should make the tag". It goes on the commit this
+    # build starts from, at the very end, and it belongs on main. Asked about
+    # here with the rest, before anything is built.
+    TAG="release-$NEXT_VERSION-build-$NEXT_BUILD"
+    COMMIT="$(git -C "$REPO" rev-parse HEAD)"
+    BRANCH="$(git -C "$REPO" branch --show-current)"
+    problems=()
+    [[ "$BRANCH" == "main" ]] || problems+=("not on main: ${BRANCH:-no branch}")
+    [[ -e "$TAKEN" ]] && problems+=("already in the releases folder: $TAKEN")
+    git -C "$REPO" show-ref --verify --quiet "refs/tags/$TAG" && problems+=("tag $TAG already exists")
+    if (( ${#problems[@]} > 0 )); then
+        echo "cannot release $NEXT_VERSION ($NEXT_BUILD):" >&2
+        printf '  %s\n' "${problems[@]}" >&2
+        echo "for another candidate, move the build number first: Scripts/bump-version.sh" >&2
         exit 1
     fi
 fi
@@ -241,6 +273,10 @@ fi
 # image needs to include them. 'Photos-Go-Round 0.1 (1).dmg', for example."
 VERSION="$(defaults read "$APP/Contents/Info.plist" CFBundleShortVersionString)"
 BUILD="$(defaults read "$APP/Contents/Info.plist" CFBundleVersion)"
+if [[ $NOTARIZE -eq 1 && "$TAG" != "release-$VERSION-build-$BUILD" ]]; then
+    echo "the app is $VERSION ($BUILD), but Version.xcconfig named $TAG" >&2
+    exit 1
+fi
 TITLE="Photos-Go-Round $VERSION ($BUILD)"
 DMG="$BUILD_DIR/$TITLE.dmg"
 echo "==> Packaging $(basename "$DMG")"
@@ -270,6 +306,13 @@ fi
 mkdir -p "$RELEASES_DIR"
 cp "$DMG" "$FINAL"
 
-# The last line on stdout is the image in the releases folder, which is what the
-# Release DMG target reveals in Finder.
+# The tag goes on the commit the build started from, and only once the image is
+# in the releases folder. Advice goes to stderr, so the last line on stdout is
+# the image in the releases folder, which is what the Release DMG target reveals
+# in Finder.
+echo "==> Tagging $TAG"
+git -C "$REPO" tag -a "$TAG" "$COMMIT" -m "Photos-Go-Round $VERSION ($BUILD)"
+echo "nothing is pushed; to send the tag: git push origin $TAG" >&2
+echo "another candidate: Scripts/bump-version.sh" >&2
+echo "it shipped:        Scripts/bump-version.sh --minor" >&2
 echo "$FINAL"

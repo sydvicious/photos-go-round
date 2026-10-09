@@ -151,10 +151,8 @@ Syd, 2026-09-19: *"add a panel in the dashboard breaking down how many files hav
 
 ## Release the way every app now releases
 
-Syd, 2026-09-28: "This is the way all of my app releases should work." The flow is the global `app-release` skill, and `MarkdownPreviewApp` is its reference implementation. This project predates it and differs in three ways:
+Syd, 2026-09-28: "This is the way all of my app releases should work." The flow is the global `app-release` skill, and `MarkdownPreviewApp` is its reference implementation. This project predates it and differs in one way:
 
-- **The release tags nothing.** It should tag the commit it built `release-<version>-build-<build>`, once the DMG exists, and refuse to start unless on a clean main with the tag not yet taken.
-- **The release can start dirty.** It checks tracked files only, and `--allow-dirty` overrides even that. It should refuse on any `git status --porcelain` output, untracked files included, with no override — Syd, 2026-09-28: "the release script should refuse to start if the repo is dirty."
 - **`bump-version.sh` branches and merges, and pushes nothing.** It should refuse to start unless on a clean main (untracked files count), then commit `Config/Version.xcconfig` straight to main, tag it `v<x.y>-<build>` as it does now, and push main and its tags to origin with `--follow-tags`.
 
 Nothing else changes: the Finder layout, the uninstaller, the About document and the `pgr-notary` profile all stay.
