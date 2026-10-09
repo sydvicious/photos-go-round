@@ -241,6 +241,14 @@ struct SourceService {
         try await send(decoding: Library.self, "GET", "/v2/photos/albums", within: readLimit)
     }
 
+    /// What the agent's Photos permission is. A read, which asks nobody.
+    func photoAccess() async throws -> String {
+        struct Consent: Decodable { var authorization: String }
+        return try await send(
+            decoding: Consent.self, "GET", "/v2/photos/authorization", within: readLimit
+        ).authorization
+    }
+
     /// Raises the consent prompt on the agent, and answers with what came back.
     ///
     /// **Only ever from a press.** The agent never asks on its own — see

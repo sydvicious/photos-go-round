@@ -11,6 +11,7 @@ Things to look into, deferred out of the phase list. Each one earns its own plan
 Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist for final release".
 
 - [ ] **A finished DMG.** *A finished DMG*, below.
+- [ ] **The proof-of-concept widget is out of `Photos-Go-Round.app`.** It comes out when there is a menubar app to carry it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
@@ -29,7 +30,6 @@ Syd, 2026-09-16: "i have no deadlines, and I hate tech debt surprises. I won't r
 - **`PhotosSourceEditingTests` fails under machine load, against a fake library.** 2026-09-21, load average 21–28 from something else on the Mac: five of its tests failed in each of three full runs (seven in one, with two walk-stall tests), each taking ~11 s, and all 18 passed alone in 5 s. They fail because `SourceStore.validationLimit` (5 s) expires, so the source is recorded rather than refused. An untouched copy of `HEAD` passed once and failed `SourceEndpointTests` once in the same window, so it is load, not a change. A test that races a wall clock against the pool — the same shape as the item above.
 - **Every configuration's screensaver has the same principal class, `PGRScreenSaverView`.** Found 2026-09-21: with the Debug saver loaded, a `(Claude)` saver shown in the same host ran Debug's code, on Debug's port, against Syd's running agent — the Objective-C runtime keeps the first class of a name in a process. So the three configurations' savers install side by side but cannot run side by side, which `CLAUDE.md`'s table implies they can. The class is named by `@objc(PGRScreenSaverView)` in `MacOS/Screensaver/Sources/PGRScreenSaverView.swift` and `NSPrincipalClass` in the saver's `Info.plist`; each configuration needs its own.
 - **Settings has no way to ask for Photos access.** Found 2026-09-24 after access was reset: the sources list shows "Photos access has not been granted yet" with nothing to press, and only the album picker's "Allow Access…" raises the prompt. The list should offer the same button, and it should read the agent's status first (`GET /v2/photos/authorization`): `authorized` refreshes the album sources without asking the system; `notDetermined` asks, then refreshes on a grant; `denied` or `restricted` points to System Settings. Not refresh-first: a cold album walk takes 40–60 s, so the prompt would wait that long. And the picker's error after a grant should say the library is still starting: from 17:11:08 to 17:11:40 its listings failed `503 library did not answer`, which read as a refusal though access was `authorized`.
-- **After granting Photos access from the picker, the albums chosen before still do not work.** Syd, 2026-10-08: launched with a previously established album and no Photos access, the app correctly says so. The collections button gives the chance to authenticate, and the picker then shows the collections selected before — but Done is not available until another is selected, and after Cancel the previous selection still does not work.
 - **`ConsoleMirrorTests` "A change keeps its mark and its suffix" fails in full parallel runs.** Seen 2026-09-24, once in three runs; it passed alone three times out of three. `Mirrored.install()` swaps the process-wide `Console.mirror` hook, so another test writing through it at the same moment is the likely cause.
 - **Restructure the tests so none fails on wall-clock time.** Syd, 2026-09-21: "some of the tests need to be restructured not to fail on wall clock time." Started and set aside the same day; nothing changed yet.
   - **Why they lose under load:** `Deadline.run` times on a `DispatchSourceTimer` since 2026-09-18, so its limit expires on time even when the pool is starved — while the work it bounds, a fake that would answer at once, waits for a pool thread. The timer was made robust for the agent; for a test that expects the answer, that is what makes it lose.
@@ -329,3 +329,7 @@ Syd, 2026-09-27: "add to TODO to do some more investigation of the Screen Saver 
 ## The commit hash on the dashboard
 
 Syd, 2026-09-27: "add a TODO.md to add the commit hash to the agent dashboard." The app already records it — `PGRGitCommit` in its `Info.plist`, from the *Record Git Commit* phase — and shows it in the About box with Option held; the service's own bundle does not carry it yet. `Plans/Release DMG.md`.
+
+## The main app asks Photos for the correct size
+
+Syd, 2026-10-08: "main app ask photos for the correct size". `PHImageManager.requestImage` takes a target size; the agent fetches the original and shrinks it itself today. `Plans/Photos-Go-Round Widgets.md`, *Photos: asking for a picture at a size*.

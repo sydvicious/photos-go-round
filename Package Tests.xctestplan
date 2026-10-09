@@ -25,6 +25,13 @@
     {
       "target": {
         "containerPath": "container:",
+        "identifier": "TinyCacheTests",
+        "name": "TinyCacheTests"
+      }
+    },
+    {
+      "target": {
+        "containerPath": "container:",
         "identifier": "PhotosGoRoundServerTests",
         "name": "PhotosGoRoundServerTests"
       }

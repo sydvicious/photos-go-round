@@ -636,6 +636,41 @@ struct CollectionsModelTests {
         #expect(!agent.requests.contains { $0.hasPrefix("POST") || $0.hasPrefix("DELETE") })
     }
 
+    /// The sources list shows each album's standing and polls on a timer
+    /// measured in minutes. After a grant it went on saying "Photos access has
+    /// not been granted yet" beside albums the agent had already read.
+    @Test("Granting Photos access tells the sources list to read again")
+    func grantAnnounces() async {
+        let scratch = Scratch()
+        let agent = Agent()
+        agent.holds(library: Self.library([], authorization: "authorized"))
+        let model = Self.model(agent, scratch)
+        await model.load()
+        let before = SourceChanges.shared.revision
+
+        await model.requestAccess()
+
+        // More than before, not exactly one more: the counter is the app's one
+        // shared instance, and tests running beside this one announce too.
+        #expect(SourceChanges.shared.revision > before)
+    }
+
+    @Test("Done with nothing changed still tells the sources list to read again")
+    func doneWithNoChangesAnnounces() async {
+        let scratch = Scratch()
+        let agent = Agent()
+        agent.holds(sources: [Self.source(uuid: "S1", locator: "A")])
+        agent.holds(library: Self.library([("albums", "Albums", [Self.album("A", "One")])]))
+        let model = Self.model(agent, scratch)
+        await model.load()
+        let before = SourceChanges.shared.revision
+
+        #expect(await model.apply())
+
+        // More than before, for the reason given above.
+        #expect(SourceChanges.shared.revision > before)
+    }
+
     @Test("A library we may not read says so rather than looking empty")
     func unreadableSaysSo() async {
         let scratch = Scratch()

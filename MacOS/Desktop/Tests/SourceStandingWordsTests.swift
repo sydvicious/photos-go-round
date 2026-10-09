@@ -57,6 +57,81 @@ struct SourceStandingWordsTests {
         #expect(standing.isTrouble)
     }
 
+    // MARK: - Photos permission, as the app knows it
+
+    /// Syd, 2026-10-09: "since the app has to ask the permissions, the app
+    /// should have the state of permissions. That red string should be based
+    /// on that value."
+    @Test("With access not yet given, an album says so, whatever the agent's row says")
+    func notGrantedSaysSo() {
+        let standing = SourcesSettingsView.standing(
+            of: collection(photos: 1284), photoAccess: "notDetermined")
+        #expect(standing.words == "Photos access has not been granted yet")
+        #expect(standing.isTrouble)
+    }
+
+    @Test("With access denied, an album says where to change it")
+    func deniedSaysWhere() {
+        let standing = SourcesSettingsView.standing(of: collection(), photoAccess: "denied")
+        #expect(standing.words.contains("System Settings"))
+        #expect(standing.isTrouble)
+    }
+
+    @Test("With access restricted, an album says so")
+    func restrictedSaysSo() {
+        let standing = SourcesSettingsView.standing(of: collection(), photoAccess: "restricted")
+        #expect(standing.words == "Photos access is restricted on this Mac")
+        #expect(standing.isTrouble)
+    }
+
+    /// **The case Syd saw.** Access had just been given, the agent's row still
+    /// carried the refusal from its last scan, and the list went on saying so
+    /// in red. The count is not there yet, and that is fine.
+    @Test("With access given, an album the agent still has down as refused is only waiting to be read")
+    func grantedOutranksAStaleRefusal() {
+        let stale = collection(
+            available: false, reason: "Photos access has not been granted yet", photos: 0)
+        for access in ["authorized", "limited"] {
+            let standing = SourcesSettingsView.standing(of: stale, photoAccess: access)
+            #expect(standing.words == "scanning…")
+            #expect(!standing.isTrouble)
+        }
+    }
+
+    @Test("With access given, trouble of another kind is still said")
+    func otherTroubleStillShows() {
+        let silent = collection(
+            available: false, reason: "the photo library did not answer within 10.0 seconds")
+        let standing = SourcesSettingsView.standing(of: silent, photoAccess: "authorized")
+        #expect(standing.words == "the photo library did not answer within 10.0 seconds")
+        #expect(standing.isTrouble)
+    }
+
+    @Test("With access given, a counted album says how many photographs it holds")
+    func grantedAndCounted() {
+        let standing = SourcesSettingsView.standing(
+            of: collection(photos: 1284), photoAccess: "authorized")
+        #expect(standing.words == "1,284 photos")
+        #expect(!standing.isTrouble)
+    }
+
+    /// Before the agent has said what the permission is, the row is all there
+    /// is to go on.
+    @Test("With the permission not yet known, an album says what the agent's row says")
+    func unknownPermissionUsesTheRow() {
+        let refused = collection(available: false, reason: "Photos access has not been granted yet")
+        let standing = SourcesSettingsView.standing(of: refused, photoAccess: nil)
+        #expect(standing.words == "Photos access has not been granted yet")
+        #expect(standing.isTrouble)
+    }
+
+    @Test("A missing album says it is missing, whatever the permission")
+    func missingOutranksPermission() {
+        let standing = SourcesSettingsView.standing(
+            of: collection(available: false, missing: true), photoAccess: "notDetermined")
+        #expect(standing.words == "not in this library")
+    }
+
     /// Unavailable with nothing said about why still has to say *something* —
     /// a blank column reads as fine.
     @Test("An unreachable collection with no reason still says it is unreachable")

@@ -49,7 +49,7 @@ struct BuildVariantTests {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 guard trimmed.hasSuffix(";"), let equals = trimmed.range(of: " = ") else { continue }
                 let key = String(trimmed[trimmed.startIndex..<equals.lowerBound])
-                guard key.hasSuffix("_SUFFIX") else { continue }
+                guard key.hasSuffix("_SUFFIX") || key == "OTHER_CODE_SIGN_FLAGS" else { continue }
                 var value = String(trimmed[equals.upperBound...].dropLast())
                 if value.hasPrefix("\"") && value.hasSuffix("\"") { value = String(value.dropFirst().dropLast()) }
                 values[key] = value
@@ -76,6 +76,27 @@ struct BuildVariantTests {
             "SAVER_ID_SUFFIX", "SAVER_NAME_SUFFIX", "SERVER_LABEL_SUFFIX",
             "STORAGE_ID_SUFFIX", "WALLPAPER_ID_SUFFIX", "WALLPAPER_NAME_SUFFIX",
         ]), "\(configuration) is missing one: \(keys.sorted())")
+    }
+
+    /// Every build is signed stating one requirement that all of them meet, so
+    /// that a privacy permission given to one build is not asked for again by
+    /// another. Left to itself each signature states its own: Release asks for
+    /// a Developer ID certificate and Debug for the development one, and with
+    /// both agents running macOS prompted for Documents on every refresh.
+    /// `Plans/Photos-Go-Round Widgets.md`, *Next: the app's sources, then
+    /// Photos*, has the log and the fix.
+    ///
+    /// **It must not name an identifier.** Xcode signs a Debug build's helper
+    /// libraries with the same flags, their identifiers differ from the
+    /// bundle's, and the bundle then fails `codesign --verify --strict`.
+    @Test("Every configuration signs with the one shared requirement", arguments: ["Debug", "Claude", "Release"])
+    func everyConfigurationStatesTheSharedRequirement(_ configuration: String) {
+        let flags = Self.settings[configuration]?["OTHER_CODE_SIGN_FLAGS"] ?? ""
+        #expect(flags.contains("--requirements"), "\(configuration) states no requirement: \(flags)")
+        #expect(
+            flags.contains("designated => anchor apple generic and certificate leaf[subject.OU] = $(DEVELOPMENT_TEAM)"),
+            "\(configuration) states a different requirement: \(flags)")
+        #expect(!flags.contains("identifier"), "\(configuration) names an identifier: \(flags)")
     }
 
     @Test("The identifier suffixes match", arguments: configurations)

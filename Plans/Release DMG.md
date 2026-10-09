@@ -80,10 +80,20 @@ create -format UDZO` from a folder holding the app and an `/Applications`
 symlink, and signs, notarizes and staples that. The certificate and the
 `pgr-notary` profile have been in Syd's keychain since.
 
-Every build of the app carries the agent, the wallpaper extension and the
-screensaver, installs and restarts the agent at every launch, and in Release
-registers the wallpaper and links the saver. The Help menu installs and
-uninstalls each piece for its own build. `Release App Installer.md`.
+Since 2026-10-09 the bundles it checks include the widget extension, in
+`Contents/PlugIns`, which the app carries until there is a menubar app to carry
+it. The script stops if the extension is missing, is not signed with Developer
+ID under the hardened runtime, has no Photos entitlement, or is not sandboxed,
+and if either the app or the extension lacks the App Group the two share. It
+also reads the signing requirement the exported app, agent and widget state,
+and prints a note, without stopping, if the export did not keep the one every
+build of the team meets. `Photos-Go-Round Widgets.md`.
+
+Every build of the app carries the agent, the wallpaper extension, the
+screensaver and the widget extension, installs and restarts the agent at every
+launch, and in Release registers the wallpaper and links the saver. The Help
+menu installs and uninstalls each piece for its own build. `Release App
+Installer.md`.
 
 Syd, 2026-09-23: the DMG should carry a double-clickable uninstaller and an
 "About …" document, with the icons arranged in a pleasing way, which he recalls

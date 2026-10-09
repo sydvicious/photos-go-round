@@ -225,6 +225,13 @@ final class SourcesModel {
     /// one says why instead of claiming to be still looking for ever.
     private(set) var readFailure: String?
 
+    /// The Photos permission, as the agent last named it: `authorized`,
+    /// `notDetermined` and so on. Nil until it has been read once.
+    ///
+    /// **Read with every list, and what the words beside an album are based
+    /// on.** A read that fails leaves the last answer standing.
+    private(set) var photoAccess: String?
+
     /// Asks the agent what it has. Never throws: this is called on a timer, on a
     /// doorbell, and after every change, and a failure is something to *show*,
     /// not to propagate.
@@ -238,6 +245,12 @@ final class SourcesModel {
             )
             readFailure = nil
             hasRead = true
+            // Not when the panel has gone away while the list was being read:
+            // `endPolling` cancels the task this runs in, and a settings window
+            // nobody is looking at should not be asking the agent anything.
+            if !Task.isCancelled {
+                photoAccess = (try? await service.photoAccess()) ?? photoAccess
+            }
             // A source removed by something else — `pgr_ctl`, another window —
             // must not leave the panel with a selection pointing at nothing,
             // because every button reads the selection to decide what it does.
@@ -372,6 +385,9 @@ final class SourcesModel {
         // `refresh` rather than `load`: a change happens *inside* a visit, so
         // there is nothing stale to forget.
         await refresh()
+        // The widgets show the same sources, and are let into a folder only
+        // through a bookmark this app leaves for it.
+        WidgetFolderBookmark.leaveForWidget()
         // **Set last, and to nil on success.** `trouble` belongs entirely to
         // actions now — the read above no longer touches it — so this is both
         // how a refusal reaches the screen and how the next thing that works

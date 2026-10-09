@@ -45,11 +45,18 @@ struct SourcesModelTests {
         private var listing = Data("[]".utf8)
         private var refusal: (status: Int, body: String)?
         private var asked: [String] = []
+        private var access = "authorized"
 
         var methods: [String] { lock.withLock { asked.map { String($0.split(separator: " ")[0]) } } }
         /// Every request as "METHOD path", for a test that cares where it went.
         var requests: [String] { lock.withLock { asked } }
-        var listCount: Int { methods.filter { $0 == "GET" }.count }
+        /// How many times the list was asked for. The list only: since
+        /// 2026-10-09 every read of it is followed by a read of the Photos
+        /// permission, which is another `GET` and not another list.
+        var listCount: Int { requests.filter { $0 == "GET /v2/sources" }.count }
+
+        /// What the agent says its Photos permission is.
+        func says(photoAccess name: String) { lock.withLock { access = name } }
 
         func holds(_ sources: [[String: Any]]) {
             let encoded = (try? JSONSerialization.data(withJSONObject: sources)) ?? Data("[]".utf8)
@@ -91,6 +98,16 @@ struct SourcesModelTests {
             return gate
         }
 
+        /// Holds a read of the list open until released, so a test can close the
+        /// panel while that read is still in flight.
+        private var listGate: Gate?
+
+        func holdsTheListOpen() -> Gate {
+            let gate = Gate()
+            lock.withLock { listGate = gate }
+            return gate
+        }
+
         final class Gate: @unchecked Sendable {
             private let semaphore = DispatchSemaphore(value: 0)
             private let lock = NSLock()
@@ -117,9 +134,9 @@ struct SourcesModelTests {
             { [self] request in
                 let method = request.httpMethod ?? "GET"
                 let path = request.url?.path(percentEncoded: false) ?? ""
-                let (refusing, held, quiet) = lock.withLock {
+                let (refusing, held, quiet, access) = lock.withLock {
                     asked.append("\(method) \(path)")
-                    return (refusal, listing, silent)
+                    return (refusal, listing, silent, access)
                 }
                 if quiet {
                     // Far longer than any bound these tests set, so the deadline
@@ -128,6 +145,9 @@ struct SourcesModelTests {
                 }
 
                 if method != "GET", let gate = lock.withLock({ openGate }) { await gate.waitHere() }
+                if method == "GET", path == "/v2/sources", let gate = lock.withLock({ listGate }) {
+                    await gate.waitHere()
+                }
 
                 // A refusal applies to changes; the list keeps working, which is
                 // what lets a test assert that a failed change left the list
@@ -145,6 +165,9 @@ struct SourcesModelTests {
                 // it — the agent re-reads afterwards anyway, but a body that
                 // cannot be decoded is a failure the model would show.
                 var body = method == "GET" ? held : Data("[]".utf8)
+                if method == "GET", path == "/v2/photos/authorization" {
+                    body = Data(#"{"authorization":"\#(access)"}"#.utf8)
+                }
                 if method == "POST", path.hasSuffix("/reconnect"),
                     let uuid = path.split(separator: "/").dropLast().last,
                     let listed = try? JSONSerialization.jsonObject(with: held) as? [[String: Any]],
@@ -600,6 +623,36 @@ struct SourcesModelTests {
         #expect(model.selection == "b")
     }
 
+    // MARK: - The Photos permission
+
+    /// Syd, 2026-10-09: "since the app has to ask the permissions, the app
+    /// should have the state of permissions."
+    @Test("The Photos permission is read with the list")
+    func permissionIsReadWithTheList() async {
+        let scratch = Scratch()
+        let agent = Agent()
+        agent.says(photoAccess: "notDetermined")
+        let model = model(agent, scratch)
+
+        await model.load()
+
+        #expect(model.photoAccess == "notDetermined")
+    }
+
+    @Test("A later read of the list brings the permission as it stands then")
+    func permissionFollowsTheAgent() async {
+        let scratch = Scratch()
+        let agent = Agent()
+        agent.says(photoAccess: "notDetermined")
+        let model = model(agent, scratch)
+        await model.load()
+
+        agent.says(photoAccess: "authorized")
+        await model.refresh()
+
+        #expect(model.photoAccess == "authorized")
+    }
+
     // MARK: - Changing
 
     @Test("Adding asks, and then re-reads rather than trusting its own answer")
@@ -891,6 +944,27 @@ struct SourcesModelTests {
         let settled = agent.listCount
         try await Task.sleep(for: .milliseconds(120))
         #expect(agent.listCount == settled, "it kept asking after the panel went away")
+    }
+
+    /// A read of the list is followed by a read of the Photos permission. With
+    /// the panel closed between the two, the second was still made: one request
+    /// to the agent from a window nobody was looking at.
+    @Test("A read in flight when the panel closes asks for nothing more")
+    func closingStopsAReadInFlight() async throws {
+        let scratch = Scratch()
+        let agent = Agent()
+        agent.holds([Self.entry(uuid: "a")])
+        let gate = agent.holdsTheListOpen()
+        let model = model(agent, scratch)
+
+        model.beginPolling()
+        // Bounded: the read either reaches the agent or this fails.
+        try await confirm(within: .seconds(2)) { gate.hasArrived }
+        model.endPolling()
+        gate.release()
+
+        try await Task.sleep(for: .milliseconds(120))
+        #expect(!agent.requests.contains("GET /v2/photos/authorization"))
     }
 
     @Test("Asking to poll twice does not poll twice")

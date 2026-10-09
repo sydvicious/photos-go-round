@@ -353,7 +353,7 @@ Every client of `/v1/next` stops sending `w` and `h` and resizes the original it
 
 - **Transfer.** Originals of 10–40 MB over localhost instead of a few hundred kilobytes. On the same Mac that is a memory copy, not a network cost.
 - **Decode on the client.** The same 109 ms median moves into the client, where it already sits inside the gap between pictures.
-- **A future remote client** — Watch, widgets, iPhone — can ask for a size, since `/v1/next` still takes one.
+- **A future remote client** — Watch, iPhone — can ask for a size, since `/v1/next` still takes one.
 
 ### Photographs that will not decode
 

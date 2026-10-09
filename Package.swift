@@ -45,6 +45,11 @@ let package = Package(
         // links the same fit and the same pan rather than reimplementing
         // what this phase was supposed to have rehearsed.
         .library(name: "PhotosGoRoundDisplay", targets: ["PhotosGoRoundDisplay"]),
+        // The widgets' cache: a handful of pictures at a widget's size, fetched
+        // by whichever process is showing them. Classes called directly, with
+        // no agent and no HTTP behind them, so it depends on nothing else here.
+        // `Plans/Photos-Go-Round Widgets.md`.
+        .library(name: "TinyCache", targets: ["TinyCache"]),
         // A product only so the Xcode targets can link it. The two executables
         // are Xcode targets as well as package ones now, and an Xcode target
         // reaches a package's *products* — a bare target is invisible to it.
@@ -80,6 +85,11 @@ let package = Package(
             // The client, not the kit: all it wants is the published port.
             dependencies: ["PhotosGoRoundAgentAPI"],
             path: "Shared/Sources/PhotosGoRoundDisplay",
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "TinyCache",
+            path: "Shared/Sources/TinyCache",
             swiftSettings: everyTarget
         ),
         // Terminal output, shared by the two executables and by nothing else.
@@ -152,6 +162,12 @@ let package = Package(
             name: "PhotosGoRoundDisplayTests",
             dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundDisplay"],
             path: "Shared/Tests/PhotosGoRoundDisplayTests",
+            swiftSettings: everyTarget
+        ),
+        .testTarget(
+            name: "TinyCacheTests",
+            dependencies: ["TinyCache"],
+            path: "Shared/Tests/TinyCacheTests",
             swiftSettings: everyTarget
         ),
         .testTarget(
