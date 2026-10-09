@@ -512,7 +512,8 @@ reloaded one interval after its last entry. With nothing to show it asks again i
 - Whether `peak` stays flat as timelines go from 1 entry to 20.
 
 **While a widget waits.** Syd, 2026-10-09: "I want the app icon with a grey overlay, with
-'Scanning...' in the widgets while they wait for their first pictures." Built, not yet seen:
+'Scanning...' in the widgets while they wait for their first pictures." Seen on 2026-10-09, with
+0.7 (5) freshly installed: "I saw the starting... graphic in the widgets... looked good".
 
 - *When it shows.* In the system's placeholder, which is what stands in a widget's place while its
   first timeline is being built, and for any entry that has no photograph and no trouble to
@@ -1140,11 +1141,17 @@ it should work for me in development as well."
   uninstaller, and "the widget disappeared as it should." That round had no stale record: a new
   Debug build lands on the path the old record named.
 
+- **Run for real with a release, 2026-10-09**: the 0.7 (5) uninstaller, with five widgets placed.
+  NotificationCenter logged "Remove widgets belonging to extension … from storage", and twenty
+  seconds later "instance removed" for each of the five. No record of the extension was left in
+  `pluginkit` or LaunchServices.
+- **The 0.7 (5) release build left no stale record**, where 0.6 (4)'s had. Not understood. So the
+  step that forgets one has found a real one only in a dry run.
+
 To do:
 
-- [ ] See it with a stale record present. After the next release build, a dry run of
-  `uninstall.sh --variant release --widget` should list a record to forget, and the uninstall
-  should then take the placed widgets away.
+- [ ] See it with a stale record present: a dry run of `uninstall.sh --variant release --widget`
+  lists a record to forget, and the uninstall then takes the placed widgets away.
 
 ## The hard-coded folder, and the sandbox
 
