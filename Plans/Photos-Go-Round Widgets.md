@@ -622,6 +622,11 @@ and no larger.
 - **The cache does get deep.** The timelines handed over at 23:09 had 19 and 15 entries, from
   pictures fetched during earlier wakes.
 
+**An undisturbed run after the identity fix, 23:24 to 23:40.** One extension process for sixteen
+minutes with both agents up. The extra-large widget's timelines were 20 entries each, the fill
+limit; the small widget's were 7 and 10. Reloads came at 23:24:21 and 23:31:52. The process's peak
+reached 152.6 MB and it was not killed.
+
 **What Syd's point about sources does to the memory question.** Syd, 2026-10-08: "it is highly
 unlikely that anybody will use folders on iPhones. Slightly more likely to use on an iPad. On the
 other hand, photos library is the expected use case". Everything measured so far is the cost of
@@ -679,8 +684,7 @@ and then we can test photos access".
   app's permission, and have failed because the widget is Debug-signed and the permission was
   given to a Release-signed build. If so, a Debug widget asking for Photos fails for the same
   reason, and that says nothing about whether a widget can use its app's Photos permission. Fixing
-  the shared identity first makes the Photos test mean something. `TODO.md`, *Debug and Release
-  builds share one privacy identity*.
+  the shared identity first makes the Photos test mean something. It is fixed; see below.
 - **The fix for the shared identity, tried without changing the project, 2026-10-08.** Syd chose
   to fix it first, with one signing requirement that every configuration's build states.
   - *Why the two builds disagree.* Each signature states a requirement of its own by default. The
@@ -712,7 +716,13 @@ and then we can test photos access".
   - *How it is to be shown working.* With the Release agent running, the Debug app is run once so
     that its agent starts. One Documents prompt is expected, for the Debug build, since the
     permission on record was given to a Release build that states the old requirement. After that
-    one is allowed, both agents should refresh every five minutes with no prompt. Not yet run.
+    one is allowed, both agents should refresh every five minutes with no prompt.
+  - *Shown working, 23:24 to 23:40.* Syd ran the Debug app with the Release agent already up. The
+    Debug agent started at 23:24:11 and was prompted once, at 23:24:16, with `Failed to match
+    existing code requirement`; Syd allowed it. Both agents then refreshed at 23:29, 23:34 and
+    23:39, eight refreshes in all, with no prompt and no failure to match. Before the fix each such
+    round raised two or three prompts. The Release agent in `/Applications` was not rebuilt and
+    still states its old requirement; it meets the shared one now on record, as expected.
   - *Not known: whether a Release export keeps it.* The release script archives and then exports,
     and the export signs again. If it drops the stated requirement, the Release app keeps its
     default one, and still meets a permission given to a Debug build that states the shared one.
@@ -879,7 +889,8 @@ and took them for the two widgets asking. The privacy daemon's log names who ask
   prompt, so it is the likeliest trigger; how is not established.
 - **This is the existing product's, not the widgets'.** Release and Debug builds of the app share
   the identifier `com.sydpolk.photosgoround`, so the privacy system cannot keep their permissions
-  apart. It is in `TODO.md`, *Debug and Release builds share one privacy identity*.
+  apart. It is fixed, with one signing requirement stated by every build; *Next: the app's
+  sources, then Photos* has the fix and the run that showed it working.
 - **Lasting.** Whether the bookmark still opens after a restart, after the app is rebuilt, or after
   the folder moves.
 - **iOS.**

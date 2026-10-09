@@ -83,7 +83,8 @@ struct BuildVariantTests {
     /// another. Left to itself each signature states its own: Release asks for
     /// a Developer ID certificate and Debug for the development one, and with
     /// both agents running macOS prompted for Documents on every refresh.
-    /// `TODO.md`, *Debug and Release builds share one privacy identity*.
+    /// `Plans/Photos-Go-Round Widgets.md`, *Next: the app's sources, then
+    /// Photos*, has the log and the fix.
     ///
     /// **It must not name an identifier.** Xcode signs a Debug build's helper
     /// libraries with the same flags, their identifiers differ from the
