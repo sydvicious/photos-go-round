@@ -20,8 +20,12 @@ design that works the same on the Mac and on devices that never had an agent.
     carry it.
   - For now the settings are hard-coded: 1 minute, and `~/Documents/Coins/Raw Coin Images`, read
     recursively, as the source.
+  - Next in the proof of concept, once the 1-minute and memory readings are in: the widget reads
+    the app's preferences for its sources, in place of the hard-coded folder.
+  - Then test Photos access from the widget.
   - Find out how a widget that has been placed keeps its name.
-  - Find out whether the sandboxed extension can read the hard-coded folder, and how.
+  - Decide how a widget gets pictures from a folder macOS protects, such as one in `~/Documents`.
+    The extension can't read one itself; see *The hard-coded folder, and the sandbox*.
   - Spike: does a widget change its photograph every minute, and does the extension's memory stay
     flat as a timeline gets longer?
   - Measure a picture at the extra-large widget's size, to set TinyCache's space for 30.
@@ -57,8 +61,14 @@ design that works the same on the Mac and on devices that never had an agent.
 - **On iOS and iPadOS it is a normal app.** There is no menubar there; the settings are reached
   through the app. Syd, 2026-10-08.
 - **Its settings are its own.** It can't share settings with the rest of the product line.
-- **All the widgets share one database and one set of settings.** Each has its own TinyCache, not
-  its own settings.
+- **The Photos library is the expected source; folders are the lesser case.** On an iPhone hardly
+  anyone will use a folder, on an iPad slightly more will, and on every platform the Photos library
+  is what people are expected to choose. Syd, 2026-10-08.
+- **The widgets share the app's sources.** Every widget shows pictures from the sources set in the
+  app that carries it. Syd, 2026-10-08.
+- **The only setting a widget has is how often it updates.** Each widget has its own interval and
+  its own TinyCache, and nothing else of its own.
+- **All the widgets share one database.**
 - **Widgets may show the same picture as each other.** Nothing is done to prevent it.
 - **The menubar app and the widgets share through an App Group.** They are separate processes, so
   the settings and the database live in the group's shared container.
@@ -86,6 +96,9 @@ design that works the same on the Mac and on devices that never had an agent.
 - **The menubar app has a second TinyCache of its own, for previews of the widgets.** A preview
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
 - **Widgets in every size the platform offers.** No families left out.
+- **A photograph is fitted inside the widget, whole, with black around it.** As everywhere else in
+  Photos-Go-Round. Eventually every fill and fit option is supported on every surface; fit is the
+  one built now. Syd, 2026-10-08.
 - **The intervals offered are 1, 5, 10 and 30 minutes, and 1, 2, 4, 8 and 24 hours.** Ten seconds
   isn't feasible: Apple's guidance is entries about 5 minutes apart. One minute is dropped if the
   system won't honour it. Syd, 2026-10-08.
@@ -104,7 +117,10 @@ design that works the same on the Mac and on devices that never had an agent.
 
 - `Plans/Product Strategy.md` (2026-09-22) names this product: *Photos-Go-Round Widgets* on macOS, and
   on iOS, iPadOS, visionOS and watchOS.
-- Nothing is built. `ConsumerKind.widget` and `Log.widget` exist and are unused.
+- What exists: the `TinyCache` package target with its tests, and the proof-of-concept widget
+  extension, `Photos-Go-Round Widget`, embedded in `Photos-Go-Round.app`. It has not been run.
+- `ConsumerKind.widget` and `Log.widget` in the kit exist and are unused; the widget links
+  `TinyCache` and not the kit.
 
 # Detailed discussions
 
@@ -180,6 +196,66 @@ the size of that picture's file, which sets TinyCache's space. Then the same on 
 or skips, 1 minute is dropped and 5 minutes is the shortest. If memory stays flat as entries go up,
 one picture at a time holds by design. If it climbs, the climb gives the longest timeline the
 extension can hand over, and a short interval gets more reloads of fewer entries each.
+
+**First measurements, 2026-10-08**, from Syd's Debug build with a small and an extra-large widget
+on the desktop, reading coin scans through the bookmark. One process served everything.
+
+- **The extension went far past 30 MB and was not killed.** Its peak read 34.7 MB after the first
+  picture, 113.1 MB after the fourth and 116.4 MB a few seconds later, and it went on running. So
+  on this Mac, in this build, there is no 30 MB ceiling in force. Whether that is the Mac, or a
+  build run from Xcode, is not known. An iPhone is expected to kill it.
+- **The peak comes from fetching, not from drawing.** It rose while a picture was being fetched
+  and resized, and one line caught the footprint at 62.3 MB mid-fetch. Between fetches it sat at 7
+  to 8 MB.
+- **So "the original is never decoded whole" does not hold for these files.** Resizing one coin
+  scan cost tens of megabytes, up to about 100. What the scans are, in format and in pixels, was
+  not logged and needs to be. This is the thing to fix before an iPhone: it argues for asking the
+  source for a small picture where the source can give one, as Photos can.
+- **Drawing runs in the extension**, which settles "from memory, not checked" above: the `drew`
+  lines come from the extension's own process.
+- **Entries are drawn when the timeline is handed over, not when they are due.** A two-entry
+  timeline had both entries drawn in the same second it was handed over, a minute before the second
+  was due. So a picture's file is needed at handover and not after.
+- **Drawing cost almost nothing.** `now` moved from 7.6 to 7.7 MB across two entries, and the peak
+  did not move. That is two entries; 5, 10 and 20 are still to be read.
+- **The widget gallery fetches a picture for each of the five sizes** to show its previews, which
+  is five fetches before anything is placed.
+- **Still to read**: whether a picture changes each minute and how late, which needs the widgets
+  left up for a while.
+
+**Memory, read again at 22:56 the same evening**, across three extension processes and 74 drawn
+entries, the last process alive for eight minutes with the app quit and one agent running.
+
+- **A fresh process starts at 4.6 MB.**
+- **One fetch takes the peak to about 110 MB.** In each fresh process the peak went from 4.6 MB to
+  108.6 or 114.0 MB on the first picture fetched. Readings caught mid-fetch were 45 to 68 MB.
+- **It does not grow with the number of pictures.** After dozens of fetches the peaks were 113.5,
+  116.4 and 120.1 MB. So the cost is one picture's resize, paid each time and given back, not
+  something that builds up.
+- **Between fetches it sits at 6 to 10 MB.**
+- **Timelines of up to 13 entries were handed over at 7 to 10 MB.** 1, 2, 5, 8, 11 and 13 entries
+  read 7.3, 7.6, 9.6, 7.4, 7.4 and 8.2 MB. That is the flat line the spike was looking for, as far
+  as it goes.
+- **Drawing is not yet separated from fetching.** The extension goes on filling while the system
+  draws, so the readings at the moment of drawing, 7.5 to 45.9 MB, include a fetch in progress. The
+  peak never rose at a handover that had no fetch in it.
+- **Nothing was killed**, at 120 MB.
+
+**What is still to measure for memory.**
+
+- **What a coin scan is**: its format and its size in pixels, logged at each fetch, to say why one
+  resize costs 110 MB and whether another way of resizing costs less.
+- **The size on disk of a picture at each widget size**, logged at each fetch, for TinyCache's
+  space for 30.
+- **Drawing by itself**, with filling held off while a timeline is drawn.
+- **The same on an iPhone**, where the ceiling is expected to be enforced. On Syd's own phone, and
+  after Photos works on the Mac.
+
+**Timing, from the same read.** The extra-large widget's timeline asked to be reloaded at 22:53:41
+and was reloaded at 22:53:43. The small widget's was not due until 22:56:42 and was reloaded with
+it, at 22:53:44: the system reloaded both widgets together. The extension is not filling far
+between wakes; the most waiting was 3 and 4 pictures, so timelines are 4 or 5 entries and a reload
+comes about every five minutes.
 
 ## Spike: CarPlay widgets
 
@@ -384,6 +460,218 @@ carries. No new app target yet. What that means, from reading the project file t
 - **What moves later.** The extension's code goes over to the menubar app's target unchanged; only
   where it is embedded, and its identifier, change.
 
+## Running the proof of concept
+
+**What it is.** One widget, *Photos-Go-Round* with the build's suffix, in all five sizes. It shows
+one photograph filling the widget. When it has no photograph it says why on its face: "Can't read
+…" with what the system said, or "No pictures in …".
+
+**To run it.** Syd runs the `Photos-Go-Round` scheme from Xcode, which launches the app and so
+installs its agent as any launch does. Then Edit Widgets on the desktop, and add *Photos-Go-Round
+(Debug)*. To check only that it compiles, build the `Photos-Go-Round Widget` scheme, which registers
+nothing.
+
+**What each wake does.** It takes everything waiting in TinyCache, up to 20, as entries a minute
+apart; with nothing waiting it fetches one picture and shows that. It then keeps one more, hands the
+timeline over, and goes on filling to 20 for as long as the system leaves it running. It asks to be
+reloaded one interval after its last entry. With nothing to show it asks again in 15 minutes.
+
+**What to read.** Every line the extension logs carries its memory, `now` and `peak`:
+
+    /usr/bin/log show --info --last 1h --predicate 'subsystem == "com.sydpolk.photosgoround" AND category == "widget"'
+
+- `timeline asked` and `timeline handed over, N entries` — how often the system reloads, and how
+  long each timeline was.
+- `filled, N waiting` — how far the extension got before it was stopped.
+- `drew <file>` — when an entry's view was drawn, and in which process: the line appears only if the
+  drawing runs in the extension. That settles what the memory section calls "from memory, not
+  checked".
+
+**What the first run answers.**
+
+- Whether the sandboxed extension can read the folder at all.
+- Whether a photograph changes each minute, and how late.
+- Whether `peak` stays flat as timelines go from 1 entry to 20.
+
+**What it leaves out.**
+
+- **The space for 30.** Only the fill limit of 20 is enforced; no size ceiling is, until a picture
+  at the extra-large size has been measured.
+- **A TinyCache per widget.** There is one per size, so two widgets of one size share. A widget has
+  no name yet.
+- **Photos as a source.** Only the folder.
+- **Walking the folder once.** Each picture fetched walks the whole folder again to choose one at
+  random, holding only the one path. Fine for a folder of thousands; not looked at beyond that.
+- **The release script.** `Scripts/release-build.sh` checks the nested bundles it knows by name,
+  and has not been taught the widget extension.
+
+**Measured while building it, 2026-10-08.** A `Claude` build of the `Photos-Go-Round` scheme took
+the widget extension's registration count from none to one, and `pluginkit -r` on the embedded
+`.appex` took it back. Building the `Photos-Go-Round Widget` scheme alone registered nothing.
+
+**Timing, undisturbed**, 22:48 to 22:58, one extension process throughout, one agent running, no
+prompts.
+
+| Widget | Handed over | Entries | Reload asked for | Reloaded | Off by |
+|---|---|---|---|---|---|
+| Extra-large | 22:48:41 | 5 | 22:53:41 | 22:53:43 | 2 s late |
+| Small | 22:48:42 | 8 | 22:56:42 | 22:53:44 | 3 min early |
+| Extra-large | 22:53:44 | 4 | 22:57:44 | 22:58:00 | 16 s late |
+| Small | 22:53:45 | 5 | 22:58:45 | 22:57:58 | 47 s early |
+
+- **Reloads come when asked, within seconds.** Two were 2 and 16 seconds late.
+- **The system reloads both widgets together.** Whichever is due first brings the other with it,
+  early. The early one loses nothing: pictures it was handed and had not shown yet go back to
+  waiting.
+- **A reload about every five minutes** is 288 a day, far over the 40 to 70 the guide gives. The
+  system is allowing it for now; the guide says a widget gets more reloads than usual in its first
+  days. Longer timelines are what would bring it down, and those need the cache fuller than the 3
+  to 7 pictures it reaches between wakes.
+- **When each picture actually appeared is not in the log.** The extension is not awake for that.
+  Syd watched them change.
+
+**The second build of the proof of concept** adds what the memory reading lacked:
+
+- **`fetched for <size>, <type> <pixels> <MB> → <pixels> <KB>`** on every fetch: what the original
+  is and what was written.
+- **Filling waited two seconds after a timeline was handed over**, so that the memory read at each
+  `drew` line was the drawing's alone. Taken out once it had answered that; see below.
+
+**What the second build showed, 23:01.**
+
+- **Drawing costs next to nothing.** With no fetch in progress, four small entries took the
+  extension from 8.1 to 8.5 MB and six extra-large ones from 8.6 to 9.5 MB. The peak did not move.
+  So a timeline's length is not what threatens the ceiling, and one picture in memory at a time
+  holds for drawing.
+- **A 38-megapixel JPEG resized for almost nothing.** `public.jpeg 6288×6032 7.4 MB → 342×328 72
+  KB`, with the process's peak at 11.9 MB afterwards. So the 110 MB peaks are not what every coin
+  scan costs. They came from particular files, of a kind or size not yet caught by the new line.
+- **A small widget's picture is about 72 KB on disk**, at 342×328. An extra-large widget's has not
+  been measured: the one caught was a 640×401 original, smaller than the widget, written as it was
+  at 99 KB.
+- **The extension is stopped within two seconds of handing over.** The fill that waited two
+  seconds never began: no line from the process after its handovers, half a minute on. So "if the
+  extension survives and is still running" does not happen in the way the design hoped. Earlier
+  fills ran only in the second or two before the system stopped the process, mostly while the other
+  widget's timeline was still being built.
+- **So the two-second wait is taken out again.** It answered the drawing question and then starved
+  the cache.
+
+**The first builds filled the widget and cropped the photograph.** That was the agent's choice and
+not asked for. Syd, 2026-10-08: "I noticed that the photos are not fitting inside the widget", and
+of fit against fill, "at some point that will be an option for all of this". The third build fits
+the whole photograph inside the widget, and TinyCache writes each picture at the size that fits
+and no larger.
+
+- **The figures above were taken at the fill size**, which for a squarish coin in the wide
+  extra-large widget is about twice the fit size each way: 1408×1351 against roughly 717×688. So
+  the 691 KB on disk and the 37 MB peak for one extra-large fetch should both come down, and are to
+  be read again.
+- **The fill figures are kept, as the fill case.** Syd, 2026-10-08: "eventually, I want to support
+  all of the fill/fit options everywhere, so your measurements are still worth something". When
+  fill is an option, a filled picture is the larger one, and TinyCache's space has to be sized for
+  it: 400 to 720 KB at the extra-large size, against 144 to 268 KB fitted.
+- **Pictures already cached at the fill size are still shown**, scaled to fit, until they have had
+  their turn.
+
+**Where the 110 MB comes from, read at 23:09 from the third build.** The per-fetch line caught it.
+
+- **The coin scans are enormous.** Of 49 fetches in twelve minutes, 26 were of originals over 40
+  megapixels, and many were around 300: `public.jpeg 23024×13488 57.0 MB`, `22656×13312 67.3 MB`.
+  The largest was 33280×20395, 678 megapixels, in a 68 MB file. All were JPEG.
+- **One such fetch is the whole peak.** In a fresh process, fetching a 23024×13488 scan for the
+  small widget took the peak from 5.0 to 97.8 MB, and the next, 22656×13312 for the extra-large,
+  took it to 112.3 MB.
+- **The cost follows the original's size in pixels, not the widget's.** That 310-megapixel scan
+  cost about 93 MB to write a 328×192 picture. A 38-megapixel JPEG written at about the same size
+  cost about 4 MB. Roughly a third of a megabyte per megapixel of original.
+- **So an ordinary photograph is cheap.** At that rate a 12-megapixel picture is about 4 MB and a
+  48-megapixel one about 15 MB, inside 30 MB with the 5 to 8 MB the extension holds anyway. The
+  coin scans are the unusual case, not the widget. That is an estimate from two points and wants
+  checking against real photographs.
+- **Fit made the pictures on disk smaller, as expected.** Small: 22 to 73 KB. Extra-large, fitted:
+  144 KB at 552×688, 172 KB at 852×688, 268 KB at 1171×688. Filled, it had been 400 to 720 KB. So
+  space for 30 at the extra-large size is about 9 MB, on these few. Extra-large portrait is not
+  measured; no one has placed one.
+- **The cache does get deep.** The timelines handed over at 23:09 had 19 and 15 entries, from
+  pictures fetched during earlier wakes.
+
+**What Syd's point about sources does to the memory question.** Syd, 2026-10-08: "it is highly
+unlikely that anybody will use folders on iPhones. Slightly more likely to use on an iPad. On the
+other hand, photos library is the expected use case". Everything measured so far is the cost of
+shrinking a file from a folder inside the extension. On an iPhone, where the 30 MB ceiling is
+expected to bite, the source will nearly always be Photos, and Photos can be asked for a picture
+at the size wanted. So the figure that matters for the phone is what a Photos request at
+extra-large size costs the extension, which is not yet measured. The folder figures matter for the
+Mac, where nothing has been killed at 120 MB.
+
+**What that leaves open for the design.** A wake is the only time the extension reliably runs. If
+the cache is to get deeper than one or two pictures, the fetching has to happen before the timeline
+is handed over, for a bounded time or a bounded number of pictures. How long the system waits for a
+timeline before giving up is not known. Not decided.
+
+## Next: the app's sources, then Photos
+
+Syd, 2026-10-08: "we really should get photos working on mac before we try phone. I don't want to
+have to copy a bunch of photos into a simulator image. I will use my real device to test". So the
+order is Photos on the Mac first, and the iPhone is tested on his own phone, not in a simulator.
+
+
+Syd, 2026-10-08: "the next step, when we get there, is the read the app's preferences for sources,
+and then we can test photos access".
+
+- **What the sources are.** The existing app keeps its list of folders and Photos albums in its
+  preferences, `com.sydpolk.photosgoround` with the configuration's suffix. The widget would take
+  its sources from that list in place of the one hard-coded folder.
+- **How a sandboxed extension can read them.** The wallpaper extension already reads those
+  preferences, by an entitlement that names the domain. That is fine for the proof of concept and
+  not for the Store. The other way is for the app to write the list into the App Group container.
+- **A folder in the list still needs a bookmark.** Knowing a folder's path is not being let into
+  it; that is today's finding. So for each folder source the app leaves a bookmark, as the probe
+  does for the one folder now.
+- **Photos is the open question.** A Photos source needs the extension to be allowed into Photos,
+  by its own permission or by the app's. The privacy system would not prompt for the widget over a
+  folder; whether it will over Photos is what the test finds out.
+- **What it takes, from reading the code, 2026-10-08.**
+  - *The list.* The app's sources are `SourceSpec` values in its preferences: a kind (folder or
+    Photos collection), a locator (a path or a collection's identifier), whether it is recursive,
+    and whether it is enabled. `Preferences` in `PhotosGoRoundAgentAPI` reads them, and the
+    wallpaper extension already links that and reads the same domain. The widget does the same.
+  - *Folders.* The app leaves a bookmark for each folder source, where the probe leaves one for the
+    one hard-coded folder. The app is what changes the sources, so it leaves the bookmark as it
+    adds the folder, at the moment the person has just chosen it in the open panel; nothing extra
+    has to run. Syd, 2026-10-08: "the app is making the changes". Two cases fall outside that:
+    folders already in the list before this is built, which the app can bookmark when it next
+    launches, and a folder added with `pgr_ctl`, which gets no bookmark until the app next runs.
+  - *Photos.* A new kind of source in TinyCache that asks Photos for a picture at the widget's size
+    and writes it, so the extension never holds an original. Today a source hands TinyCache a file
+    and TinyCache shrinks it; that has to turn round, so that a source writes a picture at a size.
+    The extension needs the Photos entitlement and a usage description.
+- **The shared privacy identity will muddy the Photos test.** When the widget was first refused
+  the folder, the privacy daemon logged `Failed to match existing code requirement for subject
+  com.sydpolk.photosgoround` in the same second. So the widget's request may be judged against the
+  app's permission, and have failed because the widget is Debug-signed and the permission was
+  given to a Release-signed build. If so, a Debug widget asking for Photos fails for the same
+  reason, and that says nothing about whether a widget can use its app's Photos permission. Fixing
+  the shared identity first makes the Photos test mean something. `TODO.md`, *Debug and Release
+  builds share one privacy identity*.
+- **Whose sources.** Syd came back to this the same day: "the widgets sharing the app's sources.
+  the only setting a widget would have is how often it updates." Read here as: the sources belong
+  to the app that carries the widgets, which is the existing app in the proof of concept and the
+  menubar app later. Design Decisions still says the widgets product's settings are not shared
+  with the rest of the product line; that line is left as it is, and now speaks of the menubar
+  app's sources.
+- **Where a widget's one setting would live.** A widget's interval is its own, so it has to be kept
+  per placed widget. The system's Edit Widget panel is made for exactly that: a widget declares a
+  choice, the system keeps each placed widget's answer and hands it to the extension on every wake.
+  Against that, Design Decisions says all of the settings are reached through the menubar app,
+  which would need the app to tell placed widgets apart. Not decided.
+- **No controls go on the widget's face.** Syd, 2026-10-08: "I don't want to have to cram the
+  controls into the small of an extra-small widgets available space". The Edit Widget panel is not
+  drawn in the widget's space, and not by us: the widget declares one choice, "Update every", and
+  the system draws a panel of its own for it, opened by right-clicking the widget. From memory, not
+  checked on 27: the panel is the system's own size, larger than a small widget.
+
 ## The hard-coded folder, and the sandbox
 
 For now the source is `~/Documents/Coins/Raw Coin Images`, read recursively. A widget extension is
@@ -396,13 +684,154 @@ wallpaper extension is built.
   files. The App Store doesn't accept it.
 - **For the Store**, the person chooses the folder in the menubar app, which keeps a bookmark to it.
   Whether a bookmark the app makes can be used by its extension is not checked.
-- **`~/Documents` has a privacy prompt of its own on macOS.** Whether that prompt can be raised for
-  an extension, or has to be answered through the app, is not checked.
+- **`~/Documents` has a privacy prompt of its own on macOS, and a widget is never shown it.**
+  Measured 2026-10-08; see below.
 - **Photos is the same kind of question.** The extension needs Photos access of its own, or the
   app's. Not checked.
 
-So the first build finds out whether the extension can read the folder at all. If it can't, the
-widget should say so on its face instead of showing nothing.
+**The first run, 2026-10-08: the extension cannot read the folder.** Syd ran his Debug build and
+placed a medium widget. It showed "Can't read /Users/jazzman/Documents/Coins/Raw Coin Images/: The
+file “Raw Coin Images” couldn’t be opened because you don’t have permission to view it." The log
+says why:
+
+- **The sandbox entitlement worked.** There is no denial from the extension's own sandbox for the
+  folder.
+- **The refusal is macOS's privacy protection of `~/Documents`.** The kernel's line is `System
+  Policy: Photos-Go-Round Widget deny(1) file-read-data /Users/jazzman/Documents/Coins/Raw Coin
+  Images`, and "System Policy" is the privacy system, not the sandbox.
+- **The system will not ask on a widget's behalf.** The privacy daemon logged `Preventing prompt
+  from Avocado widget` for `com.sydpolk.photosgoround.widget.debug`, each time. So no prompt
+  appears, and there is nothing for a person to allow.
+- **The widget is judged by itself.** The request is attributed to the widget extension alone, not
+  to the app that carries it, so the app being allowed into `~/Documents` would not obviously help.
+  Not tested.
+
+So a widget extension cannot read a folder in `~/Documents`, `~/Desktop` or `~/Downloads` by its
+path, whatever entitlement it has. That bears on "the widget extension fills its own TinyCache"
+for any folder a person is likely to choose. The ways forward, none decided:
+
+- **A folder macOS doesn't protect**, for the proof of concept only. A copy of the pictures
+  somewhere like `~/Pictures` would let the rest of the spike run. Whether `~/Pictures` is
+  unprotected is from memory, not checked.
+- **The app does the reading.** An app can be shown the prompt. It reads the folder and writes
+  widget-sized pictures where the extension can read them, in an App Group container. That gives up
+  the extension fetching for itself, for folders like this one.
+- **A bookmark from the app.** A person chooses the folder in the app, and the app passes the
+  extension a security-scoped bookmark to it. A folder a person chose is treated differently by the
+  privacy system. Whether an extension can use a bookmark its app made is not checked.
+
+**Could the app ask, and the widget honour it, with an App Group between them?** Syd's question,
+2026-10-08. What follows is reasoning from the log and from memory; none of it is tested.
+
+- **By permission alone, probably not.** The privacy system keeps its permissions per program, by
+  identifier. The log shows the widget's request judged under the widget's own identifier, with no
+  app named as responsible for it. So the app being allowed into `~/Documents` is a permission the
+  widget doesn't hold.
+- **An App Group doesn't change that.** It gives the two a shared folder of their own. It says
+  nothing to the privacy system about any other folder.
+- **A bookmark is the one way a permission might travel.** The app, once allowed, makes a
+  security-scoped bookmark to the folder and leaves it in the shared container. If the extension
+  can resolve it, the system hands the extension access to that one folder, and access given that
+  way isn't subject to the prompt. The doubt is that such a bookmark is normally tied to the program
+  that made it, and an extension is a different program from its app.
+- **What works for certain is the shared folder itself.** The app reads the pictures and writes
+  widget-sized copies into the App Group container; the extension reads them there. As far as is
+  known this is what photo widgets generally do.
+
+**The bookmark test.** Syd chose to try it, 2026-10-08. It is built and has not been run.
+
+- **An App Group joins the two**: `R5PQPZARC5.com.sydpolk.photosgoround.widgets`, with the
+  configuration's suffix, in the entitlements of the app and of the extension. The extension's
+  `Info.plist` states the name, and the app reads it from there.
+- **The app's half** runs at launch. It reads the folder, which is where the app is shown the
+  privacy prompt for `~/Documents`. Then it leaves two bookmarks to the folder in the group's
+  container, `scoped` made with a security scope and `plain` made without, and asks the widgets to
+  reload.
+- **The extension's half** tries each bookmark before every timeline until one opens the folder:
+  resolve it, start access, list the folder. A folder that opens becomes the source.
+- **The path entitlement is gone.** The extension no longer names the folder in its entitlements,
+  as a Store build could not. So a refusal can now come from the sandbox or from the privacy
+  system, and the kernel's log line says which: `Sandbox:` or `System Policy:`.
+- **How it reads.** If it works the widget shows a coin. If not, its face says what happened to
+  each bookmark: "not there", "did not resolve", or "resolved but unreadable". The same is in the
+  log under `widget: bookmarks:`, and the app's steps are under `widget: app …`.
+- **It is a probe.** `WidgetFolderBookmark` in the app and `BookmarkedFolder` in the extension go
+  once the question is answered, and have no tests: what they find out can only be seen with the
+  extension running under the system.
+
+**The bookmark test worked, 2026-10-08.** Syd ran his Debug build and placed a small and an
+extra-large widget; both showed coins.
+
+- **The plain bookmark opened the folder.** The extension's line: `plain bookmark: opened, 32
+  entries, access started true, stale true`. It listed the same 32 entries the app had.
+- **The security-scoped one did not resolve**: "The file couldn’t be opened because it isn’t in the
+  correct format." So the kind made for the purpose is the one another program can't use, and the
+  ordinary kind carries the access.
+- **No refusal was logged**, from the sandbox or from the privacy system, though the extension no
+  longer names the folder in its entitlements.
+- **"Stale" was true.** The system is saying the bookmark should be made again. It worked anyway;
+  what stale costs over time is not known.
+
+So the answer to Syd's question is yes: the app asks, leaves a bookmark in the App Group
+container, and the widget extension reads the folder for itself. "The widget extension fills its
+own TinyCache" stands for a folder in `~/Documents`.
+
+**What this run does not show.**
+
+- **A sandboxed app.** The app that made the bookmark is the existing one, which is not sandboxed.
+  The Store's menubar app will be, and will get the folder from a person choosing it in an open
+  panel. Whether a plain bookmark from a sandboxed app opens in its extension is a separate test.
+- **An app that a person allowed.** The app's own read of the folder at 22:37:29 raised no prompt
+  and no privacy check was logged for it. It was launched from Xcode, and may have been let in on
+  Xcode's permission. So the bookmark came from an app that was let in, but not shown to be one a
+  person had allowed.
+
+**With the app quit, a fresh extension process opened the bookmark by itself.** Syd quit the app
+and Xcode at about 22:42 and left both widgets up. At 22:43:32 a new extension process started and
+logged `plain bookmark: opened, 32 entries, access started true, stale true`, then handed over
+timelines of 6, 8, 11 and 13 entries. So the extension fetches for itself with no app running.
+
+**The Documents prompts Syd saw were not the widgets'.** He saw prompts for the Documents folder
+and took them for the two widgets asking. The privacy daemon's log names who asked:
+
+- **Five prompts**, at 22:38:08, 22:38:15, 22:38:24, 22:43:26 and 22:43:30, all for the Documents
+  folder, all for the subject `com.sydpolk.photosgoround`, the app's own identifier.
+- **Each was raised by an agent**, `Photos-Go-Round Server`: alternately the Release one in
+  `/Applications`, running since 19:39, and the Debug one from Xcode's build folder, running since
+  22:27:39 when the Debug app was first launched.
+- **Each came with `Failed to match existing code requirement`.** The two agents answer to one
+  privacy identity, the app's, and are signed differently: Developer ID and Apple Development.
+  Allowing one rewrites the permission for its signature, and the other no longer matches. They
+  fall on the agents' five-minute refresh.
+- **The widget was restarted by the answer, not by asking.** The system's widget host listens for
+  permission changes; the new extension process at 22:43:32 started two seconds after the prompt
+  was answered.
+- **Each answered prompt disturbs the widget test.** A sixth prompt came at 22:48:35, from the
+  Release agent, and six seconds later the widget host started a third extension process, which
+  replaced both widgets' timelines part-way through. So a timeline never runs its course while the
+  two agents alternate, and the 1-minute reading needs the alternation stopped first.
+- **Turning off the wallpaper and the screensaver does not stop it.** Syd did, at about 22:49. The
+  prompts come from the agents' own refresh every five minutes, which runs whether or not anything
+  is showing pictures; both agents were still running afterwards.
+- **Not explained**: why these began at 22:38 and not at 22:28 or 22:33, when the Debug agent was
+  already running. The app's bookmark probe first ran at 22:37:29, 39 seconds before the first
+  prompt, so it is the likeliest trigger; how is not established.
+- **This is the existing product's, not the widgets'.** Release and Debug builds of the app share
+  the identifier `com.sydpolk.photosgoround`, so the privacy system cannot keep their permissions
+  apart. It is in `TODO.md`, *Debug and Release builds share one privacy identity*.
+- **Lasting.** Whether the bookmark still opens after a restart, after the app is rebuilt, or after
+  the folder moves.
+- **iOS.**
+
+Photos is a separate permission, and may not behave the same way; that is still to be found out.
+
+**What else the first run showed.**
+
+- **The widget gallery asked for a snapshot in all five sizes at once**, then for the timeline of
+  the one placed: medium, 344×164 points.
+- **With no picture loaded the extension holds about 8 MB.** `now 7.9 MB, peak 8.0 MB`. That is the
+  floor the 30 MB ceiling is measured from.
+- **The extension shows its trouble on its face**, as intended.
 
 ## Research: what Apple's documentation says, 2026-10-08
 

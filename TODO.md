@@ -334,3 +334,7 @@ Syd, 2026-09-27: "add a TODO.md to add the commit hash to the agent dashboard." 
 ## The main app asks Photos for the correct size
 
 Syd, 2026-10-08: "main app ask photos for the correct size". `PHImageManager.requestImage` takes a target size; the agent fetches the original and shrinks it itself today. `Plans/Photos-Go-Round Widgets.md`, *Photos: asking for a picture at a size*.
+
+## Debug and Release builds share one privacy identity
+
+Syd, 2026-10-08: "add the shared identifier problem to TODO.md. Let's fix that." The app is `com.sydpolk.photosgoround` in every configuration, and macOS files an agent's privacy requests under the app that carries it. Release is signed with Developer ID and Debug with Apple Development, so allowing one rewrites the permission for its signature and the other is asked again: five Documents prompts in five minutes with both agents running. The one identifier was chosen on 2026-09-19 "so Photos is answered once" (`BuildVariant.swift`, `agentLabel`). `Plans/Photos-Go-Round Widgets.md`, *The hard-coded folder, and the sandbox*, has the log.

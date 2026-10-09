@@ -69,5 +69,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Whatever this app's wrapper carries and the Mac does not yet have —
         // in a Release build. Debug and Claude install from the Help menu.
         MainActor.assumeIsolated { Installer.shared.startAtLaunch() }
+        // The proof-of-concept widget cannot be let into a protected folder by
+        // itself; this finds out whether a bookmark from here lets it in.
+        WidgetFolderBookmark.leaveForWidget()
     }
 }

@@ -45,6 +45,8 @@
 		AA0000000000000000000903 /* Uninstall Photos-Go-Round.app in Embed Uninstaller */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AA0000000000000000000931 /* Uninstaller.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000932 /* Uninstaller.icon */; };
 		AA0000000000000000000A02 /* PhotosGoRoundDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000A03 /* PhotosGoRoundDisplay */; };
+		AA0000000000000000000B0A /* TinyCache in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B0B /* TinyCache */; };
+		AA0000000000000000000B0D /* Photos-Go-Round Widget.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +91,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA0000000000000000000920;
 			remoteInfo = "Photos-Go-Round Uninstaller";
+		};
+		AA0000000000000000000B0F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000B00;
+			remoteInfo = "Photos-Go-Round Widget";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -137,6 +146,15 @@
 			);
 			name = "Embed Uninstaller";
 		};
+		AA0000000000000000000B0E /* Embed Widget Extension */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = PlugIns;
+			dstSubfolder = Contents;
+			files = (
+				AA0000000000000000000B0D /* Photos-Go-Round Widget.appex in Embed Widget Extension */,
+			);
+			name = "Embed Widget Extension";
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -161,6 +179,7 @@
 		AA0000000000000000000801 /* PhotosGoRound.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = PhotosGoRound.icon; sourceTree = "<group>"; };
 		AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Uninstall Photos-Go-Round.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000932 /* Uninstaller.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Uninstaller.icon; sourceTree = "<group>"; };
+		AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Photos-Go-Round Widget.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -312,6 +331,16 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000B04 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000B05 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -374,6 +403,12 @@
 				AA0000000000000000000902 /* PhotosGoRoundAgentAPI in Frameworks */,
 			);
 		};
+		AA0000000000000000000B03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				AA0000000000000000000B0A /* TinyCache in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -412,6 +447,7 @@
 				AA0000000000000000000441 /* Photos-Go-Round Screensaver$(SAVER_NAME_SUFFIX).saver */,
 				AA0000000000000000000442 /* Photos-Go-Round Wallpaper.appex */,
 				AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */,
+				AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -500,6 +536,7 @@
 				AA0000000000000000000609 /* Tools */,
 				AA0000000000000000000923 /* Uninstaller */,
 				AA0000000000000000000611 /* Wallpaper */,
+				AA0000000000000000000B0C /* Widget */,
 			);
 			path = MacOS;
 			sourceTree = "<group>";
@@ -540,6 +577,15 @@
 			path = Uninstaller;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000B0C /* Widget */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000B04 /* Resources */,
+				AA0000000000000000000B05 /* Sources */,
+			);
+			path = Widget;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -552,6 +598,7 @@
 				000000000000000140000000 /* Resources */,
 				AA0000000000000000000421 /* Embed Agent */,
 				AA0000000000000000000422 /* Embed Wallpaper Extension */,
+				AA0000000000000000000B0E /* Embed Widget Extension */,
 				AA0000000000000000000423 /* Embed Screensaver */,
 				AA0000000000000000000905 /* Embed Uninstaller */,
 				AA0000000000000000000930 /* Record Git Commit */,
@@ -561,6 +608,7 @@
 			dependencies = (
 				AA0000000000000000000431 /* PBXTargetDependency */,
 				AA0000000000000000000432 /* PBXTargetDependency */,
+				AA0000000000000000000B10 /* PBXTargetDependency */,
 				AA0000000000000000000433 /* PBXTargetDependency */,
 				AA0000000000000000000906 /* PBXTargetDependency */,
 			);
@@ -754,6 +802,26 @@
 			productReference = AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */;
 			productType = "com.apple.product-type.application";
 		};
+		AA0000000000000000000B00 /* Photos-Go-Round Widget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000B06 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Widget" */;
+			buildPhases = (
+				AA0000000000000000000B02 /* Sources */,
+				AA0000000000000000000B03 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000B05 /* Sources */,
+			);
+			name = "Photos-Go-Round Widget";
+			packageProductDependencies = (
+				AA0000000000000000000B0B /* TinyCache */,
+			);
+			productName = "Photos-Go-Round Widget";
+			productReference = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -793,6 +861,7 @@
 				AA00000000000000000000C0 /* Photos-Go-Round Server */,
 				AA00000000000000000000E0 /* Photos-Go-Round Wallpaper */,
 				AA00000000000000000000F0 /* Photos-Go-Round Wallpaper Host */,
+				AA0000000000000000000B00 /* Photos-Go-Round Widget */,
 				AA0000000000000000000920 /* Photos-Go-Round Uninstaller */,
 				AA0000000000000000000940 /* Release DMG */,
 				AA0000000000000000000063 /* Photos-Go-RoundTests */,
@@ -919,6 +988,11 @@
 			files = (
 			);
 		};
+		AA0000000000000000000B02 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -951,6 +1025,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000920 /* Photos-Go-Round Uninstaller */;
 			targetProxy = AA0000000000000000000904 /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000B10 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000B00 /* Photos-Go-Round Widget */;
+			targetProxy = AA0000000000000000000B0F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1824,6 +1903,78 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000B07 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		AA0000000000000000000B08 /* Release configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		AA0000000000000000000B09 /* Claude configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Claude;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1926,6 +2077,15 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		AA0000000000000000000B06 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Widget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000B07 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Widget" */,
+				AA0000000000000000000B09 /* Claude configuration for PBXNativeTarget "Photos-Go-Round Widget" */,
+				AA0000000000000000000B08 /* Release configuration for PBXNativeTarget "Photos-Go-Round Widget" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -2011,6 +2171,10 @@
 		AA0000000000000000000A03 /* PhotosGoRoundDisplay */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PhotosGoRoundDisplay;
+		};
+		AA0000000000000000000B0B /* TinyCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TinyCache;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

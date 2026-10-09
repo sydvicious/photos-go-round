@@ -31,7 +31,7 @@ project it finds no test bundles:
 xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" -derivedDataPath "$HOME/.claude/build/photos-go-round/DerivedData"
 ```
 
-That covers all five package test targets. `Package Tests.xctestplan` is
+That covers all six package test targets. `Package Tests.xctestplan` is
 what lists them.
 
 **Nothing generated goes in the repository.** Syd, 2026-09-19: "I really don't
@@ -61,6 +61,7 @@ installed on one Mac at once and none can be mistaken for another:
 | LaunchAgent label | `…photosgoround.server` | `….server.debug` | `….server.claude` |
 | Screensaver bundle | `Photos-Go-Round Screensaver.saver` | `… (Debug).saver` | `… (Claude).saver` |
 | Wallpaper extension | `…wallpaper.extension` | `…wallpaper.debug.extension` | `…wallpaper.claude.extension` |
+| Widget extension | `…photosgoround.widget` | `….widget.debug` | `….widget.claude` |
 
 `-configuration Claude` sets all of it. The three settings that used to be
 passed by hand — `PGR_AGENT_CONDITION`, `WALLPAPER_ID_SUFFIX`,
@@ -95,6 +96,21 @@ but ⌘B there is not inert. Unregister afterwards:
 pluginkit -r "$HOME/.claude/build/photos-go-round/DerivedData/Build/Products/Claude/Photos-Go-Round Wallpaper Host.app/Contents/Extensions/Photos-Go-Round Wallpaper.appex"
 ```
 
+**Since 2026-10-08 building `Photos-Go-Round` registers the widget extension as
+well.** The app carries the proof-of-concept widget in `Contents/PlugIns`, and
+Xcode registers an app's extensions when it builds the app. Measured that day: a
+`Claude` build of the `Photos-Go-Round` scheme took the widget's registration
+count from none to one. It registers `…widget.claude` beside Syd's
+`…widget.debug`, so it cannot replace his, but it does put a *Photos-Go-Round
+(Claude)* widget in his widget gallery. Unregister afterwards:
+
+```bash
+pluginkit -r "$HOME/.claude/build/photos-go-round/DerivedData/Build/Products/Claude/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex"
+```
+
+To check only that the widget compiles, build the `Photos-Go-Round Widget`
+scheme: a bare `.appex` registers nothing. `Plans/Photos-Go-Round Widgets.md`.
+
 **⌘R on an `Install …` scheme is still Syd's to press**, because it changes the
 running system: it bootstraps a job under launchd, restarts his
 `WallpaperAgent`, and replaces an installed bundle. `Scripts/uninstall.sh` is
@@ -108,7 +124,7 @@ not yours to run.
 
 To check something compiles, build the product scheme — `Photos-Go-Round`,
 `Photos-Go-Round Server`, `Photos-Go-Round Saver`, `Photos-Go-Round Wallpaper
-Host`, `Photos-Go-Round Uninstaller`. Hand Syd the Install scheme to run from his
+Host`, `Photos-Go-Round Widget`, `Photos-Go-Round Uninstaller`. Hand Syd the Install scheme to run from his
 own Xcode.
 
 **Build the uninstaller; never run it.** Running `Uninstall Photos-Go-Round.app`
@@ -177,5 +193,6 @@ a clean build succeeded. `Plans/Build Plan.md`.
   builtin. No binary writes a log file. Test runs log under
   `com.sydpolk.photosgoround.tests` instead. Categories: `console` is everything
   the agent prints on standard output, `cache` the queue's own lines,
-  `system-wallpaper` the extension, `saver` the screensaver, `install` what the
+  `system-wallpaper` the extension, `saver` the screensaver, `widget` the widget
+  extension, `install` what the
   app installs at launch and from its Help menu.
