@@ -11,6 +11,7 @@ Things to look into, deferred out of the phase list. Each one earns its own plan
 Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist for final release".
 
 - [ ] **A finished DMG.** *A finished DMG*, below.
+- [ ] **The proof-of-concept widget is out of `Photos-Go-Round.app`.** It comes out when there is a menubar app to carry it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
@@ -329,3 +330,7 @@ Syd, 2026-09-27: "add to TODO to do some more investigation of the Screen Saver 
 ## The commit hash on the dashboard
 
 Syd, 2026-09-27: "add a TODO.md to add the commit hash to the agent dashboard." The app already records it — `PGRGitCommit` in its `Info.plist`, from the *Record Git Commit* phase — and shows it in the About box with Option held; the service's own bundle does not carry it yet. `Plans/Release DMG.md`.
+
+## The main app asks Photos for the correct size
+
+Syd, 2026-10-08: "main app ask photos for the correct size". `PHImageManager.requestImage` takes a target size; the agent fetches the original and shrinks it itself today. `Plans/Photos-Go-Round Widgets.md`, *Photos: asking for a picture at a size*.
