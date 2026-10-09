@@ -15,7 +15,12 @@ design that works the same on the Mac and on devices that never had an agent.
 
 - *macOS, in the existing app* — the widget is carried by Photos-Go-Round.app and released in it.
   Syd, 2026-10-09: "there is no menubar app yet, so this is the vehicle."
-  - Release it. `Scripts/release-build.sh` checks the widget extension with the other bundles.
+  - Release it, as 0.5 (3). `Scripts/release-build.sh` checks the widget extension with the other
+    bundles. The first attempt, on 2026-10-09, built 0.5 (2), and was lost: the script writes its
+    DMG into Xcode's DerivedData and copies it nowhere, and DerivedData was cleared before the DMG
+    was copied out. The releases folder already held a `Photos-Go-Round 0.5 (2).dmg` from
+    2026-09-27, built before any widget work, and that is what was then installed. So the build
+    number goes up first, and the new DMG is copied to the releases folder as soon as it exists.
   - After the release, read whether the exported app kept the shared signing requirement; the
     script says so if it did not.
   - The interval is hard-coded, at 5 minutes, until there are individual settings panels. Make it
