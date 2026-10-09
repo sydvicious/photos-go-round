@@ -73,7 +73,10 @@ public enum Scrub {
 
     /// The saver's cache inside `legacyScreenSaver`'s container, and the
     /// wallpaper extension's Application Support inside its own — where each
-    /// keeps the last picture it showed.
+    /// keeps the last picture it showed. And the widgets' two folders: the
+    /// pictures a widget has cached, inside the widget extension's container,
+    /// and the bookmarks the app left for it in the App Group's. Measured
+    /// 2026-10-09: a Debug build was deleted and both were still on disk.
     public static func protectedPaths(for variant: BuildVariant, home: URL) -> [URL] {
         let containers = home.appending(path: "Library/Containers")
         return [
@@ -81,6 +84,9 @@ public enum Scrub {
                 path: "com.apple.ScreenSaver.Engine.legacyScreenSaver/Data/Library/Caches/\(variant.saverIdentifier)"),
             containers.appending(
                 path: "\(variant.wallpaperExtensionIdentifier)/Data/Library/Application Support"),
+            containers.appending(
+                path: "\(variant.widgetExtensionIdentifier)/Data/Library/Caches/TinyCache"),
+            home.appending(path: "Library/Group Containers/\(variant.widgetAppGroup)/WidgetSource"),
         ]
     }
 

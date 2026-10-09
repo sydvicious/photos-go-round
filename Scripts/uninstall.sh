@@ -37,7 +37,7 @@ usage() {
 Removes what Photos-Go-Round's installs put on this Mac.
 
 USAGE
-  ./Scripts/uninstall.sh (--variant <name> ... | --all) [--agent] [--wallpaper] [--saver] [--dry-run]
+  ./Scripts/uninstall.sh (--variant <name> ... | --all) [--agent] [--wallpaper] [--saver] [--widget] [--dry-run]
 
   --variant <name>  release, debug or claude: whose copies to remove. May be
                     given more than once.
@@ -52,7 +52,11 @@ WHAT EACH ONE REMOVES
                 picture.
   --saver       Deletes the Photos-Go-Round Screensaver bundle from
                 ~/Library/Screen Savers and stops the hosts holding it.
-                With none of the three, it removes all of them.
+  --widget      Unregisters the widget extension and stops its process. Any
+                widget placed on the desktop or in Notification Center goes
+                with it. The app that carries the extension stays where it is,
+                and registers it again the next time it is built or launched.
+                With none of the four, it removes all of them.
   --dry-run     Says what would go and removes nothing.
 
 WHAT IT NEVER TOUCHES
@@ -66,7 +70,7 @@ while [[ $# -gt 0 ]]; do
     take_variant_option "$@"
     if (( CONSUMED > 0 )); then shift "$CONSUMED"; continue; fi
     case "$1" in
-        --agent|--wallpaper|--saver|--dry-run) PASSED+=("$1") ;;
+        --agent|--wallpaper|--saver|--widget|--dry-run) PASSED+=("$1") ;;
         -h|--help) usage; exit 0 ;;
         *) echo "unknown option: $1" >&2; usage >&2; exit 2 ;;
     esac

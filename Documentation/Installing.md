@@ -172,7 +172,7 @@ Installed from the schemes instead: ⌘R all three, in the order above.
 ./Scripts/uninstall.sh --variant debug
 ```
 
-**It says which build**: `--variant release`, `debug` or `claude`, more than once if wanted, or `--all` for every configuration's copy — three labels, three saver names, three extension identifiers, all from `BuildVariant`. Or one piece at a time with `--agent`, `--wallpaper`, `--saver`. `--dry-run` says what would go and removes nothing. The app's Help menu removes one piece of its own build.
+**It says which build**: `--variant release`, `debug` or `claude`, more than once if wanted, or `--all` for every configuration's copy — three labels, three saver names, three wallpaper and three widget extension identifiers, all from `BuildVariant`. Or one piece at a time with `--agent`, `--wallpaper`, `--saver`, `--widget`. `--dry-run` says what would go and removes nothing. The app's Help menu removes one piece of its own build.
 
 The library, cache and preferences are left alone. `Scripts/scrub-data.sh`, with the same `--variant` or `--all`, deletes them — current and retired names alike — after stopping that build's agent.
 

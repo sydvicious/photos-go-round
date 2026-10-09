@@ -333,3 +333,7 @@ Syd, 2026-09-27: "add a TODO.md to add the commit hash to the agent dashboard." 
 ## The main app asks Photos for the correct size
 
 Syd, 2026-10-08: "main app ask photos for the correct size". `PHImageManager.requestImage` takes a target size; the agent fetches the original and shrinks it itself today. `Plans/Photos-Go-Round Widgets.md`, *Photos: asking for a picture at a size*.
+
+## The uninstaller inside the app wrapper
+
+Syd, 2026-10-09: "Figure out a way to package the uninstaller inside the app wrapper itself." A copy is in `Contents/Helpers` today, and the one people are sent to is on the disk image.

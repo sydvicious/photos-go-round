@@ -29,7 +29,7 @@ USAGE
   pgr_install wallpaper [--from <path>] [--dry-run]
   pgr_install start [--variant <name>]
   pgr_install stop [--variant <name>]
-  pgr_install uninstall [--agent] [--saver] [--wallpaper] [--variant <name>] [--dry-run]
+  pgr_install uninstall [--agent] [--saver] [--wallpaper] [--widget] [--variant <name>] [--dry-run]
   pgr_install scrub --variant <name> [--dry-run]
 
 OPTIONS
@@ -40,8 +40,9 @@ OPTIONS
                   every product here has a space in its name.
   --dry-run       Print what would happen and change nothing.
   --agent         For uninstall: which parts to remove. With none of the
-  --saver         three, it removes all of them.
+  --saver         four, it removes all of them.
   --wallpaper
+  --widget
   --variant <name>
                   release, debug or claude: whose agent start and stop act on,
                   and whose copies uninstall removes. start and stop default to
@@ -90,6 +91,8 @@ func parse(_ arguments: [String]) throws -> Options {
             options.parts.insert(.saver)
         case "--wallpaper":
             options.parts.insert(.wallpaper)
+        case "--widget":
+            options.parts.insert(.widget)
         case "-h", "--help":
             options.command = "help"
         case let other:
@@ -180,7 +183,7 @@ do {
         }
 
     case "uninstall":
-        // Naming none of the three means all of them, which is what somebody
+        // Naming none of the four means all of them, which is what somebody
         // typing `uninstall` on its own means.
         let parts = options.parts.isEmpty ? Set(Uninstall.Part.allCases) : options.parts
         let plan = Uninstall.plan(

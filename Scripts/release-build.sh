@@ -24,6 +24,10 @@ TEAM_ID="R5PQPZARC5"
 DERIVED_DATA="${PGR_BUILD_ROOT:-$HOME/Library/Developer/Xcode/DerivedData/Photos-Go-Round-scripts}"
 BUILD_DIR="$DERIVED_DATA/release"
 PROFILE="pgr-notary"
+# Where a finished release is kept. Syd, 2026-10-09: "Release script should copy
+# resulting dmg to /Users/jazzman/iCloud/dev/Photos-Go-Round Releases/". Until
+# then the image stayed in DerivedData, and one was lost the day he cleared it.
+RELEASES_DIR="$HOME/iCloud/dev/Photos-Go-Round Releases"
 NOTARIZE=1
 ALLOW_DIRTY=0
 
@@ -38,9 +42,12 @@ OPTIONS
   --output <dir>              Where to build. Default:
                               ~/Library/Developer/Xcode/DerivedData/Photos-Go-Round-scripts/release
                               or $PGR_BUILD_ROOT/release. Never the repository.
+  --releases <dir>            Where the finished DMG is copied. Default:
+                              ~/iCloud/dev/Photos-Go-Round Releases
   --keychain-profile <name>   The notarytool credentials to submit with.
                               Default: pgr-notary.
-  --no-notarize               Sign and package, but upload nothing to Apple.
+  --no-notarize               Sign and package, but upload nothing to Apple and
+                              copy nothing to the releases folder.
   --allow-dirty               Build even with uncommitted changes. The About box
                               then shows the commit with -dirty on it.
                               Gatekeeper refuses the result on any other Mac.
@@ -53,15 +60,20 @@ NEEDS, ONCE PER MAC
         --apple-id "sydvicious@mac.com" --team-id "R5PQPZARC5"
 
 RESULT
-  <output>/Photos-Go-Round <version> (<build>).dmg, and the stapled app beside it in
-  <output>/export. Launching the app installs its agent, as every build does,
-  unless one of the same or a greater version is already installed and running.
+  <releases>/Photos-Go-Round <version> (<build>).dmg. The image it was copied from
+  stays in <output>, with the stapled app beside it in <output>/export. A release
+  whose image is already in <releases> is refused before anything is built: move
+  the build number first, with Scripts/bump-version.sh.
+
+  Launching the app installs its agent, as every build does, unless one of the
+  same or a greater version is already installed and running.
 HELPTEXT
 }
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --output) BUILD_DIR="$2"; shift 2 ;;
+        --releases) RELEASES_DIR="$2"; shift 2 ;;
         --keychain-profile) PROFILE="$2"; shift 2 ;;
         --no-notarize) NOTARIZE=0; shift ;;
         --allow-dirty) ALLOW_DIRTY=1; shift ;;
@@ -81,6 +93,23 @@ if [[ $ALLOW_DIRTY -eq 0 ]] && ! git -C "$REPO" diff --quiet HEAD --; then
     git -C "$REPO" status --short --untracked-files=no >&2
     echo "(or pass --allow-dirty, and the About box will say -dirty)" >&2
     exit 1
+fi
+
+# **A version and build are released once.** On 2026-10-09 the folder already
+# held a 0.5 (2) from September; a second 0.5 (2) was built, and the old image
+# was installed in its place because the two had one name. Asked here, of the
+# version the build is about to be given, so that the answer comes before the
+# archive and two trips to Apple and not after. Asked again of the built app
+# below, which is what names the image.
+if [[ $NOTARIZE -eq 1 ]]; then
+    NEXT_VERSION="$(sed -n 's/^MARKETING_VERSION *= *//p' "$REPO/Config/Version.xcconfig")"
+    NEXT_BUILD="$(sed -n 's/^CURRENT_PROJECT_VERSION *= *//p' "$REPO/Config/Version.xcconfig")"
+    TAKEN="$RELEASES_DIR/Photos-Go-Round $NEXT_VERSION ($NEXT_BUILD).dmg"
+    if [[ -e "$TAKEN" ]]; then
+        echo "already released: $TAKEN" >&2
+        echo "move the build number first: Scripts/bump-version.sh" >&2
+        exit 1
+    fi
 fi
 
 case "$BUILD_DIR" in
@@ -125,6 +154,14 @@ PLIST
 xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$EXPORT_DIR" \
     -exportOptionsPlist "$OPTIONS" -allowProvisioningUpdates -quiet
 
+# **The export signs again and drops the requirement every build states.**
+# Measured 2026-10-09: the exported 0.5 (3) stated the default Developer ID one
+# on the app, the agent and the widget, where the archive it came from stated
+# the team's. So everything is signed once more here, inside first, with the
+# requirement and nothing else changed. `Scripts/sign-shared-requirement.sh`.
+echo "==> Stating the shared signing requirement"
+"$REPO/Scripts/sign-shared-requirement.sh" "$APP" "$IDENTITY" "$TEAM_ID"
+
 # Notarization refuses anything without the hardened runtime, and a hardened
 # agent without the Photos entitlement finds no photographs. Check both here,
 # where the answer is a line of output rather than a rejection from Apple or a
@@ -168,14 +205,13 @@ for bundle in "$APP" "$WIDGET"; do
 done
 # Every build states one signing requirement that all of this team's builds
 # meet, so that a privacy permission given to a Release build is not asked for
-# again by a Debug one (`OTHER_CODE_SIGN_FLAGS` in the project). The export
-# signs again and may not keep it. A release without it still works by itself,
-# so this is said and not refused.
-for bundle in "$APP" "$SERVER" "$WIDGET"; do
+# again by a Debug one. The step after the export puts it on every bundle; this
+# is the check that it is there, where the answer is a line of output and not
+# two builds asking for Photos in turn.
+for bundle in "$APP" "$SERVER" "$UNINSTALLER" "$WALLPAPER" "$SAVER" "$WIDGET"; do
     codesign -d -r- "$bundle" 2>&1 \
-        | grep -q "designated => anchor apple generic and certificate leaf\[subject.OU\] = " \
-        || echo "note: the export did not keep the shared signing requirement on: $bundle
-      A Debug build beside this release will be asked for its permissions again."
+        | grep -q "designated => anchor apple generic and certificate leaf\[subject.OU\] = $TEAM_ID" \
+        || { echo "does not state the shared signing requirement: $bundle" >&2; exit 1; }
 done
 
 notarize() {
@@ -213,12 +249,27 @@ echo "==> Packaging $(basename "$DMG")"
 "$REPO/Scripts/make-dmg.sh" "$APP" "$DMG" >/dev/null
 codesign --sign "$IDENTITY" --timestamp "$DMG"
 
-if [[ $NOTARIZE -eq 1 ]]; then
-    notarize "$DMG"
-    xcrun stapler staple "$DMG"
-    echo "==> Gatekeeper"
-    spctl --assess --type execute -vv "$APP"
-    spctl --assess --type open --context context:primary-signature -vv "$DMG"
+if [[ $NOTARIZE -eq 0 ]]; then
+    echo "$DMG"
+    exit 0
 fi
 
-echo "$DMG"
+notarize "$DMG"
+xcrun stapler staple "$DMG"
+echo "==> Gatekeeper"
+spctl --assess --type execute -vv "$APP"
+spctl --assess --type open --context context:primary-signature -vv "$DMG"
+
+# Never over one that is there. The check before the build asked the same of
+# Version.xcconfig; this asks it of the name the built app gave the image.
+FINAL="$RELEASES_DIR/$(basename "$DMG")"
+if [[ -e "$FINAL" ]]; then
+    echo "$FINAL already exists; the new image is at $DMG" >&2
+    exit 1
+fi
+mkdir -p "$RELEASES_DIR"
+cp "$DMG" "$FINAL"
+
+# The last line on stdout is the image in the releases folder, which is what the
+# Release DMG target reveals in Finder.
+echo "$FINAL"

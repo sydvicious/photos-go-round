@@ -19,13 +19,15 @@ struct UninstallTests {
         loaded: Set<String> = [],
         files: Set<String> = [],
         registered: [WallpaperInstall.Registration] = [],
-        running: [AgentInstall.ForeignAgent] = []
+        running: [AgentInstall.ForeignAgent] = [],
+        widgets: [WallpaperInstall.Registration] = []
     ) -> Uninstall.Surroundings {
         Uninstall.Surroundings(
             isJobLoaded: { loaded.contains($0) },
             fileExists: { files.contains($0.path(percentEncoded: false)) },
             registrations: { registered },
-            runningAgents: { running })
+            runningAgents: { running },
+            widgetRegistrations: { widgets })
     }
 
     /// **Three of everything, from `BuildVariant` rather than a second list.**
@@ -92,6 +94,55 @@ struct UninstallTests {
         #expect(plan.registrations == [ours])
     }
 
+    // MARK: - The widget extension
+
+    private static func widget(_ variant: BuildVariant) -> WallpaperInstall.Registration {
+        .init(
+            identifier: variant.widgetExtensionIdentifier,
+            path: "/Applications/\(variant.rawValue)/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex")
+    }
+
+    /// Syd, 2026-10-09: "we also need the uninstaller to remove widgets". The
+    /// system drops a widget extension when its app is deleted, and the
+    /// uninstaller only moves the app to the Trash; so it is unregistered by
+    /// name, as the wallpaper extension is.
+    @Test("Every configuration's widget extension is looked for, and nobody else's")
+    func everyWidgetAndOnlyOurs() {
+        let ours = BuildVariant.allCases.map(Self.widget)
+        let weather = WallpaperInstall.Registration(
+            identifier: "com.apple.weather.widget", path: "/System/Applications/Weather.app/x.appex")
+        let plan = Uninstall.plan(
+            removing: [.widget], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(widgets: [weather] + ours))
+        #expect(plan.widgets == ours)
+    }
+
+    @Test("Naming one configuration leaves the others' widget extensions alone")
+    func oneConfigurationsWidget() {
+        let plan = Uninstall.plan(
+            removing: [.widget], variants: [.debug], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(widgets: BuildVariant.allCases.map(Self.widget)))
+        #expect(plan.widgets == [Self.widget(.debug)])
+    }
+
+    @Test("What it would do to a widget extension is said, by its identifier and its path")
+    func widgetStepsAreDescribed() {
+        let plan = Uninstall.plan(
+            removing: [.widget], variants: [.release], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(widgets: [Self.widget(.release)]))
+        #expect(plan.describedSteps == [
+            "widget: unregister com.sydpolk.photosgoround.widget",
+            "  /Applications/release/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex",
+        ])
+    }
+
+    @Test("With no widget extension registered, it says so")
+    func noWidgetIsSaid() {
+        let plan = Uninstall.plan(
+            removing: [.widget], launchAgents: agents, screenSavers: savers, surroundings: surroundings())
+        #expect(plan.describedSteps == ["widget: nothing is registered"])
+    }
+
     @Test("Naming one part leaves the others entirely alone", arguments: Uninstall.Part.allCases)
     func partsAreIndependent(_ part: Uninstall.Part) {
         let plan = Uninstall.plan(
@@ -101,10 +152,12 @@ struct UninstallTests {
                 files: Set(BuildVariant.allCases.map {
                     savers.appending(path: "\($0.saverBundleName).saver").path(percentEncoded: false)
                 }),
-                registered: [.init(identifier: "com.sydpolk.photosgoround.wallpaper.extension", path: "/x.appex")]))
+                registered: [.init(identifier: "com.sydpolk.photosgoround.wallpaper.extension", path: "/x.appex")],
+                widgets: [Self.widget(.release)]))
         #expect(plan.agents.isEmpty == (part != .agent))
         #expect(plan.savers.isEmpty == (part != .saver))
         #expect(plan.registrations.isEmpty == (part != .wallpaper))
+        #expect(plan.widgets.isEmpty == (part != .widget))
     }
 
     /// Nothing about a library, a cache or a preference domain appears anywhere

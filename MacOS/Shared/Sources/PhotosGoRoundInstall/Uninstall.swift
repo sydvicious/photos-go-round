@@ -20,7 +20,7 @@ import PhotosGoRoundAgentAPI
 public enum Uninstall {
 
     public enum Part: String, CaseIterable, Sendable {
-        case agent, wallpaper, saver
+        case agent, wallpaper, saver, widget
     }
 
     /// One configuration's agent, and what of it is actually here.
@@ -38,6 +38,8 @@ public enum Uninstall {
         public var foreignAgents: [AgentInstall.ForeignAgent]
         public var registrations: [WallpaperInstall.Registration]
         public var savers: [URL]
+        /// The widget extensions registered, of the builds asked about.
+        public var widgets: [WallpaperInstall.Registration] = []
         /// Whose copies were looked for.
         public var variants: [BuildVariant] = BuildVariant.allCases
 
@@ -77,6 +79,13 @@ public enum Uninstall {
                     steps.append("screensaver: remove \(saver.path(percentEncoded: false))")
                 }
             }
+            if parts.contains(.widget) {
+                if widgets.isEmpty { steps.append("widget: nothing is registered") }
+                for widget in widgets {
+                    steps.append("widget: unregister \(widget.identifier)")
+                    steps.append("  \(widget.path)")
+                }
+            }
             return steps
         }
     }
@@ -88,19 +97,24 @@ public enum Uninstall {
         public var runningAgents: @Sendable () -> [AgentInstall.ForeignAgent]
         /// The process a loaded job owns, by label; nil when it has none.
         public var jobPID: @Sendable (String) -> Int32?
+        /// Every widget extension registered on this Mac, ours and everybody
+        /// else's; the plan keeps ours.
+        public var widgetRegistrations: @Sendable () -> [WallpaperInstall.Registration]
 
         public init(
             isJobLoaded: @escaping @Sendable (String) -> Bool,
             fileExists: @escaping @Sendable (URL) -> Bool,
             registrations: @escaping @Sendable () -> [WallpaperInstall.Registration],
             runningAgents: @escaping @Sendable () -> [AgentInstall.ForeignAgent],
-            jobPID: @escaping @Sendable (String) -> Int32? = { _ in nil }
+            jobPID: @escaping @Sendable (String) -> Int32? = { _ in nil },
+            widgetRegistrations: @escaping @Sendable () -> [WallpaperInstall.Registration] = { [] }
         ) {
             self.isJobLoaded = isJobLoaded
             self.fileExists = fileExists
             self.registrations = registrations
             self.runningAgents = runningAgents
             self.jobPID = jobPID
+            self.widgetRegistrations = widgetRegistrations
         }
 
         public static let live = Surroundings(
@@ -114,8 +128,12 @@ public enum Uninstall {
             },
             registrations: { PluginKit.registrations(for: WallpaperInstall.extensionPoint) },
             runningAgents: { Launchctl.agentsOutsideLaunchd(named: AgentInstall.executableName) },
-            jobPID: { Launchctl.pid(of: $0) })
+            jobPID: { Launchctl.pid(of: $0) },
+            widgetRegistrations: { PluginKit.registrations(for: widgetExtensionPoint) })
     }
+
+    /// What every WidgetKit extension registers under.
+    public static let widgetExtensionPoint = "com.apple.widgetkit-extension"
 
     /// The running agents no loaded job owns: the ones somebody started by hand.
     ///
@@ -165,6 +183,17 @@ public enum Uninstall {
                 .filter(surroundings.fileExists)
             : []
 
+        // **By name, because a deleted app takes its widgets with it and a
+        // trashed one may not.** Syd, 2026-10-09: "we also need the uninstaller
+        // to remove widgets". The system drops a widget extension when its app
+        // is deleted; the uninstaller moves the app to the Trash, and
+        // `uninstall.sh` leaves the app where it is.
+        let widgets = parts.contains(.widget)
+            ? surroundings.widgetRegistrations().filter {
+                variants.map(\.widgetExtensionIdentifier).contains($0.identifier)
+            }
+            : []
+
         return Plan(
             parts: parts,
             agents: agents,
@@ -172,6 +201,7 @@ public enum Uninstall {
                 ? handStarted(surroundings.runningAgents(), surroundings: surroundings) : [],
             registrations: registrations,
             savers: savers,
+            widgets: widgets,
             variants: variants)
     }
 
@@ -249,6 +279,23 @@ public enum Uninstall {
             // nothing ends another build's.
             for host in SaverInstall.hosts where !plan.savers.isEmpty && Shell.killall(host) {
                 done.append("screensaver: stopped \(host)")
+            }
+        }
+
+        if plan.parts.contains(.widget) {
+            for widget in plan.widgets {
+                PluginKit.remove(widget.path)
+                done.append("widget: unregistered \(widget.identifier)")
+                done.append("  \(widget.path)")
+            }
+            if plan.widgets.isEmpty { done.append("widget: nothing was registered") }
+            // **By its bundle's path, not its name**, as for the wallpaper:
+            // every configuration's extension process has the same name. A
+            // widget extension goes on running after it is unregistered, and
+            // after its app is deleted — seen 2026-10-09 — until it is stopped.
+            for widget in plan.widgets
+            where Shell.run("/usr/bin/pkill", ["-f", widget.path + "/Contents/MacOS/"]).status == 0 {
+                done.append("widget: stopped the extension process of \(widget.identifier)")
             }
         }
 

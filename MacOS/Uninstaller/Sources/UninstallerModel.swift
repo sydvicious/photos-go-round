@@ -90,6 +90,9 @@ final class UninstallerModel {
                 name: "Photos-Go-Round Screensaver",
                 isPresent: !uninstallPlan.savers.isEmpty),
             Item(
+                name: "Photos-Go-Round Widgets",
+                isPresent: !uninstallPlan.widgets.isEmpty),
+            Item(
                 name: "Your settings",
                 isPresent: !scrubPlan.found.isEmpty),
         ]

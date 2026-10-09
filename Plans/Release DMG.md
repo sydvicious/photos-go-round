@@ -25,6 +25,7 @@ It is the last item on the *Before the first release* checklist.
   embedded in `Photos-Go-Round.app` and copied onto the DMG.
   - A target and a scheme of its own in `Photos-Go-Round.xcodeproj`, built with `xcodebuild` in all three configurations like every other product.
   - Links `PhotosGoRoundInstall` and runs `Uninstall.plan` for its own build variant.
+  - Since 2026-10-09 that plan has a fourth part, the widget extension: it is unregistered by name and its process stopped, and the data it leaves, the pictures it cached and the bookmarks the app left it, is deleted with the rest. The system drops a widget extension when its app is deleted, but leaves both folders and a running process behind. `Photos-Go-Round Widgets.md`, *Uninstalling the widgets*.
   - Then deletes that build's data: the library, the cache, the preferences — the agent's, the wallpaper's and the screensaver's — and the wallpaper extension's own container.
   - The deleting moves out of `Scripts/scrub-data.sh` into `PhotosGoRoundInstall`, and the script becomes a wrapper, as `uninstall.sh` is.
   - Asks, then moves the installed app to the Trash — only from `/Applications`.
@@ -84,10 +85,30 @@ Since 2026-10-09 the bundles it checks include the widget extension, in
 `Contents/PlugIns`, which the app carries until there is a menubar app to carry
 it. The script stops if the extension is missing, is not signed with Developer
 ID under the hardened runtime, has no Photos entitlement, or is not sandboxed,
-and if either the app or the extension lacks the App Group the two share. It
-also reads the signing requirement the exported app, agent and widget state,
-and prints a note, without stopping, if the export did not keep the one every
-build of the team meets. `Photos-Go-Round Widgets.md`.
+and if either the app or the extension lacks the App Group the two share.
+`Photos-Go-Round Widgets.md`.
+
+**It signs once more after the export.** Every build states one signing
+requirement that all of the team's builds meet, so that a privacy permission
+given to one build is not asked for again by another. The export signs with
+Developer ID and drops it: the exported 0.5 (3) stated the default requirement
+on the app, the agent and the widget. So the script runs
+`Scripts/sign-shared-requirement.sh` on what the export produced, which signs
+the app and the code inside it again, inside first, with the requirement and
+nothing else changed, and it stops unless all six bundles state it.
+
+**It copies the finished image to the releases folder**, `~/iCloud/dev/Photos-Go-Round
+Releases` or `--releases <dir>`, once the image is notarized and Gatekeeper has
+accepted it. Syd, 2026-10-09: "Release script should copy resulting dmg to
+/Users/jazzman/iCloud/dev/Photos-Go-Round Releases/". Until then the image
+stayed in DerivedData; one was lost the day DerivedData was cleared, and an
+older image of the same name was installed in its place. `--no-notarize`
+copies nothing.
+
+**It refuses a version and build already in the releases folder**, before it
+builds anything, reading them from `Config/Version.xcconfig`; the build number
+is moved first, with `Scripts/bump-version.sh`. It asks again of the name the
+built app gives the image, and never copies over one that is there.
 
 Every build of the app carries the agent, the wallpaper extension, the
 screensaver and the widget extension, installs and restarts the agent at every

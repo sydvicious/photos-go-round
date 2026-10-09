@@ -49,7 +49,8 @@ struct BuildVariantTests {
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 guard trimmed.hasSuffix(";"), let equals = trimmed.range(of: " = ") else { continue }
                 let key = String(trimmed[trimmed.startIndex..<equals.lowerBound])
-                guard key.hasSuffix("_SUFFIX") || key == "OTHER_CODE_SIGN_FLAGS" else { continue }
+                guard key.hasSuffix("_SUFFIX") || key == "OTHER_CODE_SIGN_FLAGS" || key == "DEVELOPMENT_TEAM"
+                else { continue }
                 var value = String(trimmed[equals.upperBound...].dropLast())
                 if value.hasPrefix("\"") && value.hasSuffix("\"") { value = String(value.dropFirst().dropLast()) }
                 values[key] = value
@@ -97,6 +98,23 @@ struct BuildVariantTests {
             flags.contains("designated => anchor apple generic and certificate leaf[subject.OU] = $(DEVELOPMENT_TEAM)"),
             "\(configuration) states a different requirement: \(flags)")
         #expect(!flags.contains("identifier"), "\(configuration) names an identifier: \(flags)")
+    }
+
+    /// The widget extension's identifier and its App Group are spelled in the
+    /// project and its entitlements from `STORAGE_ID_SUFFIX` and the team, and
+    /// here for the uninstaller, which has to find both by name.
+    @Test("The widget extension and its App Group are named for the build", arguments: configurations)
+    func widgetNamesMatch(_ pair: (String, BuildVariant)) {
+        let (configuration, variant) = pair
+        let suffix = Self.settings[configuration]?["STORAGE_ID_SUFFIX"] ?? "missing"
+        #expect(variant.widgetExtensionIdentifier == "com.sydpolk.photosgoround.widget\(suffix)")
+        #expect(variant.widgetAppGroup == "R5PQPZARC5.com.sydpolk.photosgoround.widgets\(suffix)")
+    }
+
+    @Test("The team is the project's")
+    func teamMatchesTheProject() {
+        let teams = Set(Self.settings.values.compactMap { $0["DEVELOPMENT_TEAM"] })
+        #expect(teams == [BuildVariant.teamIdentifier])
     }
 
     @Test("The identifier suffixes match", arguments: configurations)

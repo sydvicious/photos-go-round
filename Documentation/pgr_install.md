@@ -12,7 +12,7 @@ pgr_install agent     [--from <path>] [--dry-run]
 pgr_install wallpaper [--from <path>] [--dry-run]
 pgr_install start     [--variant <name>]
 pgr_install stop      [--variant <name>]
-pgr_install uninstall [--agent] [--saver] [--wallpaper] [--variant <name>] [--dry-run]
+pgr_install uninstall [--agent] [--saver] [--wallpaper] [--widget] [--variant <name>] [--dry-run]
 ```
 
 ## DESCRIPTION
@@ -56,8 +56,8 @@ Wallpaper Host.app/Contents/Extensions/Photos-Go-Round Wallpaper.appex`.
 `--dry-run`
 Print what would happen and change nothing.
 
-`--agent`, `--saver`, `--wallpaper`
-For `uninstall`, which parts to remove. With none of them, all three.
+`--agent`, `--saver`, `--wallpaper`, `--widget`
+For `uninstall`, which parts to remove. With none of them, all four.
 
 `--variant` *name*
 `release`, `debug` or `claude`. Whose agent `start` and `stop` act on — by

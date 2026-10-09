@@ -21,8 +21,7 @@ design that works the same on the Mac and on devices that never had an agent.
     was copied out. The releases folder already held a `Photos-Go-Round 0.5 (2).dmg` from
     2026-09-27, built before any widget work, and that is what was then installed. So the build
     number goes up first, and the new DMG is copied to the releases folder as soon as it exists.
-  - After the release, read whether the exported app kept the shared signing requirement; the
-    script says so if it did not.
+  - At the next release, read that the installed app states the shared signing requirement.
   - The interval is hard-coded, at 5 minutes, until there are individual settings panels. Make it
     each widget's own setting.
   - Find out how a widget that has been placed keeps its name.
@@ -829,9 +828,21 @@ and then we can test photos access".
   - *What ends it for good.* A Release built after the fix, so that no installed build states an
     old requirement. Until then, each kind of permission can go wrong once, the first time an old
     Release build and a new Debug build meet over it.
-  - *Not known: whether a Release export keeps it.* The release script archives and then exports,
-    and the export signs again. If it drops the stated requirement, the Release app keeps its
-    default one, and still meets a permission given to a Debug build that states the shared one.
+  - *A Release export does not keep it.* Read on the installed 0.5 (3), 2026-10-09: the app, the
+    agent and the widget each stated the default Developer ID requirement, though the archive they
+    were exported from was built with the setting. The export signs everything again and drops it.
+    That does no harm while only the Release build is installed. It matters when a Debug build
+    next runs beside it: a permission answered for the Release build is recorded in a form no
+    Debug build meets.
+  - *So a release signs once more, itself.* `Scripts/sign-shared-requirement.sh` signs an app and
+    the code inside it again, inside first, stating the shared requirement and keeping each
+    signature's identifier, entitlements and flags. `release-build.sh` runs it on what the export
+    produced, then refuses to go on unless all six bundles state the requirement. Tried on a
+    `Claude` build with the development certificate: sixteen pieces signed, identifiers, flags and
+    entitlements unchanged on all of them, the app passing a deep strict check, and the default
+    requirement put back on two of them replaced. On a release it is unrun; the next release is
+    its first.
+
 - **Built, and not run.** Syd, 2026-10-08, with the identity fix committed: "go ahead with
   sources and photos".
   - *The widget reads the app's sources on every wake*, from the app's preferences, and shows the
@@ -1049,6 +1060,42 @@ and then we can test photos access".
   drawn in the widget's space, and not by us: the widget declares one choice, "Update every", and
   the system draws a panel of its own for it, opened by right-clicking the widget. From memory, not
   checked on 27: the panel is the system's own size, larger than a small widget.
+
+## Uninstalling the widgets
+
+Syd, 2026-10-09: "we also need the uninstaller to remove widgets", and then: "or does that happen
+automagically when the app is removed?" Partly, and his own Mac showed which part: he had deleted
+the Debug build that morning.
+
+- **The registration goes by itself when the app is deleted.** After DerivedData was removed the
+  Debug widget extension was no longer registered.
+- **The widget's data does not.** Both of the deleted build's folders were still on disk: the
+  extension's container, with the pictures TinyCache had cached, and the App Group's, with the
+  bookmarks the app had left.
+- **A running extension process does not either.** One was still alive from the deleted bundle
+  until it was killed.
+- **Not known**: whether the system drops a widget extension when its app is moved to the Trash,
+  which is what the uninstaller does, or only when the Trash is emptied.
+
+So the uninstaller now does it by name, as it does for the wallpaper extension. Built, with its
+tests passing; not run for real.
+
+- **A fourth part to an uninstall, `widget`.** It finds the widget extensions registered for the
+  builds it was asked about, unregisters each, and stops each one's process by its bundle's path.
+  `Scripts/uninstall.sh` and `pgr_install uninstall` take `--widget`; with no part named they
+  remove all four.
+- **The scrub removes the widgets' two folders**: `Data/Library/Caches/TinyCache` in the
+  extension's container, and `WidgetSource` in the App Group's. They are tried and not reported,
+  as the wallpaper's and the screensaver's remembered pictures are.
+- **The uninstaller app lists "Photos-Go-Round Widgets"** among what it found.
+- **`BuildVariant` names the widget extension and its App Group** for each configuration, and a
+  test holds them to the project's suffix and team.
+- **A dry run against Syd's Mac found the Release widget extension** in `/Applications`, and
+  nothing for Debug, whose build had been deleted.
+- **Placed widgets cannot be removed one by one**; no API does that. They go when the extension
+  that draws them is unregistered.
+- **`uninstall.sh --widget` on an app left in place does not last**: the app registers its
+  extension again the next time it is built or launched.
 
 ## The hard-coded folder, and the sandbox
 

@@ -128,8 +128,8 @@ Host`, `Photos-Go-Round Widget`, `Photos-Go-Round Uninstaller`. Hand Syd the Ins
 own Xcode.
 
 **Build the uninstaller; never run it.** Running `Uninstall Photos-Go-Round.app`
-uninstalls this build's agent, wallpaper and screensaver, deletes its library and
-preferences, and moves its app to the Trash. Its scheme's Run action is Syd's to
+uninstalls this build's agent, wallpaper, screensaver and widgets, deletes its
+library and preferences, and moves its app to the Trash. Its scheme's Run action is Syd's to
 press, like an `Install …` scheme's. `Plans/Release DMG.md`.
 
 `Scripts/install.sh`, `Scripts/uninstall.sh` and `Scripts/scrub-data.sh` are his
@@ -142,6 +142,17 @@ Apple's notary service; `make-dmg.sh` drives Finder on his screen. An agent may
 run `make-dmg.sh --no-layout` on a `Claude` build to check the image's contents,
 into its own directory — never the arranged image, and never `Release DMG`.
 `Plans/Release DMG.md`.
+
+`Scripts/sign-shared-requirement.sh`, which `release-build.sh` runs on what it
+exports, signs and uploads nothing. An agent may run it on a `Claude` build of
+its own, with `--no-timestamp` and the development identity, to check that it
+still signs every bundle; it changes that build's signatures and nothing else.
+
+**A release is kept in `~/iCloud/dev/Photos-Go-Round Releases`.** Since
+2026-10-09 `release-build.sh` copies its image there, and refuses a version and
+build already there. Look in that folder before saying a version has not been
+released: on 2026-10-09 a 0.5 (2) had been there since September, a second was
+built, and the old one was installed in its place.
 
 ## Launching a built app installs. Never launch one
 

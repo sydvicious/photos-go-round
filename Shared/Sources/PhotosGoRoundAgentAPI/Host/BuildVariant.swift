@@ -122,6 +122,22 @@ public enum BuildVariant: String, Sendable, CaseIterable {
         "com.sydpolk.photosgoround.wallpaper\(identifierSuffix).extension"
     }
 
+    /// The developer team every build is signed for, which is the first part
+    /// of an App Group's name on macOS. `DEVELOPMENT_TEAM` in the project.
+    public static let teamIdentifier = "R5PQPZARC5"
+
+    /// The widget extension's bundle identifier, which is what `pluginkit`
+    /// registers and what names its sandbox container. It begins with the
+    /// app's own, as an extension carried in `Contents/PlugIns` has to, and
+    /// ends with the build's suffix. `Plans/Photos-Go-Round Widgets.md`.
+    public var widgetExtensionIdentifier: String { "com.sydpolk.photosgoround.widget" + identifierSuffix }
+
+    /// The App Group the app and its widget extension share, where the app
+    /// leaves the bookmarks that let the extension into a folder.
+    public var widgetAppGroup: String {
+        "\(Self.teamIdentifier).com.sydpolk.photosgoround.widgets" + identifierSuffix
+    }
+
     /// For the line the agent prints at startup: a port nobody can account for
     /// is worse than no fixed port at all.
     public var description: String {

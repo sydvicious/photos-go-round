@@ -66,12 +66,24 @@ struct ScrubTests {
         #expect(!named.contains { $0.contains(".debug") || $0.contains(".claude") })
     }
 
-    @Test("The remembered pictures are the saver's cache and the extension's Application Support")
+    @Test("The remembered pictures are the saver's cache, the extension's Application Support, and the widgets' two folders")
     func protectedPaths() {
         let paths = Scrub.protectedPaths(for: .debug, home: home).map { $0.path(percentEncoded: false) }
         #expect(paths == [
             path("Library/Containers/com.apple.ScreenSaver.Engine.legacyScreenSaver/Data/Library/Caches/com.sydpolk.photosgoround.saver.debug"),
             path("Library/Containers/com.sydpolk.photosgoround.wallpaper.debug.extension/Data/Library/Application Support"),
+            // The widgets' cached pictures, and the bookmarks the app left
+            // them. Measured 2026-10-09: a Debug build was deleted and both
+            // of its folders were still there afterwards.
+            path("Library/Containers/com.sydpolk.photosgoround.widget.debug/Data/Library/Caches/TinyCache"),
+            path("Library/Group Containers/R5PQPZARC5.com.sydpolk.photosgoround.widgets.debug/WidgetSource"),
         ])
+    }
+
+    @Test("A Release build's widget folders carry no suffix")
+    func releaseWidgetPaths() {
+        let paths = Scrub.protectedPaths(for: .release, home: home).map { $0.path(percentEncoded: false) }
+        #expect(paths.contains(path("Library/Containers/com.sydpolk.photosgoround.widget/Data/Library/Caches/TinyCache")))
+        #expect(paths.contains(path("Library/Group Containers/R5PQPZARC5.com.sydpolk.photosgoround.widgets/WidgetSource")))
     }
 }
