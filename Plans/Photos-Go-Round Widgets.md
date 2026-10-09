@@ -13,28 +13,27 @@ design that works the same on the Mac and on devices that never had an agent.
 
 # Phases
 
-- *macOS* — Photos-Go-Round Widgets.app on the Mac App Store.
-  - Proof of concept first: the widget is built into the existing Photos-Go-Round app, for testing.
-    The menubar app is built separately once that works. Syd, 2026-10-08.
-  - Take the proof-of-concept widget out of Photos-Go-Round.app when there is a menubar app to
-    carry it.
-  - For now the settings are hard-coded: 1 minute, and `~/Documents/Coins/Raw Coin Images`, read
-    recursively, as the source.
-  - Next in the proof of concept, once the 1-minute and memory readings are in: the widget reads
-    the app's preferences for its sources, in place of the hard-coded folder.
-  - Then test Photos access from the widget.
+- *macOS, in the existing app* — the widget is carried by Photos-Go-Round.app and released in it.
+  Syd, 2026-10-09: "there is no menubar app yet, so this is the vehicle."
+  - Release it. `Scripts/release-build.sh` checks the widget extension with the other bundles.
+  - After the release, read whether the exported app kept the shared signing requirement; the
+    script says so if it did not.
+  - The interval is hard-coded, at 5 minutes, until there are individual settings panels. Make it
+    each widget's own setting.
   - Find out how a widget that has been placed keeps its name.
+  - Find out why an occasional Photos fetch costs far more memory than its neighbours.
   - Later: find out which transitions between pictures a widget can really show, and offer them
     as a setting.
-  - Decide how a widget gets pictures from a folder macOS protects, such as one in `~/Documents`.
-    The extension can't read one itself; see *The hard-coded folder, and the sandbox*.
-  - Spike: does a widget change its photograph every minute, and does the extension's memory stay
-    flat as a timeline gets longer?
-  - Measure a picture at the extra-large widget's size, to set TinyCache's space for 30.
-  - Measure what asking Photos for a picture at that size costs the extension in memory.
-- *iOS and iPadOS* — the same app on the iOS App Store.
+- *iOS and iPadOS* — the same widgets in an app on the iOS App Store. Before the Mac's menubar
+  app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested on his own
+  phone, not in a simulator.
   - Investigate how widgets work on iPhone Duo.
   - Find out whether the widget can query Photos while the phone is locked.
+  - Read the extension's memory on the phone, where the 30 MB ceiling is expected to be enforced.
+- *macOS menubar app* — Photos-Go-Round Widgets.app on the Mac App Store.
+  - Take the widget out of Photos-Go-Round.app when the menubar app carries it.
+  - Have the app write its sources into the App Group container: the Store does not accept the
+    entitlement by which the widget reads the app's preferences today.
 - *watchOS* — watch widgets, with the iPhone app as their agent.
 - *CarPlay* — the iPhone's small widget, shown in the car.
   - Spike: how does a photograph look there, and how often may it change on the road?
@@ -84,12 +83,19 @@ design that works the same on the Mac and on devices that never had an agent.
 - **TinyCache is classes and objects, called directly.** A caller gets its answer returned to it;
   nothing reaches TinyCache over HTTP.
 - **Each widget has its own TinyCache.**
-- **TinyCache has space for 30 pictures and fills at most 20.** The space is measured with pictures
-  at the extra-large widget's size, and the room for 30 is in case pictures turn out bigger. It
-  could instead follow each widget's own size.
-- **The widget extension fills its own TinyCache.** It asks the source for its first picture and
-  shows it, then keeps one more; there is probably only one picture in the cache at a time. While it
-  stays running it can fill up to 20.
+- **Each wake shows one picture and keeps one more, and fetches nothing further.** The widget
+  extension asks the source for a picture, shows it, and keeps one for next time, so there is one
+  picture in the cache at a time. Syd, 2026-10-09, choosing this over a cap on fetches: go back to
+  the original rule exactly. It replaces filling toward 20 while the extension stayed running,
+  which made a wake's memory follow how much the wake did. See *A longer run*.
+- **So every change of picture is a reload.** How often a widget changes is how often the system
+  will reload it, whatever interval is asked for.
+- **The interval is five minutes for now.** Syd, 2026-10-09: "set the value for widget refresh to
+  five minutes until we have individual settings panels." At one reload for each change that is
+  288 a day for each widget, against the 1,350 of the one-minute night.
+- **Space for 30 pictures at the extra-large size, measured, is about 12 MB.** That figure was for
+  a cache that filled to 20. With one picture waiting it is far more than is used; it is kept as
+  the measured ceiling should filling come back.
 - **A widget works with a cache of one, or with none.**
 - **On iPhone, TinyCache's files are not protected.** They can be read while the phone is locked,
   which is how it is in the car and on the nightstand.
@@ -99,6 +105,8 @@ design that works the same on the Mac and on devices that never had an agent.
 - **The menubar app has a second TinyCache of its own, for previews of the widgets.** A preview
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
 - **Widgets in every size the platform offers.** No families left out.
+- **A widget waiting for its first photograph shows the app's icon, greyed over, and
+  "Scanning…".** Syd, 2026-10-09. When something has gone wrong it says what instead.
 - **One photograph fades into the next.** Syd, 2026-10-08: "I want the fade transition". Later, a
   person chooses the transition in the widget's settings, from whatever the system actually
   supports.
@@ -499,6 +507,25 @@ reloaded one interval after its last entry. With nothing to show it asks again i
 - Whether a photograph changes each minute, and how late.
 - Whether `peak` stays flat as timelines go from 1 entry to 20.
 
+**While a widget waits.** Syd, 2026-10-09: "I want the app icon with a grey overlay, with
+'Scanning...' in the widgets while they wait for their first pictures." Built, not yet seen:
+
+- *When it shows.* In the system's placeholder, which is what stands in a widget's place while its
+  first timeline is being built, and for any entry that has no photograph and no trouble to
+  report. With Photos allowed to download, that first wait can be long.
+- *When it does not.* "No sources are set", "Photos access is denied" and the like are still said
+  in words, since those want something done.
+- *Where the icon comes from.* The extension asks the system for the icon of the app that carries
+  it, by the app's path, so it is whatever icon the app has. Whether a sandboxed widget extension
+  is given the real icon or a generic one is to be seen. On iOS it will have to come from the
+  extension's own assets.
+- *The placeholder is normally blanked out by the system*, text and pictures both. This one is
+  marked to be drawn as it is.
+- *It did not show on Syd's Mac.* The widgets there already had a picture waiting, so there was
+  nothing to wait for. It is up only for as long as a widget's first fetch takes, which is a
+  fraction of a second from a folder or from a photograph already on the Mac, and longer only
+  when Photos has to download. It is to be looked for on a Mac that has never run the widget.
+
 **The change between pictures.** Syd asked, 2026-10-08, whether the widget animates between
 images. It does nothing of its own: whatever is seen when a picture changes is the system's own
 transition between one timeline entry and the next. From memory, not checked on 27: since macOS 14
@@ -525,7 +552,6 @@ blur-replace, and a widget may not honour all of them.
   at the extra-large size has been measured.
 - **A TinyCache per widget.** There is one per size, so two widgets of one size share. A widget has
   no name yet.
-- **Photos as a source.** Only the folder.
 - **Walking the folder once.** Each picture fetched walks the whole folder again to choose one at
   random, holding only the one path. Fine for a folder of thousands; not looked at beyond that.
 - **The release script.** `Scripts/release-build.sh` checks the nested bundles it knows by name,
@@ -723,9 +749,285 @@ and then we can test photos access".
     23:39, eight refreshes in all, with no prompt and no failure to match. Before the fix each such
     round raised two or three prompts. The Release agent in `/Applications` was not rebuilt and
     still states its old requirement; it meets the shared one now on record, as expected.
+  - *The same fault came back for Photos, 08:24 on 2026-10-09, and why.* Syd opened the Release
+    app from `/Applications`. Its agent was refused Photos, he allowed it at the prompt, and the
+    Debug widget then showed "Photos access is denied." The privacy daemon's lines:
+    - 08:23:50, the Release agent: `Failed to match existing code requirement for subject
+      com.sydpolk.photosgoround and service kTCCServicePhotos`, then a prompt at 08:24:05.
+    - 08:24:07, the permission is written again, for the Release build.
+    - 08:24:09, the Debug widget: `Failed to match`, then `Preventing prompt from Avocado widget`.
+  - *What the fix does and does not do.* A permission records the requirement stated by the build
+    it was given to. The fix makes new builds state one that every build of the team meets. It
+    does nothing for a permission already on record from an older build, and the Release app in
+    `/Applications` is an older build: it still states the Developer ID requirement. So:
+    - The Photos permission on record last night had been given to a Debug build before the fix.
+      The Debug widget met it. The Release agent, started afresh this morning, did not.
+    - Allowing Photos for the Release app wrote its old requirement, which no Debug build meets.
+    - Documents did not go wrong because its last answer, at 23:24, was given to a new Debug build.
+  - *How it settles.* The permission has to be given once more through a build made after the
+    fix. The Debug agent can ask; a widget cannot. Once the shared requirement is the one on
+    record, the old Release build meets it too and is not asked again, as happened with Documents.
+  - *Rerunning the Debug app did not settle it, 08:50.* The widgets restarted with it and were
+    refused again in the same second. No prompt came, because nothing that can prompt was checked
+    afresh: the Debug app shows photographs through its agent, and that agent had been running
+    since 03:45, let in before the permission was rewritten at 08:24. A running process is not
+    checked again. So the Debug app still "has access" while the permission on record no longer
+    covers any Debug build. It takes a freshly started Debug agent, and then Photos granted in
+    the Debug app, to put the shared requirement on record.
+  - *Settled at 08:54.* With the Debug agent restarted and so refused, Syd used *Allow Access…* in
+    the Debug app's album picker. The agent was prompted at 08:54:12 and allowed at 08:54:14. Both
+    widgets showed photographs again at 08:54:16, and the agent re-read its three Photos sources
+    by 08:54:27. No failure to match has been logged for Photos since. The Release agent had been
+    started at 08:51 and let in under the earlier answer, so it has not been checked against the
+    new one; the next time it starts is the test of that.
+  - *What the Settings window did.* After the grant its sources list went on showing "Photos access
+    has not been granted yet" beside two albums, while the agent had already read them. The album
+    picker re-reads after a grant; nothing tells the sources list to. An existing fault in the app,
+    not the widget's.
+  - *What was changed in the app for it, 2026-10-09.* The entry in `TODO.md` this answered, "After
+    granting Photos access from the picker, the albums chosen before still do not work", is
+    removed.
+    - *Done in the album picker always works.* It was held back until a tick changed, so after a
+      grant the only way out was Cancel. Syd: "make the Done button always work, not gated on my
+      changing anything. this will allow me to fix photos access without having to change which
+      collections are selected."
+    - *A grant tells the sources list to read again*, as choosing albums does.
+    - *The app holds the permission, and the red words come from it.* Syd: "since the app has to
+      ask the permissions, the app should have the state of permissions. That red string should
+      be based on that value. Everything else about the agent updating sources, etc., does not
+      have to change", and "all the agent can do is complain back to the app that it does not have
+      permissions". The app reads the agent's Photos permission with every read of the list. An
+      album says it is refused when that value says so; and when access has been given, an album
+      the agent still has down as refused says "scanning…" until the agent's next scan counts it.
+    - *The agent is not changed.* A first attempt put this in the agent, had its list answer with
+      today's permission, and had a grant make it read its sources again. That was taken back out
+      when Syd said where it belonged. So after a grant, the albums are read again at the agent's
+      next scan, which can be up to five minutes; the list says "scanning…" for that long.
+    - *The app's tests for this pass.* They are hosted by the app, whose launch installs an
+      agent, so running them is Syd's; he ran them in Xcode on 2026-10-09. The first run failed
+      four, all faults in tests: two new ones expected the app's one shared change counter to rise
+      by exactly one while other tests were raising it too, and three older ones counted every
+      `GET` as a read of the list, which the new read of the permission doubled.
+    - *A read in flight when the panel closes asks for nothing more.* The read of the list is
+      followed by the read of the permission, and with the panel closed between the two the second
+      was still made. One of the failing tests showed it. The agent first left it as harmless;
+      Syd had it fixed: "that just accrues tech debt". The model now skips the permission read once
+      the panel's polling has been cancelled, and a test holds a list read open, closes the panel,
+      and checks that nothing more is asked.
+  - *Folders are the agent's to be asked about, and the app's.* Syd, 2026-10-09: "the agent
+    controls the file system access permissions since it can trigger the system to ask", and "I
+    suppose we could have the app list out the files in the sources, which should trigger
+    filesystem permissions." The app already lists each folder source, at launch and whenever its
+    sources change, before it leaves that folder's bookmark for the widget; that read is where the
+    app is asked. What is not known is what the app does with the answer: it logs a folder it
+    could not read and shows nothing.
+  - *What ends it for good.* A Release built after the fix, so that no installed build states an
+    old requirement. Until then, each kind of permission can go wrong once, the first time an old
+    Release build and a new Debug build meet over it.
   - *Not known: whether a Release export keeps it.* The release script archives and then exports,
     and the export signs again. If it drops the stated requirement, the Release app keeps its
     default one, and still meets a permission given to a Debug build that states the shared one.
+- **Built, and not run.** Syd, 2026-10-08, with the identity fix committed: "go ahead with
+  sources and photos".
+  - *The widget reads the app's sources on every wake*, from the app's preferences, and shows the
+    folders and the Photos collections that are switched on. A Debug widget reads the Debug app's
+    list. The hard-coded coin folder is gone; it is shown only if it is one of the app's sources.
+  - *A source now writes its own picture*, at the size that fits, where before it handed TinyCache
+    a file to shrink. A folder shrinks an original. Photos is asked for the picture at that size,
+    exactly, and what comes back is written as it is.
+  - *Every source has an equal chance*, whatever it holds: an album of ten is asked as often as a
+    library of twenty thousand. Weighing by size would mean counting.
+  - *One source's trouble does not stop the others.* A folder that can't be read is passed over.
+    The widget says what went wrong only when no source gave it a picture.
+  - *Photos is not asked to download.* A photograph that is only in iCloud comes back as whatever
+    smaller copy is on the Mac, or not at all. That was the agent's choice, for fear of a download
+    of unknown length inside a widget's wake. Syd, 2026-10-08: "After this run, I do want the pics
+    downloaded in Photos." So it changes after the first run, to let Photos download.
+  - *The widget reads its Photos permission and does not ask.* If Photos has not said yes, the
+    widget's face says "Photos access is denied", or "not determined", and so on. That line is the
+    answer to whether a widget can use its app's permission.
+  - *The app leaves a bookmark for every folder source*, at launch and whenever its sources
+    change, in place of the one for the coin folder. The naming of the bookmark files and the
+    leaving and opening are in `TinyCache`, tested, so the app and the extension cannot disagree.
+  - *The extension's entitlements* now name the app's preferences, as the wallpaper extension's
+    do, and Photos. The first is not something the Store accepts.
+  - *Not built*: a source that is a single file or a single Photos asset, and Google albums. They
+    are counted and said to be "of other kinds not shown".
+- **The first run, 23:52.** Syd ran the Debug app, which rebuilt the widget; the widgets were
+  already showing the new build when he wondered about restarting them.
+  - *A sandboxed widget can read the app's sources.* Its first timeline logged `1 folders, 0
+    Photos collections`: the Debug app's list held the coin folder.
+  - *The bookmark for a listed folder works as the probe's did.* The widget logged `the app has
+    left no bookmark` at 23:52:32, the app left one at 23:52:34, and the widget opened the folder
+    through it in the same second.
+  - *A source added in the app reaches the widget at once.* Syd added a Photos album at 23:52:52.
+    The app left its bookmarks again and reloaded the widgets, and the next timeline logged `1
+    folders, 1 Photos collections`.
+  - *Photos let the widget in, under the app's permission.* The widget's first Photos picture came
+    two seconds later: `fetched for systemSmall, photos 2272×1704 → 328×246 30 KB`. The privacy
+    daemon's lines for it are the answer to whose permission: the request came from the widget's
+    process, and was looked up under `subject=com.sydpolk.photosgoround`, the app's identifier, not
+    the widget's own. The result was `authValue=2`, allowed, by consent the person had already
+    given. So a widget uses its app's Photos permission, and needs none of its own.
+  - *That is the opposite of a folder.* The widget's request for the Documents folder was judged
+    under the widget's own identifier, where there is no permission and no way to be asked.
+  - *Photos handed back exactly the size asked for*: 328×246 for the small widget's 328×328 box.
+  - *Not read yet: what a Photos picture costs in memory.* Coin scans were being fetched in the
+    same second, and the peak is the process's, so the two can't be told apart in this run.
+  - *Photos now downloads.* With the run done, the request lets Photos fetch from iCloud, as Syd
+    asked. What a download costs a wake in time is not measured.
+- **Read again at 23:56**, with the folder and one Photos album both in the list.
+  - *Photos pictures are a quarter of the fetches, not half.* 13 from Photos and 39 from the
+    folder in seven minutes, though each source has an equal chance. That build did not let Photos
+    download, so a photograph only in iCloud came back as nothing and the widget fell back to the
+    folder.
+  - *A Photos picture does not move the peak.* Across eight Photos fetches in a row, small and
+    extra-large, from photographs of up to 6048×4024, the process's peak stayed where the last coin
+    scan had left it. It rose only on coin scans, to 174.6 MB on a 33280×20395 one.
+  - *But the extension sits higher once Photos is in use.* Between fetches it had been at 8 to 12
+    MB. After the Photos fetches began it climbed in steps of half a megabyte to three, and sat at
+    24 to 31 MB. On an iPhone that is the whole of the 30 MB before any picture. Whether it keeps
+    climbing, and what it is on iOS, is to be measured.
+  - *Photos pictures on disk*: 19 to 45 KB for the small widget, 99 to 300 KB for the extra-large.
+  - *Syd still saw only coins.* Each widget had just been handed a 20-entry timeline from a cache
+    filled mostly with coins before the album was added, and three of four new fetches were coins.
+  - *A gap this shows: the cache outlives a change of sources.* Pictures already fetched from a
+    source go on being shown after the source is switched off or removed, up to 20 waiting and 20
+    more in the timeline. Nothing cleared TinyCache when the list changed.
+  - *Syd hit it at once.* He removed the coin folder from the Debug app's sources, the app went
+    over to Photos, and the widgets went on showing coins. Two faults, both fixed in the next
+    build:
+    - *The cache.* TinyCache is now kept per list of sources. When the list a widget is showing is
+      no longer the one in force, the pictures cached for it are deleted, and the widget starts
+      again from the sources that are left.
+    - *The app did not tell the widgets.* It asked them to reload only when a Photos collection was
+      chosen in the picker. Adding or removing a folder went through another path that said
+      nothing, so the widgets kept their 20-entry timelines. Every change of sources in the app now
+      leaves bookmarks again and asks the widgets to reload.
+- **Photos alone, 00:00 on 2026-10-09.** Syd ran the build with both fixes; the widgets reloaded
+  on launch and showed photographs from the album, no coins. One fresh extension process, every
+  fetch from Photos.
+  - *The app's reload reached the widgets*: `app asked the widgets to reload, 0 folder sources`,
+    and timelines logged `0 folders, 1 Photos collections`.
+  - *A small widget's Photos picture costs almost nothing.* The process started at 7.5 MB; the
+    first fetch took it to 11.8 MB, which is Photos itself loading, and the next five moved the
+    peak from 12.1 to 13.2 MB.
+  - *An extra-large one can cost a great deal.* `photos 6639×4256 → 1073×688` moved the peak from
+    13.2 to 21.3 MB. `photos 7983×4490 → 1223×688`, a 36-megapixel photograph, moved it to 71.2 MB.
+    Ordinary 12-megapixel photographs at the same widget size did not move it again. So asking
+    Photos for a size does not keep a big original out of the extension's memory: the shrinking is
+    done in the extension's own process, and a large photograph at a large widget size goes well
+    past 30 MB.
+  - *The extension climbed between fetches*, from 12.9 to 28.2 MB across about twenty fetches in
+    two seconds, with no step to match any one picture. That looks like things made during a fetch
+    not being released until the whole wake is over. Each fetch now runs in a release pool of its
+    own; whether that flattens it is to be read.
+  - *Photos pictures on disk at the extra-large size*: 132 to 428 KB.
+- **The climb, before and after the release pool, 00:02 and 00:23.**
+  - *Before.* The old build's last wake, about forty Photos fetches in three seconds: the
+    extension went from 33.6 to 56 MB with the peak unmoved. Each fetch left behind about one
+    decoded picture, some 3 MB for an extra-large one and half a megabyte for a small one.
+  - *After.* The rebuilt widget was first woken at 00:23, when the old timelines ran out. In 27
+    fetches it went from 4.4 MB to a highest of 22.8 MB and ended at 20.7 MB, with a peak of 23.9
+    MB. It rose over the first fetches and then held at about 22 MB for the last ten, dipping once.
+    The old build had reached 28 MB by the same count and was still rising.
+  - *So the pool helps, and one wake does not prove it flat.* The figure to watch is whether the
+    next wakes start from 20 MB and stay there, or add to it.
+  - *No large photograph came up in that wake*, so the 71 MB case was not met again.
+- **A longer run, 00:23 to 00:45, read at 01:04.** One extension process the whole time, Photos
+  only, a small and an extra-large widget, 98 fetches over four wakes.
+
+  | Wake | Fetches | Memory at its start | at its end | Peak so far |
+  |---|---|---|---|---|
+  | 00:23 | 21 | 11.2 MB | 20.7 MB | 23.9 MB |
+  | 00:32 | 15 | 13.7 MB | 23.3 MB | 24.8 MB |
+  | 00:36 | 30 | 14.4 MB | 29.0 MB | 33.9 MB |
+  | 00:44 | 32 | 17.8 MB | 33.6 MB | 38.3 MB |
+
+  - *Memory rises through a wake and falls back before the next.* It ended the four wakes at 21,
+    23, 29 and 34 MB and began the next ones at 14, 14 and 18. So most of what a wake piles up is
+    given back while the extension is stopped.
+  - *How high a wake goes follows how much it does.* About half a megabyte a fetch: 15 fetches
+    added 10 MB, 32 added 16. The two busiest wakes each handed over 20-entry timelines as well.
+    So the release pool did not make a wake flat; it made the pile smaller and let it go afterwards.
+  - *The level it falls back to is creeping up*: 11.2, 13.7, 14.4, 17.8 MB. About 2 MB a wake.
+    Four wakes do not say whether that goes on.
+  - *A busy wake goes past 30 MB without any large photograph.* The last one peaked at 38.3 MB.
+    That is the amount of work, not one picture, and the amount of work in a wake is ours to set:
+    two widgets share the one process, each fills toward 20, and nothing limits how many pictures
+    a single wake fetches.
+  - *The 71 MB photograph was not met again.* In 98 fetches the largest originals were 44, 35, 35
+    and 27 megapixels, and none moved the peak by more than 5 MB, including a 27-megapixel one at
+    the extra-large size. So whatever made a 36-megapixel photograph cost 50 MB the first time is
+    not simply its size. Its format is not logged; Photos reports only pixels.
+  - *Reloads came 15 to 31 seconds after they were asked for*, three times out of three, both
+    widgets together each time. So the last picture of a timeline stays up that much longer.
+  - *The gaps between reloads grew as the cache did*: 8½ minutes, 4, 8½, and then 20, once both
+    timelines had 20 entries. Twenty minutes is 72 reloads a day, at the top of what the guide
+    allows.
+  - *What Syd chose.* Offered a cap on the fetches in a wake, the original rule, or leaving it for
+    the phone, he chose the original rule: show one, keep one more, no further filling. The widget
+    now takes one picture for each timeline and fetches one to replace it. A wake fetches one
+    picture, two the first time. Built; not yet run.
+  - *What that costs.* A timeline is one entry, so every change is a reload, about 1,440 a day at
+    a one-minute interval against the 40 to 70 the guide allows. The system has been generous so
+    far; when it stops, a widget will change only as often as it is reloaded, which the guide puts
+    at every 15 to 60 minutes.
+  - *The original rule's first twelve minutes, 01:27 to 01:39.* The rebuilt widget was first woken
+    at 01:27:58, when the old build's timelines ran out. Each widget was reloaded every 64 seconds,
+    twelve times, each timeline one entry. For the first ten minutes it only worked through the
+    pictures the old build had cached, and sat at 7.1 MB with a peak of 7.6 MB. Its first Photos
+    fetches came at 01:38 and 01:39, both extra-large, and took it to 13 or 14 MB with a peak of
+    18.1 MB. Syd left it running overnight.
+  - *Two hours of it, 01:27 to 03:36.* One extension process throughout, nothing on either
+    widget's face but photographs.
+    - *The system reloaded each widget every 64 seconds, 121 times, without a break.* No gap
+      longer than 65 seconds. So for the first two hours a one-minute interval was honoured by
+      reloads alone, about 56 an hour for each widget. The guide's 40 to 70 a day was passed in the
+      first hour and nothing was held back. Whether that lasts beyond a widget's first days is not
+      something one night shows.
+    - *Memory after a wake's one fetch held at 15 to 16 MB*: 14.9 MB at 01:49, 16.2 MB at 03:25.
+      About a megabyte of creep in two hours.
+    - *The peak held at 20.5 to 21.8 MB, until one fetch.* At 03:18:40, `photos 4608×2592 →
+      1223×688` took the process to 26.4 MB and its peak to 40.0 MB. A 12-megapixel photograph,
+      like dozens of others that moved nothing.
+    - *A guess at why, not checked.* The earlier outlier, a 36-megapixel photograph, added about
+      50 MB; this one, 12 megapixels, added about 18. That is the same 1.4 to 1.5 MB a megapixel
+      both times, which is what holding the whole original decoded would cost. Both came after
+      Photos was allowed to download, and none came before. So a photograph that has to be fetched
+      from iCloud may arrive as its original and be shrunk in the extension, where one already on
+      the Mac is served from a smaller copy Photos keeps. If so, letting Photos download is what
+      makes an occasional wake expensive.
+  - *Four hours and forty minutes of it, to 06:07.* Still one process and still every 64
+    seconds: 263 reloads for each widget, 56 or 57 an hour, no gap over 65 seconds, nothing on
+    either face but photographs. Memory after a wake stayed between 13 and 19 MB in every hour. The
+    peak did not move again from the 40.0 MB of 03:18.
+  - *The whole night, 01:27 to 08:22, just under seven hours.*
+    - *One extension process the whole time.* It was never killed and never restarted.
+    - *390 reloads for each widget, one every 64 seconds, with no gap longer than 67 seconds.* 56 or
+      57 an hour, every hour. The system never rationed it. That is about 1,350 reloads a day for
+      each widget, some twenty times what the guide gives as typical.
+    - *756 fetches from Photos, one a wake for each widget, and never a failure.* Nothing but
+      photographs was ever on either widget's face.
+    - *Memory after a wake averaged 15 to 16 MB in every hour from 02:00 on*: 15.2, 16.0, 15.8,
+      15.4, 15.6, 15.8, 16.3. No creep.
+    - *The peak was 20.5 to 21.8 MB except for one fetch*, the 40.0 MB of 03:18. A few other
+      fetches took the process to 23 to 25 MB for a moment without passing that peak.
+    - *No privacy prompt all night*, with the Release and Debug agents both running.
+    - *On disk*: 380 extra-large pictures averaged 182 KB, largest 459 KB; 376 small ones averaged
+      37 KB, largest 228 KB.
+    - *What it does not show.* What the system does after a widget's first days, when the guide
+      says the extra reloads stop. What an iPhone does. And why one photograph in 756 cost 18 MB
+      more than its neighbours.
+  - *On disk*: the small widget's 51 pictures averaged 35 KB, largest 54 KB. The extra-large
+    widget's 47 averaged 204 KB, largest 394 KB. Space for 30 at the extra-large size, fitted, is
+    about 12 MB at the largest and 6 MB on average.
+- **What the first run answers.**
+  - Whether a sandboxed widget can read the app's preferences at all.
+  - Whether Photos lets the widget in, and under whose permission.
+  - What a Photos picture at the extra-large size costs the extension in memory, which is the
+    figure that matters for an iPhone. The `fetched` line reads `photos`, the photograph's own size
+    in pixels, and the size written.
 - **Whose sources.** Syd came back to this the same day: "the widgets sharing the app's sources.
   the only setting a widget would have is how often it updates." Read here as: the sources belong
   to the app that carries the widgets, which is the existing app in the proof of concept and the

@@ -49,12 +49,14 @@ struct PhotoWidgetView: View {
                     // to bring in, and the transition says how.
                     .id(picture)
                     .transition(.opacity)
-            } else {
-                Text(entry.trouble ?? "Photos-Go-Round")
+            } else if let trouble = entry.trouble {
+                Text(trouble)
                     .font(.caption)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.center)
                     .padding()
+            } else {
+                WaitingView()
             }
         }
         .animation(.easeInOut(duration: 1), value: entry.date)
@@ -69,4 +71,43 @@ struct PhotoWidgetView: View {
         WidgetLog.note("drew \(picture.lastPathComponent)\(image == nil ? ", unreadable" : "")")
         return image
     }
+}
+
+/// What a widget shows while it waits for its first photograph: the app's icon,
+/// greyed over, and the word. Syd, 2026-10-09: "I want the app icon with a grey
+/// overlay, with 'Scanning...' in the widgets while they wait for their first
+/// pictures."
+///
+/// It is what the system shows in a widget's place while the first timeline is
+/// being built, which with Photos allowed to download can take a while. Nothing
+/// has gone wrong when this is up; when something has, the widget says what.
+struct WaitingView: View {
+    var body: some View {
+        ZStack {
+            if let icon = Self.icon {
+                Image(nsImage: icon)
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+            }
+            Color.gray.opacity(0.65)
+            Text("Scanning…")
+                .font(.headline)
+                .foregroundStyle(.white)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The system draws a placeholder with its text and pictures blanked
+        // out. This one is the icon and one word, and is meant to be read.
+        .unredacted()
+    }
+
+    /// The icon of the app that carries this extension, asked of the system by
+    /// the app's own path, so the widget shows whatever icon the app has.
+    @MainActor private static let icon: NSImage? = {
+        // …/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex
+        let app = Bundle.main.bundleURL
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        guard app.pathExtension == "app" else { return nil }
+        return NSWorkspace.shared.icon(forFile: app.path(percentEncoded: false))
+    }()
 }

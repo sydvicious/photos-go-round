@@ -338,6 +338,10 @@ final class CollectionsModel {
             // this visit, and reseeding here would drop a tick made before the
             // button was pressed.
             await refresh()
+            // The sources list is showing these albums as refused, and it polls
+            // on a timer measured in minutes. Syd saw it say "Photos access has
+            // not been granted yet" beside albums the agent had already read.
+            SourceChanges.shared.announce()
         } catch {
             trouble = SourcesModel.explain(error)
         }

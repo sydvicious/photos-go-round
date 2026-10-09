@@ -4,24 +4,50 @@
 // fetched ahead: the widget extension asks for a picture when it is about to
 // show one, from inside its own process.
 
+import CoreGraphics
 import Foundation
 import UniformTypeIdentifiers
 
 public protocol PictureSource: Sendable {
-    /// Up to `count` pictures, chosen at random. Fewer when the source has
-    /// fewer, none when it has none, and an error when it cannot be read at
-    /// all — so "nothing there" and "not allowed in" stay different answers.
-    func pictures(_ count: Int) throws -> [URL]
+    /// Writes one picture, chosen at random, at the largest size that fits
+    /// `box`, in pixels. Nil when the source has no pictures, and an error
+    /// when it cannot be read at all — so "nothing there" and "not allowed in"
+    /// stay different answers.
+    ///
+    /// **The source writes; it does not hand over a file to be shrunk.** A
+    /// folder has an original to shrink. The Photos library can be asked for a
+    /// picture at the size wanted, and then no original is ever held.
+    func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize?
 }
 
-/// A folder on disk, with every folder inside it.
+/// A folder on disk, with every folder inside it unless told otherwise.
 public struct FolderSource: PictureSource {
     public let folder: URL
 
-    public init(folder: URL) {
+    public let recursive: Bool
+
+    public init(folder: URL, recursive: Bool = true) {
         self.folder = folder
+        self.recursive = recursive
     }
 
+    /// A file that will not decode is passed over for another, a few times,
+    /// and then given up on: a folder of things that are not pictures has
+    /// nothing to show, which is not an error.
+    public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        for original in try pictures(Self.attempts) {
+            do {
+                return try PictureResizer().write(original, fitting: box, to: destination)
+            } catch PictureResizer.Failure.notAPicture {
+                continue
+            }
+        }
+        return nil
+    }
+
+    private static let attempts = 3
+
+    /// Up to `count` pictures, chosen at random and none of them twice.
     public func pictures(_ count: Int) throws -> [URL] {
         guard count > 0 else { return [] }
         let manager = FileManager.default
@@ -32,7 +58,9 @@ public struct FolderSource: PictureSource {
         guard
             let files = manager.enumerator(
                 at: folder, includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles, .skipsPackageDescendants])
+                options: recursive
+                    ? [.skipsHiddenFiles, .skipsPackageDescendants]
+                    : [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
         else { return [] }
 
         // A reservoir: the whole folder is walked, and only `count` paths are

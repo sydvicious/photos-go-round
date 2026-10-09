@@ -70,8 +70,33 @@ public struct PictureResizer: Sendable {
             throw Failure.notAPicture(original)
         }
 
-        // Written beside the destination and moved into place, so that a file
-        // with the destination's name is always a whole picture.
+        try Self.encode(image, to: destination)
+        return Resize(
+            originalType: (CGImageSourceGetType(source) as String?) ?? "",
+            originalWidth: Int(width), originalHeight: Int(height),
+            originalBytes: Self.byteCount(of: original),
+            writtenWidth: image.width, writtenHeight: image.height,
+            writtenBytes: Self.byteCount(of: destination))
+    }
+
+    /// Writes a picture that is already the size wanted, as the Photos library
+    /// hands one back. Nothing is decoded and nothing is shrunk; the report's
+    /// original is whatever the library says the photograph is.
+    @discardableResult
+    public func write(
+        _ image: CGImage, originalType: String, originalWidth: Int, originalHeight: Int,
+        to destination: URL
+    ) throws -> Resize {
+        try Self.encode(image, to: destination)
+        return Resize(
+            originalType: originalType, originalWidth: originalWidth, originalHeight: originalHeight,
+            originalBytes: 0, writtenWidth: image.width, writtenHeight: image.height,
+            writtenBytes: Self.byteCount(of: destination))
+    }
+
+    /// Written beside the destination and moved into place, so that a file with
+    /// the destination's name is always a whole picture.
+    private static func encode(_ image: CGImage, to destination: URL) throws {
         let manager = FileManager.default
         let partial = destination.deletingLastPathComponent()
             .appending(path: ".\(UUID().uuidString).partial")
@@ -91,12 +116,6 @@ public struct PictureResizer: Sendable {
             try? manager.removeItem(at: partial)
             throw error
         }
-        return Resize(
-            originalType: (CGImageSourceGetType(source) as String?) ?? "",
-            originalWidth: Int(width), originalHeight: Int(height),
-            originalBytes: Self.byteCount(of: original),
-            writtenWidth: image.width, writtenHeight: image.height,
-            writtenBytes: Self.byteCount(of: destination))
     }
 
     private static func byteCount(of file: URL) -> Int {

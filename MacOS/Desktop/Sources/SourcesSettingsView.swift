@@ -369,7 +369,7 @@ struct SourcesSettingsView: View {
     private static let indent: CGFloat = 14
 
     private func collectionRow(_ source: SourceService.Source, depth: Int) -> some View {
-        let standing = Self.standing(of: source)
+        let standing = Self.standing(of: source, photoAccess: model.photoAccess)
         return HStack(spacing: 8) {
             Image(systemName: "photo.on.rectangle.angled")
                 .foregroundStyle(.secondary)
@@ -400,9 +400,22 @@ struct SourcesSettingsView: View {
     ///
     /// **The words carry it and the colour only underlines it**, the same rule
     /// the folder rows and the missing-albums line already follow.
-    static func standing(of source: SourceService.Source) -> (words: String, isTrouble: Bool) {
+    ///
+    /// **Except the permission, which is the app's to know.** `photoAccess` is
+    /// what the agent says its Photos permission is now, read with the list. A
+    /// refusal is said from that; and when access has been given, a row the
+    /// agent still has down as refused is only waiting to be read.
+    static func standing(
+        of source: SourceService.Source, photoAccess: String? = nil
+    ) -> (words: String, isTrouble: Bool) {
         if source.isMissing { return ("not in this library", true) }
-        if !source.available { return (source.unavailableReason ?? "unavailable", true) }
+        if let refusal = PhotoAccess.refusal(photoAccess) { return (refusal, true) }
+        if !source.available {
+            if PhotoAccess.isReadable(photoAccess), PhotoAccess.isRefusal(source.unavailableReason) {
+                return ("scanning…", false)
+            }
+            return (source.unavailableReason ?? "unavailable", true)
+        }
         // Added a moment ago and not yet walked. Saying "0 photos" would be a
         // claim rather than a delay — the same reason a folder says "scanning…".
         if source.scannedAt == nil { return ("scanning…", false) }

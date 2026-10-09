@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Testing
 
@@ -67,5 +68,59 @@ struct FolderSourceTests {
         #expect(throws: (any Error).self) {
             try FolderSource(folder: missing).pictures(1)
         }
+    }
+
+    @Test("Told not to look inside folders, it finds only the pictures at the top")
+    func notRecursive() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("top.jpg")
+        try scratch.picture("inside/second.png")
+
+        let found = try FolderSource(folder: scratch.url, recursive: false).pictures(10)
+
+        #expect(found.map(\.lastPathComponent) == ["top.jpg"])
+    }
+
+    @Test("It writes one of its pictures at the size that fits")
+    func writesAPicture() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("pictures/coin.jpg", width: 800, height: 400)
+        let written = scratch.url.appending(path: "written.jpg")
+
+        let resize = try FolderSource(folder: scratch.url.appending(path: "pictures"))
+            .writePicture(fitting: CGSize(width: 40, height: 40), to: written)
+
+        #expect(resize?.originalWidth == 800)
+        let size = try #require(pixelSize(of: written))
+        #expect(size.width == 40)
+        #expect(size.height == 20)
+    }
+
+    @Test("A file that will not decode is passed over for one that will")
+    func passesOverABadFile() throws {
+        let scratch = try ScratchFolder()
+        try scratch.text("pictures/broken.jpg")
+        try scratch.picture("pictures/coin.jpg")
+        let folder = FolderSource(folder: scratch.url.appending(path: "pictures"))
+
+        // Which of the two is tried first is chance; neither order may fail.
+        for attempt in 0..<12 {
+            let written = scratch.url.appending(path: "written-\(attempt).jpg")
+            #expect(try folder.writePicture(fitting: CGSize(width: 40, height: 40), to: written) != nil)
+            #expect(pixelSize(of: written) != nil)
+        }
+    }
+
+    @Test("A folder with nothing that decodes writes nothing, and says so")
+    func nothingDecodes() throws {
+        let scratch = try ScratchFolder()
+        try scratch.text("pictures/broken.jpg")
+        let written = scratch.url.appending(path: "written.jpg")
+
+        let resize = try FolderSource(folder: scratch.url.appending(path: "pictures"))
+            .writePicture(fitting: CGSize(width: 40, height: 40), to: written)
+
+        #expect(resize == nil)
+        #expect(pixelSize(of: written) == nil)
     }
 }

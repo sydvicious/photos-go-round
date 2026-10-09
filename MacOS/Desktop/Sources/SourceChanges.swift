@@ -23,5 +23,10 @@ final class SourceChanges {
 
     private init() {}
 
-    func announce() { revision += 1 }
+    func announce() {
+        revision += 1
+        // The widgets read the same sources, and are let into a folder only
+        // through a bookmark this app leaves.
+        WidgetFolderBookmark.leaveForWidget()
+    }
 }

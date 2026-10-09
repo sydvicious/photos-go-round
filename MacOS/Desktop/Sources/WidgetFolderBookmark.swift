@@ -1,46 +1,36 @@
-// A probe: can the app let its widget into a folder macOS protects?
+// The app's half of letting its widget into the folders it shows.
 // `Plans/Photos-Go-Round Widgets.md`, *The hard-coded folder, and the sandbox*.
 //
-// **What was measured first**, 2026-10-08: the widget extension cannot read
-// `~/Documents/Coins/Raw Coin Images` by its path. The privacy system refuses,
-// and will not show a prompt on a widget's behalf.
+// **Measured 2026-10-08**: the widget extension cannot read a folder in
+// `~/Documents` by its path, because the privacy system refuses and will not
+// show a prompt on a widget's behalf. An app can be let in, and a plain bookmark
+// the app leaves in the App Group container opens the folder for the extension.
 //
-// **What this tries.** An app can be shown the prompt. So the app reads the
-// folder, makes bookmarks to it, and leaves them in the App Group container it
-// shares with the widget extension. The extension tries to open each one. Two
-// kinds are left because it is not known which, if either, another program can
-// use: one made with a security scope, and one made without.
-//
-// **It is a probe, not a feature.** The folder is hard-coded, as the widget's
-// settings are for now, and this goes when the question is answered.
+// **So the app leaves a bookmark for every folder source**, when it launches
+// and whenever its sources change. Syd, of when: "the app is making the
+// changes". `FolderBookmarks` in `TinyCache` is both halves of the mechanism;
+// this is only the app deciding when and for which folders.
 
 import Foundation
 import OSLog
 import PhotosGoRoundAgentAPI
+import TinyCache
 import WidgetKit
 
 nonisolated enum WidgetFolderBookmark {
     private static let log = Logger(subsystem: Log.subsystem, category: "widget")
 
-    /// Off the main thread: the first read of the folder waits for as long as
-    /// the privacy prompt is on the screen.
+    /// Off the main thread: the first read of a folder waits for as long as a
+    /// privacy prompt is on the screen.
     static func leaveForWidget() {
+        // A test of the app's models announces source changes as the app does,
+        // and must not reach the real widgets or the real App Group for it.
+        guard !Log.subsystem.hasSuffix(".tests") else { return }
         Task.detached(priority: .utility) { leave() }
     }
 
     private static func leave() {
-        let folder = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
-            .appending(path: "Documents/Coins/Raw Coin Images", directoryHint: .isDirectory)
         let manager = FileManager.default
-
-        do {
-            let entries = try manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-            note("app read the folder, \(entries.count) entries at its top level")
-        } catch {
-            note("app could not read the folder: \(error.localizedDescription)")
-            return
-        }
-
         // The group's name is the widget's to state, in its `Info.plist`, so
         // that the two cannot disagree about it.
         guard
@@ -49,34 +39,31 @@ nonisolated enum WidgetFolderBookmark {
             let group = Bundle(url: widget)?.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String,
             let container = manager.containerURL(forSecurityApplicationGroupIdentifier: group)
         else {
-            note("app found no App Group container to leave a bookmark in")
+            note("app found no App Group container to leave bookmarks in")
             return
         }
         let shared = container.appending(path: "WidgetSource", directoryHint: .isDirectory)
 
-        do {
-            try manager.createDirectory(at: shared, withIntermediateDirectories: true)
-        } catch {
-            note("app could not make \(shared.path(percentEncoded: false)): \(error.localizedDescription)")
-            return
+        let folders = Preferences(suiteName: MacHostEnvironment.preferenceDomain()).sources
+            .filter { $0.kind == .folder }
+        for spec in folders {
+            let folder = URL(fileURLWithPath: spec.locator, isDirectory: true)
+            do {
+                // Read first: this is where the app is asked, if it is going
+                // to be, and a bookmark from an app that was refused carries
+                // nothing.
+                _ = try manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+                try FolderBookmarks.leave(for: folder, in: shared)
+                note("app left a bookmark for \(spec.locator)")
+            } catch {
+                note("app left no bookmark for \(spec.locator): \(error.localizedDescription)")
+            }
         }
-        leave(folder, options: [.withSecurityScope], as: "scoped", in: shared)
-        leave(folder, options: [], as: "plain", in: shared)
 
-        // So the widget tries what was just left, instead of at its next reload.
+        // So the widgets show what has just changed, instead of at their next
+        // reload.
         WidgetCenter.shared.reloadAllTimelines()
-    }
-
-    private static func leave(
-        _ folder: URL, options: URL.BookmarkCreationOptions, as name: String, in shared: URL
-    ) {
-        do {
-            let bookmark = try folder.bookmarkData(options: options)
-            try bookmark.write(to: shared.appending(path: "\(name).bookmark"), options: .atomic)
-            note("app left the \(name) bookmark, \(bookmark.count) bytes")
-        } catch {
-            note("app could not leave the \(name) bookmark: \(error.localizedDescription)")
-        }
+        note("app asked the widgets to reload, \(folders.count) folder sources")
     }
 
     private static func note(_ message: String) {

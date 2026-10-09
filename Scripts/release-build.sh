@@ -133,9 +133,13 @@ echo "==> Checking signatures"
 codesign --verify --deep --strict "$APP"
 SERVER="$APP/Contents/Helpers/Photos-Go-Round Server.app"
 UNINSTALLER="$APP/Contents/Helpers/Uninstall Photos-Go-Round.app"
-for bundle in "$APP" "$SERVER" "$UNINSTALLER" \
-        "$APP/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex" \
-        "$APP/Contents/Resources/Photos-Go-Round Screensaver.saver"; do
+WALLPAPER="$APP/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex"
+SAVER="$APP/Contents/Resources/Photos-Go-Round Screensaver.saver"
+# The widget extension, carried by this app until there is a menubar app to
+# carry it. `Plans/Photos-Go-Round Widgets.md`.
+WIDGET="$APP/Contents/PlugIns/Photos-Go-Round Widget.appex"
+[[ -d "$WIDGET" ]] || { echo "no widget extension in the app: $WIDGET" >&2; exit 1; }
+for bundle in "$APP" "$SERVER" "$UNINSTALLER" "$WALLPAPER" "$SAVER" "$WIDGET"; do
     # `-dvv`: `-dv` prints no Authority lines, so a check of its output never
     # passed — found 2026-09-27, on the first run from the Release DMG target.
     info="$(codesign -dvv "$bundle" 2>&1)"
@@ -144,10 +148,34 @@ for bundle in "$APP" "$SERVER" "$UNINSTALLER" \
     grep -q "flags=.*runtime" <<<"$info" \
         || { echo "no hardened runtime: $bundle" >&2; exit 1; }
 done
-for bundle in "$APP" "$SERVER"; do
+# The widget shows photographs from Photos under the app's permission, so it
+# needs the entitlement as the app and the agent do.
+for bundle in "$APP" "$SERVER" "$WIDGET"; do
     codesign -d --entitlements - --xml "$bundle" 2>/dev/null \
         | grep -q "com.apple.security.personal-information.photos-library" \
         || { echo "no Photos entitlement: $bundle" >&2; exit 1; }
+done
+# The system will not load a widget extension that is not sandboxed.
+codesign -d --entitlements - --xml "$WIDGET" 2>/dev/null \
+    | grep -q "com.apple.security.app-sandbox" \
+    || { echo "the widget extension is not sandboxed: $WIDGET" >&2; exit 1; }
+# The widget is let into a folder only through a bookmark the app leaves in the
+# App Group container the two share, so both have to belong to the group.
+for bundle in "$APP" "$WIDGET"; do
+    codesign -d --entitlements - --xml "$bundle" 2>/dev/null \
+        | grep -q "com.apple.security.application-groups" \
+        || { echo "no App Group entitlement: $bundle" >&2; exit 1; }
+done
+# Every build states one signing requirement that all of this team's builds
+# meet, so that a privacy permission given to a Release build is not asked for
+# again by a Debug one (`OTHER_CODE_SIGN_FLAGS` in the project). The export
+# signs again and may not keep it. A release without it still works by itself,
+# so this is said and not refused.
+for bundle in "$APP" "$SERVER" "$WIDGET"; do
+    codesign -d -r- "$bundle" 2>&1 \
+        | grep -q "designated => anchor apple generic and certificate leaf\[subject.OU\] = " \
+        || echo "note: the export did not keep the shared signing requirement on: $bundle
+      A Debug build beside this release will be asked for its permissions again."
 done
 
 notarize() {

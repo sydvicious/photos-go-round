@@ -88,7 +88,7 @@ final class Collected<Value: Sendable>: @unchecked Sendable {
     func add(_ value: Value) { lock.withLock { held.append(value) } }
 }
 
-/// A source that hands out the pictures it was given, in turn, and counts how
+/// A source that writes the pictures it was given, in turn, and counts how
 /// often it is asked.
 final class StubSource: PictureSource, @unchecked Sendable {
     struct Failed: Error {}
@@ -103,22 +103,49 @@ final class StubSource: PictureSource, @unchecked Sendable {
         self.files = files
     }
 
-    /// How many times `pictures(_:)` has been called.
+    /// How many times it has been asked for a picture.
     var timesAsked: Int { lock.withLock { asked } }
 
     func fail() { lock.withLock { failing = true } }
 
-    func pictures(_ count: Int) throws -> [URL] {
-        try lock.withLock {
+    func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        let file: URL? = try lock.withLock {
             asked += 1
             if failing { throw Failed() }
-            guard !files.isEmpty else { return [] }
-            var chosen: [URL] = []
-            for _ in 0..<count {
-                chosen.append(files[next % files.count])
-                next += 1
-            }
-            return chosen
+            guard !files.isEmpty else { return nil }
+            defer { next += 1 }
+            return files[next % files.count]
         }
+        guard let file else { return nil }
+        return try PictureResizer().write(file, fitting: box, to: destination)
+    }
+}
+
+/// A CGImage of the given size, as a library would hand one back.
+func makeImage(width: Int, height: Int) throws -> CGImage {
+    guard
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue),
+        let image = context.makeImage()
+    else { throw PictureNotWritten() }
+    return image
+}
+
+/// A Photos library with the collections it was given: an identifier, and the
+/// size of the pictures in it, or nil for a collection with none.
+struct FakeLibrary: PhotoLibraryPictures {
+    struct Refused: Error {}
+
+    var collections: [String: (width: Int, height: Int)?] = [:]
+    var refusing = false
+
+    func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
+        if refusing { throw Refused() }
+        guard let size = collections[identifier] ?? nil else { return nil }
+        return LibraryPicture(
+            image: try makeImage(width: size.width, height: size.height),
+            originalWidth: 4032, originalHeight: 3024)
     }
 }

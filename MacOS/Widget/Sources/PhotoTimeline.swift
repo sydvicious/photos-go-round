@@ -1,17 +1,24 @@
 // Turning a TinyCache into a WidgetKit timeline. `Plans/Photos-Go-Round
 // Widgets.md`.
 //
-// **A photograph changes because a timeline has several entries**, each dated
-// one interval after the last, which the system shows in turn without waking
-// this extension. So a timeline can show only what is already on disk when it
-// is handed over.
+// **Each wake shows one picture and keeps one more.** Syd, 2026-10-08: "widget
+// has to request its first picture from the source and serve it, and then fill
+// the cache with one more image. There is probably only one image in the cache
+// at a time."
 //
-// **What each wake does**, Syd, 2026-10-08: "widget has to request its first
-// picture from the source and serve it, and then fill the cache with one more
-// image … if the extension survives and is still running, it can go ahead and
-// fill the cache while that is true up to 20 pictures".
+// **And nothing further.** The first builds went on filling toward 20 for as
+// long as the system left the process running, so that a timeline could carry
+// many entries. Measured 2026-10-09: a wake's memory followed how much the wake
+// did, about half a megabyte a fetch, and a wake that fetched 32 pictures
+// peaked at 38 MB with no large photograph in it. Asked how to bound that, Syd
+// chose this: "go back to your original rule exactly". A wake now fetches one
+// picture, two the first time.
+//
+// **So every change of picture is a reload**, and how often a widget changes
+// is how often the system will reload it, whatever the interval asks for.
 
 import Foundation
+import PhotosGoRoundAgentAPI
 import TinyCache
 import WidgetKit
 
@@ -36,10 +43,13 @@ struct PhotoTimeline: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping @Sendable (PhotoEntry) -> Void) {
-        let cache = Settings.cache(for: context)
+        let specs = Settings.sources()
+        let cache = Settings.cache(for: context, showing: specs)
         let entry = Self.lock.withLock {
             do {
-                return PhotoEntry(date: .now, picture: try cache.preview(), trouble: nil)
+                let picture = try cache.preview()
+                return PhotoEntry(
+                    date: .now, picture: picture, trouble: picture == nil ? Self.nothing(in: specs) : nil)
             } catch {
                 return PhotoEntry(date: .now, picture: nil, trouble: Self.describe(error))
             }
@@ -50,16 +60,16 @@ struct PhotoTimeline: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<PhotoEntry>) -> Void) {
         let now = Date.now
-        let cache = Settings.cache(for: context)
-        WidgetLog.note("timeline asked, \(context.family), \(Int(context.displaySize.width))×\(Int(context.displaySize.height)) points")
+        let specs = Settings.sources()
+        let cache = Settings.cache(for: context, showing: specs)
+        WidgetLog.note(
+            "timeline asked, \(context.family), \(Int(context.displaySize.width))×\(Int(context.displaySize.height)) points, \(Settings.describe(specs))")
 
         let (entries, reload) = Self.lock.withLock { () -> ([PhotoEntry], Date) in
             do {
-                let showings = try cache.take(
-                    upTo: TinyCache.defaultFillLimit, from: now, every: Settings.interval)
+                let showings = try cache.take(upTo: 1, from: now, every: Settings.interval)
                 guard let last = showings.last else {
-                    let trouble = "No pictures in \(Settings.folder.path(percentEncoded: false))"
-                    return ([PhotoEntry(date: now, picture: nil, trouble: trouble)], now + Self.retry)
+                    return ([PhotoEntry(date: now, picture: nil, trouble: Self.nothing(in: specs))], now + Self.retry)
                 }
                 // One more for next time, which is all a wake can count on.
                 _ = try? cache.fill(to: 1)
@@ -72,37 +82,18 @@ struct PhotoTimeline: TimelineProvider {
 
         WidgetLog.note("timeline handed over, \(context.family), \(entries.count) entries, \(entries.first?.trouble ?? "no trouble")")
         completion(Timeline(entries: entries, policy: .after(reload)))
-
-        // Whatever time the system leaves this process is spent filling, one
-        // picture at a time, so that being stopped part-way loses nothing.
-        // Measured 2026-10-08: that time is a second or two. A fill that waited
-        // two seconds after the handover never ran at all.
-        let family = "\(context.family)"
-        Task.detached(priority: .utility) {
-            Self.keepFilling(cache, family: family)
-        }
     }
 
-    private static func keepFilling(_ cache: TinyCache, family: String) {
-        for _ in 0..<TinyCache.defaultFillLimit {
-            let waiting = lock.withLock { () -> Int? in
-                guard
-                    let waiting = try? cache.waiting().count,
-                    let added = try? cache.fill(to: waiting + 1), added > 0
-                else { return nil }
-                return waiting + added
-            }
-            guard let waiting else { return }
-            WidgetLog.note("filled, \(family), \(waiting) waiting")
-        }
+    /// Why there is nothing to show when nothing went wrong.
+    private static func nothing(in specs: [SourceSpec]) -> String {
+        specs.isEmpty
+            ? "No sources are set in Photos-Go-Round."
+            : "No pictures in the sources set in Photos-Go-Round: \(Settings.describe(specs))."
     }
 
-    /// The folder and what the system said about it. The widget shows this on
-    /// its face, since a sandbox refusal is otherwise an empty widget.
+    /// What the system said. The widget shows this on its face, since a
+    /// refusal is otherwise an empty widget.
     private static func describe(_ error: any Error) -> String {
-        """
-        Can't read \(Settings.folder.path(percentEncoded: false)): \(error.localizedDescription) \
-        \(BookmarkedFolder.report)
-        """
+        "Can't get a picture: \(error.localizedDescription)"
     }
 }

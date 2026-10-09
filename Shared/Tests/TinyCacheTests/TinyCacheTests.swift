@@ -163,20 +163,6 @@ struct TinyCacheTests {
         #expect(try cache.fill(to: 5) == 0)
     }
 
-    @Test("A file the source offers that will not decode is passed over for the next one")
-    func undecodableFilesAreSkipped() throws {
-        let scratch = try ScratchFolder()
-        let bad = try scratch.text("originals/broken.jpg")
-        let good = try scratch.picture("originals/coin.jpg")
-        let cache = TinyCache(
-            directory: scratch.url.appending(path: "cache", directoryHint: .isDirectory),
-            source: StubSource([bad, good]), fitting: box)
-
-        try cache.fill(to: 1)
-
-        #expect(try cache.waiting().count == 1)
-    }
-
     @Test("A cached picture is at the widget's size, not the original's")
     func cachedAtWidgetSize() throws {
         let scratch = try ScratchFolder()

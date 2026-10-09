@@ -37,7 +37,6 @@ public struct TinyCache: Sendable {
     private let source: any PictureSource
     private let box: CGSize
     private let fillLimit: Int
-    private let resizer = PictureResizer()
     private let onFetch: (@Sendable (PictureResizer.Resize) -> Void)?
 
     /// - Parameters:
@@ -114,23 +113,19 @@ public struct TinyCache: Sendable {
 
     // MARK: -
 
-    /// One picture from the source into `waiting`. A file that will not decode
-    /// is passed over for another, a few times, and then given up on.
+    /// One picture from the source into `waiting`.
     /// - Returns: Whether a picture was added.
     private func fetchOne() throws -> Bool {
-        let manager = FileManager.default
-        try manager.createDirectory(at: waitingFolder, withIntermediateDirectories: true)
-        for _ in 0..<3 {
-            guard let original = try source.pictures(1).first else { return false }
-            do {
-                let resize = try resizer.write(original, fitting: box, to: try nextWaitingFile())
-                onFetch?(resize)
-                return true
-            } catch PictureResizer.Failure.notAPicture {
-                continue
-            }
-        }
-        return false
+        try FileManager.default.createDirectory(at: waitingFolder, withIntermediateDirectories: true)
+        // In a pool of its own, so that what a fetch made on the way is let go
+        // before the next one. Measured 2026-10-08: twenty Photos fetches in a
+        // row, in one wake, took the extension from 13 MB to 28 MB with nothing
+        // released between them.
+        let destination = try nextWaitingFile()
+        guard let resize = try autoreleasepool(invoking: { try source.writePicture(fitting: box, to: destination) })
+        else { return false }
+        onFetch?(resize)
+        return true
     }
 
     private func settleShown(asOf now: Date) throws {

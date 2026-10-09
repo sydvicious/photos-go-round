@@ -47,6 +47,8 @@
 		AA0000000000000000000A02 /* PhotosGoRoundDisplay in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000A03 /* PhotosGoRoundDisplay */; };
 		AA0000000000000000000B0A /* TinyCache in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B0B /* TinyCache */; };
 		AA0000000000000000000B0D /* Photos-Go-Round Widget.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		AA0000000000000000000B11 /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B12 /* PhotosGoRoundAgentAPI */; };
+		AA0000000000000000000B13 /* TinyCache in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B14 /* TinyCache */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -350,6 +352,7 @@
 				AA0000000000000000000013 /* PhotosGoRoundAgentAPI in Frameworks */,
 				AA0000000000000000000014 /* PhotosGoRoundDisplay in Frameworks */,
 				AA0000000000000000000451 /* PhotosGoRoundInstall in Frameworks */,
+				AA0000000000000000000B13 /* TinyCache in Frameworks */,
 			);
 		};
 		AA00000000000000000000A3 /* Frameworks */ = {
@@ -407,6 +410,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				AA0000000000000000000B0A /* TinyCache in Frameworks */,
+				AA0000000000000000000B11 /* PhotosGoRoundAgentAPI in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -620,6 +624,7 @@
 				AA0000000000000000000011 /* PhotosGoRoundAgentAPI */,
 				AA0000000000000000000012 /* PhotosGoRoundDisplay */,
 				AA0000000000000000000452 /* PhotosGoRoundInstall */,
+				AA0000000000000000000B14 /* TinyCache */,
 			);
 			productName = "Photos-Go-Round";
 			productReference = 000000000000000000000120 /* Photos-Go-Round.app */;
@@ -817,6 +822,7 @@
 			name = "Photos-Go-Round Widget";
 			packageProductDependencies = (
 				AA0000000000000000000B0B /* TinyCache */,
+				AA0000000000000000000B12 /* PhotosGoRoundAgentAPI */,
 			);
 			productName = "Photos-Go-Round Widget";
 			productReference = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */;
@@ -2176,6 +2182,14 @@
 			productName = PhotosGoRoundDisplay;
 		};
 		AA0000000000000000000B0B /* TinyCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TinyCache;
+		};
+		AA0000000000000000000B12 /* PhotosGoRoundAgentAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundAgentAPI;
+		};
+		AA0000000000000000000B14 /* TinyCache */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TinyCache;
 		};

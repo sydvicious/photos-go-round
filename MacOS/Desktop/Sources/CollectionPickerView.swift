@@ -271,7 +271,12 @@ struct CollectionPickerView: View {
                 }
             }
             .keyboardShortcut(.defaultAction)
-            .disabled(model.isWorking || !model.hasChanges)
+            // Not held back for want of a change. Syd, 2026-10-09: "make the
+            // Done button always work, not gated on my changing anything. this
+            // will allow me to fix photos access without having to change which
+            // collections are selected." With nothing ticked or unticked it asks
+            // the agent for nothing, and still tells the sources list to read.
+            .disabled(model.isWorking)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
