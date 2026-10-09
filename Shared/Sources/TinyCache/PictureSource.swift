@@ -20,8 +20,36 @@ public protocol PictureSource: Sendable {
     func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize?
 }
 
+/// A source that can say how many pictures it holds, which is what lets
+/// several of them be weighed against each other. `SeveralSources`.
+public protocol CountedSource: PictureSource {
+    /// What its count is remembered under: all that makes it this source and
+    /// not another, and the same from one process to the next.
+    var countName: String { get }
+
+    /// How many pictures it holds now. An error when it cannot be read at all,
+    /// which is not a count of none.
+    func pictureCount() throws -> Int
+
+    /// Writes a picture as `writePicture` does, and says how many pictures the
+    /// source holds when finding one told it that: a folder is walked whole to
+    /// choose from it, and has counted itself by the end. Nil from a source
+    /// that chooses without counting.
+    func writePictureAndCount(
+        fitting box: CGSize, to destination: URL
+    ) throws -> (resize: PictureResizer.Resize?, pictures: Int?)
+}
+
+extension CountedSource {
+    public func writePictureAndCount(
+        fitting box: CGSize, to destination: URL
+    ) throws -> (resize: PictureResizer.Resize?, pictures: Int?) {
+        (try writePicture(fitting: box, to: destination), nil)
+    }
+}
+
 /// A folder on disk, with every folder inside it unless told otherwise.
-public struct FolderSource: PictureSource {
+public struct FolderSource: CountedSource {
     public let folder: URL
 
     public let recursive: Bool
@@ -35,33 +63,58 @@ public struct FolderSource: PictureSource {
     /// and then given up on: a folder of things that are not pictures has
     /// nothing to show, which is not an error.
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
-        for original in try pictures(Self.attempts) {
+        try writePictureAndCount(fitting: box, to: destination).resize
+    }
+
+    public func writePictureAndCount(
+        fitting box: CGSize, to destination: URL
+    ) throws -> (resize: PictureResizer.Resize?, pictures: Int?) {
+        let (originals, held) = try pick(Self.attempts)
+        for original in originals {
             do {
-                return try PictureResizer().write(original, fitting: box, to: destination)
+                return (try PictureResizer().write(original, fitting: box, to: destination), held)
             } catch PictureResizer.Failure.notAPicture {
                 continue
             }
         }
-        return nil
+        return (nil, held)
     }
 
     private static let attempts = 3
 
-    /// Up to `count` pictures, chosen at random and none of them twice.
-    public func pictures(_ count: Int) throws -> [URL] {
-        guard count > 0 else { return [] }
+    public var countName: String { "folder|\(folder.path(percentEncoded: false))|\(recursive)" }
+
+    /// A walk of the whole folder, as choosing a picture from it is.
+    public func pictureCount() throws -> Int {
+        guard let files = try files() else { return 0 }
+        var count = 0
+        for case let file as URL in files where Self.isPicture(file) { count += 1 }
+        return count
+    }
+
+    /// Everything in the folder, to be walked once.
+    private func files() throws -> FileManager.DirectoryEnumerator? {
         let manager = FileManager.default
         // An enumerator over a folder that is missing or forbidden simply ends,
         // which would read as an empty folder. Listing the top level first is
         // what throws.
         _ = try manager.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
-        guard
-            let files = manager.enumerator(
-                at: folder, includingPropertiesForKeys: nil,
-                options: recursive
-                    ? [.skipsHiddenFiles, .skipsPackageDescendants]
-                    : [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
-        else { return [] }
+        return manager.enumerator(
+            at: folder, includingPropertiesForKeys: nil,
+            options: recursive
+                ? [.skipsHiddenFiles, .skipsPackageDescendants]
+                : [.skipsHiddenFiles, .skipsPackageDescendants, .skipsSubdirectoryDescendants])
+    }
+
+    /// Up to `count` pictures, chosen at random and none of them twice.
+    public func pictures(_ count: Int) throws -> [URL] {
+        guard count > 0 else { return [] }
+        return try pick(count).chosen
+    }
+
+    /// Up to `count` pictures, and how many the folder held to choose from.
+    private func pick(_ count: Int) throws -> (chosen: [URL], held: Int) {
+        guard let files = try files() else { return ([], 0) }
 
         // A reservoir: the whole folder is walked, and only `count` paths are
         // held at any moment, however many pictures there are.
@@ -77,7 +130,7 @@ public struct FolderSource: PictureSource {
                 if slot < count { chosen[slot] = file }
             }
         }
-        return chosen.shuffled(using: &generator)
+        return (chosen.shuffled(using: &generator), seen)
     }
 
     /// By its name alone. Opening each file to find out would cost a read per

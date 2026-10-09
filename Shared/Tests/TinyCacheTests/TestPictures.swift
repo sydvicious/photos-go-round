@@ -89,29 +89,67 @@ final class Collected<Value: Sendable>: @unchecked Sendable {
 }
 
 /// A source that writes the pictures it was given, in turn, and counts how
-/// often it is asked.
-final class StubSource: PictureSource, @unchecked Sendable {
+/// often it is asked, for a picture and for how many it holds.
+final class StubSource: CountedSource, @unchecked Sendable {
     struct Failed: Error {}
+
+    let countName: String
 
     private let lock = NSLock()
     private var files: [URL]
+    private let declared: Int?
+    private let found: Int?
     private var next = 0
     private var asked = 0
+    private var counted = 0
     private var failing = false
+    private var failingToWrite = false
 
-    init(_ files: [URL]) {
+    /// - Parameters:
+    ///   - declared: What it says it holds, when that is not how many
+    ///     files it was given: a source can turn out to hold less than it said.
+    ///   - found: What writing a picture says it holds, for a source that
+    ///     finds that out on the way. Nil for one that does not.
+    init(
+        _ files: [URL], named name: String = UUID().uuidString, counting declared: Int? = nil,
+        finding found: Int? = nil
+    ) {
         self.files = files
+        self.countName = name
+        self.declared = declared
+        self.found = found
     }
 
     /// How many times it has been asked for a picture.
     var timesAsked: Int { lock.withLock { asked } }
 
+    /// How many times it has been asked how many pictures it holds.
+    var timesCounted: Int { lock.withLock { counted } }
+
+    /// Fails at everything from now on.
     func fail() { lock.withLock { failing = true } }
+
+    /// Says how many it holds, and fails when asked for one of them.
+    func failToWrite() { lock.withLock { failingToWrite = true } }
+
+    func pictureCount() throws -> Int {
+        try lock.withLock {
+            counted += 1
+            if failing { throw Failed() }
+            return declared ?? files.count
+        }
+    }
+
+    func writePictureAndCount(
+        fitting box: CGSize, to destination: URL
+    ) throws -> (resize: PictureResizer.Resize?, pictures: Int?) {
+        (try writePicture(fitting: box, to: destination), found)
+    }
 
     func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         let file: URL? = try lock.withLock {
             asked += 1
-            if failing { throw Failed() }
+            if failing || failingToWrite { throw Failed() }
             guard !files.isEmpty else { return nil }
             defer { next += 1 }
             return files[next % files.count]
@@ -134,12 +172,20 @@ func makeImage(width: Int, height: Int) throws -> CGImage {
 }
 
 /// A Photos library with the collections it was given: an identifier, and the
-/// size of the pictures in it, or nil for a collection with none.
+/// size of the pictures in it, or nil for a collection with none. A collection
+/// with pictures holds one of them unless `counts` says otherwise.
 struct FakeLibrary: PhotoLibraryPictures {
     struct Refused: Error {}
 
     var collections: [String: (width: Int, height: Int)?] = [:]
+    var counts: [String: Int] = [:]
     var refusing = false
+
+    func count(inCollection identifier: String) throws -> Int {
+        if refusing { throw Refused() }
+        guard (collections[identifier] ?? nil) != nil else { return 0 }
+        return counts[identifier] ?? 1
+    }
 
     func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
         if refusing { throw Refused() }

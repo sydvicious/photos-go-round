@@ -37,10 +37,11 @@ enum Settings {
     }
 
     /// One source made of all of `specs` that a widget can show: folders and
-    /// Photos collections. Each has an equal chance, whatever it holds.
+    /// Photos collections. Every picture has an equal chance, whichever of
+    /// them it is in.
     static func source(for specs: [SourceSpec]) -> any PictureSource {
         SeveralSources(
-            specs.compactMap { spec -> (any PictureSource)? in
+            specs.compactMap { spec -> (any CountedSource)? in
                 switch spec.kind {
                 case .folder:
                     // Through the bookmark the app left when there is one; by
@@ -51,11 +52,20 @@ enum Settings {
                         ?? URL(fileURLWithPath: spec.locator, isDirectory: true)
                     return FolderSource(folder: folder, recursive: spec.recursive)
                 case .photosCollection:
-                    return PhotosSource(collections: [spec.locator])
+                    return PhotosSource(collection: spec.locator)
                 default:
                     return nil
                 }
-            })
+            },
+            // Beside the widgets' caches and not in one: a count is a source's,
+            // whichever widget asked for it.
+            remembering: RememberedCounts(file: caches.appending(path: "TinyCache/counts.json")),
+            onCount: { WidgetLog.counted($0) })
+    }
+
+    private static var caches: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
     }
 
     /// `2 folders, 3 Photos collections`, for the log and for the widget's face
@@ -74,9 +84,6 @@ enum Settings {
     /// name, and how a placed widget keeps a name is still to be found out. Two
     /// widgets of one size share a cache until then.
     static func cache(for context: TimelineProviderContext, showing specs: [SourceSpec]) -> TinyCache {
-        let caches =
-            FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
         let scale = context.environmentVariants.displayScale?.max() ?? 2
         let family = "\(context.family)"
         let box = CGSize(

@@ -123,4 +123,90 @@ struct FolderSourceTests {
         #expect(resize == nil)
         #expect(pixelSize(of: written) == nil)
     }
+
+    @Test("It counts the pictures in the folder and in every folder inside it, and nothing else")
+    func countsItsPictures() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("top.jpg")
+        try scratch.picture("inside/second.png")
+        try scratch.picture("inside/deeper/third.jpg")
+        try scratch.text("notes.txt")
+        try scratch.text("inside/catalogue.csv")
+
+        #expect(try FolderSource(folder: scratch.url).pictureCount() == 3)
+    }
+
+    @Test("Told not to look inside folders, it counts only the pictures at the top")
+    func countsTheTopOnly() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("top.jpg")
+        try scratch.picture("inside/second.png")
+
+        #expect(try FolderSource(folder: scratch.url, recursive: false).pictureCount() == 1)
+    }
+
+    @Test("A folder with no pictures in it counts none")
+    func countsNone() throws {
+        let scratch = try ScratchFolder()
+        try scratch.text("notes.txt")
+
+        #expect(try FolderSource(folder: scratch.url).pictureCount() == 0)
+    }
+
+    @Test("A folder that cannot be read cannot be counted, which is not a count of none")
+    func missingFolderIsNotCounted() throws {
+        let scratch = try ScratchFolder()
+        let missing = scratch.url.appending(path: "not-here", directoryHint: .isDirectory)
+
+        #expect(throws: (any Error).self) {
+            try FolderSource(folder: missing).pictureCount()
+        }
+    }
+
+    @Test("Its count is remembered under the folder and whether it looks inside")
+    func countName() throws {
+        let scratch = try ScratchFolder()
+        let coins = scratch.url.appending(path: "coins", directoryHint: .isDirectory)
+        let stamps = scratch.url.appending(path: "stamps", directoryHint: .isDirectory)
+
+        #expect(FolderSource(folder: coins).countName == FolderSource(folder: coins).countName)
+        #expect(FolderSource(folder: coins).countName != FolderSource(folder: stamps).countName)
+        #expect(FolderSource(folder: coins).countName != FolderSource(folder: coins, recursive: false).countName)
+    }
+
+    @Test("Writing a picture also says how many the folder holds, since it walked all of them")
+    func writingCounts() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("pictures/top.jpg")
+        try scratch.picture("pictures/inside/second.png")
+        try scratch.picture("pictures/inside/deeper/third.jpg")
+        try scratch.text("pictures/notes.txt")
+
+        let picked = try FolderSource(folder: scratch.url.appending(path: "pictures"))
+            .writePictureAndCount(
+                fitting: CGSize(width: 40, height: 40), to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(picked.resize != nil)
+        #expect(picked.pictures == 3)
+    }
+
+    @Test("With nothing to write, it still says how many the folder holds")
+    func writingNothingCounts() throws {
+        let scratch = try ScratchFolder()
+        try scratch.text("empty/notes.txt")
+        try scratch.text("undecodable/broken.jpg")
+        let written = scratch.url.appending(path: "written.jpg")
+        let box = CGSize(width: 40, height: 40)
+
+        let empty = try FolderSource(folder: scratch.url.appending(path: "empty"))
+            .writePictureAndCount(fitting: box, to: written)
+        // By its name `broken.jpg` is a picture, which is how a count is taken.
+        let undecodable = try FolderSource(folder: scratch.url.appending(path: "undecodable"))
+            .writePictureAndCount(fitting: box, to: written)
+
+        #expect(empty.resize == nil)
+        #expect(empty.pictures == 0)
+        #expect(undecodable.resize == nil)
+        #expect(undecodable.pictures == 1)
+    }
 }
