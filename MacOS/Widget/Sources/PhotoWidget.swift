@@ -43,6 +43,12 @@ struct PhotoWidgetView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // One photograph fades into the next. Syd, 2026-10-08: "I
+                    // want the fade transition". Each entry's picture is a view
+                    // of its own, so the system has one to take away and one
+                    // to bring in, and the transition says how.
+                    .id(picture)
+                    .transition(.opacity)
             } else {
                 Text(entry.trouble ?? "Photos-Go-Round")
                     .font(.caption)
@@ -51,6 +57,7 @@ struct PhotoWidgetView: View {
                     .padding()
             }
         }
+        .animation(.easeInOut(duration: 1), value: entry.date)
         .containerBackground(.black, for: .widget)
     }
 

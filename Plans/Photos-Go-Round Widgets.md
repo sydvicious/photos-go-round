@@ -24,6 +24,8 @@ design that works the same on the Mac and on devices that never had an agent.
     the app's preferences for its sources, in place of the hard-coded folder.
   - Then test Photos access from the widget.
   - Find out how a widget that has been placed keeps its name.
+  - Later: find out which transitions between pictures a widget can really show, and offer them
+    as a setting.
   - Decide how a widget gets pictures from a folder macOS protects, such as one in `~/Documents`.
     The extension can't read one itself; see *The hard-coded folder, and the sandbox*.
   - Spike: does a widget change its photograph every minute, and does the extension's memory stay
@@ -67,7 +69,8 @@ design that works the same on the Mac and on devices that never had an agent.
 - **The widgets share the app's sources.** Every widget shows pictures from the sources set in the
   app that carries it. Syd, 2026-10-08.
 - **The only setting a widget has is how often it updates.** Each widget has its own interval and
-  its own TinyCache, and nothing else of its own.
+  its own TinyCache, and nothing else of its own. Later it gains a second, the transition between
+  pictures; and fill against fit is to be an option too, at some point.
 - **All the widgets share one database.**
 - **Widgets may show the same picture as each other.** Nothing is done to prevent it.
 - **The menubar app and the widgets share through an App Group.** They are separate processes, so
@@ -96,6 +99,9 @@ design that works the same on the Mac and on devices that never had an agent.
 - **The menubar app has a second TinyCache of its own, for previews of the widgets.** A preview
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
 - **Widgets in every size the platform offers.** No families left out.
+- **One photograph fades into the next.** Syd, 2026-10-08: "I want the fade transition". Later, a
+  person chooses the transition in the widget's settings, from whatever the system actually
+  supports.
 - **A photograph is fitted inside the widget, whole, with black around it.** As everywhere else in
   Photos-Go-Round. Eventually every fill and fit option is supported on every surface; fit is the
   one built now. Syd, 2026-10-08.
@@ -493,6 +499,26 @@ reloaded one interval after its last entry. With nothing to show it asks again i
 - Whether a photograph changes each minute, and how late.
 - Whether `peak` stays flat as timelines go from 1 entry to 20.
 
+**The change between pictures.** Syd asked, 2026-10-08, whether the widget animates between
+images. It does nothing of its own: whatever is seen when a picture changes is the system's own
+transition between one timeline entry and the next. From memory, not checked on 27: since macOS 14
+the system animates entry changes by default, and a widget can choose the transition for a view,
+such as a fade or a push, though not run an animation of its own.
+
+Syd chose the fade. The widget's view now gives each entry's picture an identity of its own and a
+fade for its coming and going, over one second. Syd saw it on the desktop the same evening: "it's
+fading". So a widget's view can choose its transition between entries, by giving the changing view
+an identity and a transition.
+
+Then: "actually, the user should be able to choose between the two in the widget settings, but
+that's later", and: "I want the user to choose from whatever the system actually supports". So the
+choice is not between two, but among every transition a widget can really show. The fade is what
+is built; the choice is not.
+
+Which those are is to be found out, by reading the documentation and by trying each on the
+desktop. From memory, not checked: SwiftUI offers fade, push from an edge, move, slide, scale and a
+blur-replace, and a widget may not honour all of them.
+
 **What it leaves out.**
 
 - **The space for 30.** Only the fill limit of 20 is enforced; no size ceiling is, until a picture
@@ -655,6 +681,41 @@ and then we can test photos access".
   reason, and that says nothing about whether a widget can use its app's Photos permission. Fixing
   the shared identity first makes the Photos test mean something. `TODO.md`, *Debug and Release
   builds share one privacy identity*.
+- **The fix for the shared identity, tried without changing the project, 2026-10-08.** Syd chose
+  to fix it first, with one signing requirement that every configuration's build states.
+  - *Why the two builds disagree.* Each signature states a requirement of its own by default. The
+    Release app's asks for a Developer ID certificate of team `R5PQPZARC5`; the Debug app's asks
+    for the certificate named "Apple Development: Sydney Polk". Neither build meets the other's.
+  - *A requirement both meet.* `anchor apple generic and certificate leaf[subject.OU] =
+    R5PQPZARC5`: signed with any Apple-issued certificate of this team. Checked with `codesign
+    --verify -R` against the Release app in `/Applications` and the Debug app in Xcode's build
+    folder; both pass.
+  - *It can be stated at signing.* A trial build of the agent with `OTHER_CODE_SIGN_FLAGS` set to
+    `--requirements "=designated => anchor apple generic and certificate leaf[subject.OU] =
+    $(DEVELOPMENT_TEAM)"` produced a bundle that states exactly that, is valid on disk, and
+    satisfies it.
+  - *It must not name the identifier.* The first trial also required the bundle's identifier, as
+    the default does. Xcode signs a Debug build's helper libraries with the same flags, their
+    identifiers differ, and the bundle then failed `codesign --verify --strict`. The privacy
+    system files a permission under the identifier separately, so the requirement loses nothing by
+    leaving it out.
+  - *How it is expected to end the prompts.* The permission records the requirement of whichever
+    build was allowed. Once it is allowed through a build that states the shared one, every other
+    build of the team meets it, whatever that build states itself. Not yet seen happen.
+  - *Built, on `pgr-widgets`.* Syd, asked whether it should go to `main` first: "why does it need
+    to be in main?" It does not: the fault needs a Debug or Claude build running beside a Release
+    one, which is his Mac only. `OTHER_CODE_SIGN_FLAGS` is set at project level in all three
+    configurations, and `BuildVariantTests` fails if a configuration loses it or names an
+    identifier in it. In a clean `Claude` build the app, the agent, the widget and wallpaper
+    extensions, the screensaver and the uninstaller each state the shared requirement, and the app
+    passes `codesign --verify --deep --strict`.
+  - *How it is to be shown working.* With the Release agent running, the Debug app is run once so
+    that its agent starts. One Documents prompt is expected, for the Debug build, since the
+    permission on record was given to a Release build that states the old requirement. After that
+    one is allowed, both agents should refresh every five minutes with no prompt. Not yet run.
+  - *Not known: whether a Release export keeps it.* The release script archives and then exports,
+    and the export signs again. If it drops the stated requirement, the Release app keeps its
+    default one, and still meets a permission given to a Debug build that states the shared one.
 - **Whose sources.** Syd came back to this the same day: "the widgets sharing the app's sources.
   the only setting a widget would have is how often it updates." Read here as: the sources belong
   to the app that carries the widgets, which is the existing app in the proof of concept and the

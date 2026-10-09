@@ -1100,6 +1100,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CODE_SIGN_FLAGS = "--requirements \"=designated => anchor apple generic and certificate leaf[subject.OU] = $(DEVELOPMENT_TEAM)\"";
 				PROJECT_UNIQUE_VALUE = T9N8XB8B;
 				SAVER_ID_SUFFIX = .debug;
 				SAVER_NAME_SUFFIX = " (Debug)";
@@ -1175,6 +1176,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_CODE_SIGN_FLAGS = "--requirements \"=designated => anchor apple generic and certificate leaf[subject.OU] = $(DEVELOPMENT_TEAM)\"";
 				PROJECT_UNIQUE_VALUE = T9N8XB8B;
 				SAVER_ID_SUFFIX = "";
 				SAVER_NAME_SUFFIX = "";
@@ -1582,6 +1584,7 @@
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CODE_SIGN_FLAGS = "--requirements \"=designated => anchor apple generic and certificate leaf[subject.OU] = $(DEVELOPMENT_TEAM)\"";
 				PGR_AGENT_CONDITION = PGR_AGENT_CLAUDE;
 				PROJECT_UNIQUE_VALUE = T9N8XB8B;
 				SAVER_ID_SUFFIX = .claude;

@@ -96,6 +96,14 @@ public enum BuildVariant: String, Sendable, CaseIterable {
     /// The bundle identifier deliberately does *not* vary: TCC grants hang off
     /// it, and Syd, 2026-09-19, chose "label per configuration" so Photos is
     /// answered once rather than once per configuration.
+    ///
+    /// **One identifier is not enough for that, and one signing requirement is
+    /// what completes it.** A permission is recorded with the requirement the
+    /// allowed build's signature states, and left alone Release and Debug state
+    /// different ones — measured 2026-10-08, when the two agents were prompted
+    /// for Documents in turn on every refresh. `OTHER_CODE_SIGN_FLAGS` in the
+    /// project gives every build the same one, and `BuildVariantTests` checks
+    /// that it stays.
     public var agentLabel: String { "com.sydpolk.photosgoround.server" + identifierSuffix }
 
     /// The screensaver bundle's name, which is also its filename in
