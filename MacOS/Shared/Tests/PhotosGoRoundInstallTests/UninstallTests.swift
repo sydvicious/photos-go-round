@@ -20,14 +20,16 @@ struct UninstallTests {
         files: Set<String> = [],
         registered: [WallpaperInstall.Registration] = [],
         running: [AgentInstall.ForeignAgent] = [],
-        widgets: [WallpaperInstall.Registration] = []
+        widgets: [WallpaperInstall.Registration] = [],
+        records: [WallpaperInstall.Registration] = []
     ) -> Uninstall.Surroundings {
         Uninstall.Surroundings(
             isJobLoaded: { loaded.contains($0) },
             fileExists: { files.contains($0.path(percentEncoded: false)) },
             registrations: { registered },
             runningAgents: { running },
-            widgetRegistrations: { widgets })
+            widgetRegistrations: { widgets },
+            extensionRecords: { records })
     }
 
     /// **Three of everything, from `BuildVariant` rather than a second list.**
@@ -141,6 +143,86 @@ struct UninstallTests {
         let plan = Uninstall.plan(
             removing: [.widget], launchAgents: agents, screenSavers: savers, surroundings: surroundings())
         #expect(plan.describedSteps == ["widget: nothing is registered"])
+    }
+
+    // MARK: - Records of a widget extension whose build is gone
+
+    /// Where a build that has since been deleted had its widget extension.
+    private static func deleted(_ variant: BuildVariant) -> WallpaperInstall.Registration {
+        .init(
+            identifier: variant.widgetExtensionIdentifier,
+            path: "/Deleted/\(variant.rawValue)/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex")
+    }
+
+    /// Syd, 2026-10-09: "I ran the uninstaller, and the widgets are still on my
+    /// desktop". The system would not remove them "because LS still has an
+    /// extension record for it": the record of a release build's archive, long
+    /// since moved away.
+    @Test("A record of a widget extension whose bundle is gone is taken")
+    func aDeletedBuildsRecordIsTaken() {
+        let plan = Uninstall.plan(
+            removing: [.widget], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(records: BuildVariant.allCases.map(Self.deleted)))
+        #expect(plan.staleWidgets == BuildVariant.allCases.map(Self.deleted))
+    }
+
+    /// A record of a bundle still on disk is a registration, which `pluginkit`
+    /// lists and the plan already takes as one.
+    @Test("A record of a widget extension that is still there is not called stale")
+    func aLiveRecordIsNotStale() {
+        let live = Self.widget(.release)
+        let plan = Uninstall.plan(
+            removing: [.widget], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(files: [live.path], widgets: [live], records: [live]))
+        #expect(plan.staleWidgets.isEmpty)
+        #expect(plan.widgets == [live])
+    }
+
+    @Test("Nobody else's records are taken, and no other configuration's")
+    func onlyOurStaleRecords() {
+        let weather = WallpaperInstall.Registration(
+            identifier: "com.apple.weather.widget", path: "/Deleted/Weather.app/Contents/PlugIns/x.appex")
+        let plan = Uninstall.plan(
+            removing: [.widget], variants: [.release], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(records: [weather] + BuildVariant.allCases.map(Self.deleted)))
+        #expect(plan.staleWidgets == [Self.deleted(.release)])
+    }
+
+    /// **The order is the fix.** The system asks once, twenty seconds after the
+    /// extension is unregistered, whether any record of it is left. Removing a
+    /// stale one after that left Syd's five widgets where they were.
+    @Test("Stale records are forgotten before the extension is unregistered")
+    func staleRecordsGoFirst() {
+        let live = Self.widget(.release)
+        let plan = Uninstall.plan(
+            removing: [.widget], variants: [.release], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(
+                files: [live.path], widgets: [live], records: [live, Self.deleted(.release)]))
+        #expect(plan.describedSteps == [
+            "widget: forget the record of a deleted com.sydpolk.photosgoround.widget",
+            "  /Deleted/release/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex",
+            "widget: unregister com.sydpolk.photosgoround.widget",
+            "  /Applications/release/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex",
+        ])
+    }
+
+    @Test("With only a stale record, it does not say nothing is registered")
+    func onlyAStaleRecord() {
+        let plan = Uninstall.plan(
+            removing: [.widget], variants: [.debug], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(records: [Self.deleted(.debug)]))
+        #expect(plan.describedSteps == [
+            "widget: forget the record of a deleted com.sydpolk.photosgoround.widget.debug",
+            "  /Deleted/debug/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex",
+        ])
+    }
+
+    @Test("Without the widget part, LaunchServices is not asked")
+    func recordsAreNotReadForOtherParts() {
+        let plan = Uninstall.plan(
+            removing: [.agent, .wallpaper, .saver], launchAgents: agents, screenSavers: savers,
+            surroundings: surroundings(records: [Self.deleted(.release)]))
+        #expect(plan.staleWidgets.isEmpty)
     }
 
     @Test("Naming one part leaves the others entirely alone", arguments: Uninstall.Part.allCases)

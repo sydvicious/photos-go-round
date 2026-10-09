@@ -1067,8 +1067,9 @@ Syd, 2026-10-09: "we also need the uninstaller to remove widgets", and then: "or
 automagically when the app is removed?" Partly, and his own Mac showed which part: he had deleted
 the Debug build that morning.
 
-- **The registration goes by itself when the app is deleted.** After DerivedData was removed the
-  Debug widget extension was no longer registered.
+- **The registration goes by itself when the app is deleted**, as `pluginkit` shows it. After
+  DerivedData was removed the Debug widget extension was no longer listed. LaunchServices kept a
+  record of it all the same; see *Run for real* below.
 - **The widget's data does not.** Both of the deleted build's folders were still on disk: the
   extension's container, with the pictures TinyCache had cached, and the App Group's, with the
   bookmarks the app had left.
@@ -1077,8 +1078,8 @@ the Debug build that morning.
 - **Not known**: whether the system drops a widget extension when its app is moved to the Trash,
   which is what the uninstaller does, or only when the Trash is emptied.
 
-So the uninstaller now does it by name, as it does for the wallpaper extension. Built, with its
-tests passing; not run for real.
+So the uninstaller now does it by name, as it does for the wallpaper extension. Run for real on
+2026-10-09; what that showed is below.
 
 - **A fourth part to an uninstall, `widget`.** It finds the widget extensions registered for the
   builds it was asked about, unregisters each, and stops each one's process by its bundle's path.
@@ -1092,10 +1093,58 @@ tests passing; not run for real.
   test holds them to the project's suffix and team.
 - **A dry run against Syd's Mac found the Release widget extension** in `/Applications`, and
   nothing for Debug, whose build had been deleted.
-- **Placed widgets cannot be removed one by one**; no API does that. They go when the extension
-  that draws them is unregistered.
+- **Placed widgets cannot be removed one by one**; no API does that. The system removes them, and
+  only under the condition below.
 - **`uninstall.sh --widget` on an app left in place does not last**: the app registers its
   extension again the next time it is built or launched.
+
+### Run for real: the placed widgets stayed
+
+Syd ran the 0.6 (4) uninstaller on 2026-10-09, and his five placed widgets were still on the
+desktop afterwards. Everything else had gone: the app, the registration, the processes.
+
+- **The system removes placed widgets only when LaunchServices has no record left for the
+  extension's identifier.** NotificationCenter, twenty seconds after the extension went: "Not
+  removing instance associated with: com.sydpolk.photosgoround::com.sydpolk.photosgoround.widget
+  because LS still has an extension record for it."
+- **The record it found was stale, and a build had left it.** Xcode registers an app's extensions
+  when it builds the app. The release build's archive step then moves the app out of
+  `ArchiveIntermediates`, and the record for the path it was built at stays. A Debug build leaves
+  the same thing when DerivedData is deleted: a `…widget.debug` record was there too.
+- **`pluginkit` does not show these records.** It listed nothing for either identifier.
+  `lsregister -dump` does.
+- **`lsregister -u <app path>` removes one, even when the path is gone.** Measured.
+- **The system asks once.** Removing the stale record afterwards did not remove the widgets, and
+  NotificationCenter logged nothing more. So stale records have to go *before* the live extension
+  is unregistered.
+- **Other copies of the app carried no extension record**: the mounted image, the copy in the
+  Trash, the release script's export copy.
+- **Restarting NotificationCenter does not make it ask again.** `killall NotificationCenter`
+  brought the five widgets back with all-white content: their drawn pictures were gone, and the
+  system then gave up on reloading them, "Disallowing reloads due to extensive failures". Left
+  like that, a widget is removed by hand, with Remove Widget.
+- **Not known**: whether a Mac that only ever installed from the image keeps its widgets. It has
+  one record, which the uninstaller removes, so it should not.
+
+Syd chose the uninstaller for the fix: "the uninstaller's primary audience is other users, but
+it should work for me in development as well."
+
+- **The uninstall reads `lsregister -dump Plugin`**, and takes every record of its widget's
+  identifier whose bundle is no longer on disk. `Plugin` alone takes under a second; the whole
+  database took seven.
+- **It forgets those first**, with `lsregister -u` on the app each was in, and unregisters the
+  live extension after.
+- **A dry run on Syd's Mac found the stale Debug record**, and nothing else.
+
+- **Run for real with a Debug build, 2026-10-09**: Syd placed a widget and ran the Debug
+  uninstaller, and "the widget disappeared as it should." That round had no stale record: a new
+  Debug build lands on the path the old record named.
+
+To do:
+
+- [ ] See it with a stale record present. After the next release build, a dry run of
+  `uninstall.sh --variant release --widget` should list a record to forget, and the uninstall
+  should then take the placed widgets away.
 
 ## The hard-coded folder, and the sandbox
 

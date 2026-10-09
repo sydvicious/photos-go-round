@@ -52,10 +52,12 @@ WHAT EACH ONE REMOVES
                 picture.
   --saver       Deletes the Photos-Go-Round Screensaver bundle from
                 ~/Library/Screen Savers and stops the hosts holding it.
-  --widget      Unregisters the widget extension and stops its process. Any
-                widget placed on the desktop or in Notification Center goes
-                with it. The app that carries the extension stays where it is,
-                and registers it again the next time it is built or launched.
+  --widget      Unregisters the widget extension and stops its process, after
+                removing LaunchServices' record of any build of it that has
+                been deleted. macOS then takes away any widget placed on the
+                desktop or in Notification Center, about twenty seconds later.
+                The app that carries the extension stays where it is, and
+                registers it again the next time it is built or launched.
                 With none of the four, it removes all of them.
   --dry-run     Says what would go and removes nothing.
 

@@ -26,6 +26,7 @@ It is the last item on the *Before the first release* checklist.
   - A target and a scheme of its own in `Photos-Go-Round.xcodeproj`, built with `xcodebuild` in all three configurations like every other product.
   - Links `PhotosGoRoundInstall` and runs `Uninstall.plan` for its own build variant.
   - Since 2026-10-09 that plan has a fourth part, the widget extension: it is unregistered by name and its process stopped, and the data it leaves, the pictures it cached and the bookmarks the app left it, is deleted with the rest. The system drops a widget extension when its app is deleted, but leaves both folders and a running process behind. `Photos-Go-Round Widgets.md`, *Uninstalling the widgets*.
+  - Before it unregisters the widget extension it removes LaunchServices' record of any build of that extension no longer on disk. The system takes a placed widget away only when no record is left, and asks once; a deleted or archived build leaves one. Found 2026-10-09, when Syd's five widgets outlived the uninstaller. Not yet seen with a stale record present; the to-do is in `Photos-Go-Round Widgets.md`, *Run for real: the placed widgets stayed*.
   - Then deletes that build's data: the library, the cache, the preferences — the agent's, the wallpaper's and the screensaver's — and the wallpaper extension's own container.
   - The deleting moves out of `Scripts/scrub-data.sh` into `PhotosGoRoundInstall`, and the script becomes a wrapper, as `uninstall.sh` is.
   - Asks, then moves the installed app to the Trash — only from `/Applications`.
@@ -164,7 +165,7 @@ launched, and a Finder alias cannot pass arguments anyway.
 ### What it does, in order
 
 1. **Says what it will remove, and asks.** One window: the app, the Photos-Go-Round
-   Service, the wallpaper, the screensaver, and its settings, one line each,
+   Service, the wallpaper, the screensaver, the widgets, and its settings, one line each,
    dimmed when it is not here. No explanatory small print — Syd, 2026-09-27:
    "Get rid of all of that explanatory small text." The Uninstall button is
    disabled when there is nothing to remove. When it is done the window says
@@ -184,7 +185,12 @@ launched, and a Finder alias cannot pass arguments anyway.
    and applies it, as `Installer.uninstall` does. That boots the agent out and
    deletes its plist, unregisters the wallpaper extension and restarts
    `WallpaperAgent`, and removes the screensaver symlink and stops
-   `legacyScreenSaver`.
+   `legacyScreenSaver`. For the widgets, in this order: it removes
+   LaunchServices' record of any build of the widget extension that is no
+   longer on disk, read from `lsregister -dump Plugin`; unregisters the
+   extension; and stops its process. **Stale records first**, because the
+   system decides once, about twenty seconds after the extension goes, whether
+   to take the placed widgets away, and keeps them if any record is left.
 4. **Deletes the build's data** — after step 3, because a live agent holds the
    database's WAL open and republishes its port. The container,
    `~/Library/Application Support/<name>` — and the retired `~/Library/Containers/<name>` —;

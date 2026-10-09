@@ -124,6 +124,13 @@ configuration's loaded job owns — and leaves it alone. It restarts
 screensaver hosts only after removing a saver, so removing one configuration
 leaves another's desktop and screensaver running.
 
+**For the widget extension it also removes LaunchServices' record of any build
+that is no longer on disk, and does that first.** macOS takes a placed widget
+off the desktop only when no record of its extension is left, and asks once,
+about twenty seconds after the extension is unregistered. Xcode leaves such a
+record for every build of the app that is later deleted or archived; `pluginkit`
+does not list them, so they are read from `lsregister -dump Plugin`.
+
 **It removes what was installed, not what was built.** Build directories, the
 library, the cache and the preferences are untouched; `Scripts/scrub-data.sh` is
 what deletes a build's data.

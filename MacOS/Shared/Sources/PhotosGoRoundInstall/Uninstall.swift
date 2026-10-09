@@ -40,6 +40,9 @@ public enum Uninstall {
         public var savers: [URL]
         /// The widget extensions registered, of the builds asked about.
         public var widgets: [WallpaperInstall.Registration] = []
+        /// The records LaunchServices still holds of these builds' widget
+        /// extensions at paths where there is no longer a bundle.
+        public var staleWidgets: [WallpaperInstall.Registration] = []
         /// Whose copies were looked for.
         public var variants: [BuildVariant] = BuildVariant.allCases
 
@@ -80,7 +83,13 @@ public enum Uninstall {
                 }
             }
             if parts.contains(.widget) {
-                if widgets.isEmpty { steps.append("widget: nothing is registered") }
+                if widgets.isEmpty && staleWidgets.isEmpty {
+                    steps.append("widget: nothing is registered")
+                }
+                for stale in staleWidgets {
+                    steps.append("widget: forget the record of a deleted \(stale.identifier)")
+                    steps.append("  \(stale.path)")
+                }
                 for widget in widgets {
                     steps.append("widget: unregister \(widget.identifier)")
                     steps.append("  \(widget.path)")
@@ -100,6 +109,9 @@ public enum Uninstall {
         /// Every widget extension registered on this Mac, ours and everybody
         /// else's; the plan keeps ours.
         public var widgetRegistrations: @Sendable () -> [WallpaperInstall.Registration]
+        /// Every extension LaunchServices holds a record of, deleted builds'
+        /// among them, which `pluginkit` does not list.
+        public var extensionRecords: @Sendable () -> [WallpaperInstall.Registration]
 
         public init(
             isJobLoaded: @escaping @Sendable (String) -> Bool,
@@ -107,7 +119,8 @@ public enum Uninstall {
             registrations: @escaping @Sendable () -> [WallpaperInstall.Registration],
             runningAgents: @escaping @Sendable () -> [AgentInstall.ForeignAgent],
             jobPID: @escaping @Sendable (String) -> Int32? = { _ in nil },
-            widgetRegistrations: @escaping @Sendable () -> [WallpaperInstall.Registration] = { [] }
+            widgetRegistrations: @escaping @Sendable () -> [WallpaperInstall.Registration] = { [] },
+            extensionRecords: @escaping @Sendable () -> [WallpaperInstall.Registration] = { [] }
         ) {
             self.isJobLoaded = isJobLoaded
             self.fileExists = fileExists
@@ -115,6 +128,7 @@ public enum Uninstall {
             self.runningAgents = runningAgents
             self.jobPID = jobPID
             self.widgetRegistrations = widgetRegistrations
+            self.extensionRecords = extensionRecords
         }
 
         public static let live = Surroundings(
@@ -129,7 +143,8 @@ public enum Uninstall {
             registrations: { PluginKit.registrations(for: WallpaperInstall.extensionPoint) },
             runningAgents: { Launchctl.agentsOutsideLaunchd(named: AgentInstall.executableName) },
             jobPID: { Launchctl.pid(of: $0) },
-            widgetRegistrations: { PluginKit.registrations(for: widgetExtensionPoint) })
+            widgetRegistrations: { PluginKit.registrations(for: widgetExtensionPoint) },
+            extensionRecords: { LaunchServices.extensionRecords() })
     }
 
     /// What every WidgetKit extension registers under.
@@ -194,6 +209,17 @@ public enum Uninstall {
             }
             : []
 
+        // **A build that is gone can still hold the widgets on the desktop.**
+        // The system removes a placed widget only when LaunchServices has no
+        // record left of its extension, and it keeps the record of a build
+        // that was deleted, or archived and moved away. Found 2026-10-09.
+        let staleWidgets = parts.contains(.widget)
+            ? surroundings.extensionRecords().filter {
+                variants.map(\.widgetExtensionIdentifier).contains($0.identifier)
+                    && !surroundings.fileExists(URL(filePath: $0.path))
+            }
+            : []
+
         return Plan(
             parts: parts,
             agents: agents,
@@ -202,6 +228,7 @@ public enum Uninstall {
             registrations: registrations,
             savers: savers,
             widgets: widgets,
+            staleWidgets: staleWidgets,
             variants: variants)
     }
 
@@ -283,12 +310,24 @@ public enum Uninstall {
         }
 
         if plan.parts.contains(.widget) {
+            // **Before the extension is unregistered, not after.** The system
+            // asks once, twenty seconds after an extension goes, whether any
+            // record of it is left, and keeps the placed widgets if one is.
+            // Measured 2026-10-09: removing the record afterwards changed
+            // nothing, and neither did restarting NotificationCenter.
+            for stale in plan.staleWidgets {
+                LaunchServices.forget(LaunchServices.registeredBundle(holding: stale.path))
+                done.append("widget: forgot the record of a deleted \(stale.identifier)")
+                done.append("  \(stale.path)")
+            }
             for widget in plan.widgets {
                 PluginKit.remove(widget.path)
                 done.append("widget: unregistered \(widget.identifier)")
                 done.append("  \(widget.path)")
             }
-            if plan.widgets.isEmpty { done.append("widget: nothing was registered") }
+            if plan.widgets.isEmpty && plan.staleWidgets.isEmpty {
+                done.append("widget: nothing was registered")
+            }
             // **By its bundle's path, not its name**, as for the wallpaper:
             // every configuration's extension process has the same name. A
             // widget extension goes on running after it is unregistered, and
