@@ -530,8 +530,8 @@ public struct Preferences: @unchecked Sendable {
     /// The secret the agent checks for: the one kept, or a new one kept from
     /// now on. The agent's to call, nobody else's.
     ///
-    /// **Kept across launches.** The app restarts the agent on every launch of
-    /// its own, and a new secret each time would send every running client back
+    /// **Kept across launches.** The agent restarts whenever an app installs
+    /// over it, or launchd starts it again, and a new secret each time would send every running client back
     /// to re-read it. **A malformed one is replaced** — a `defaults write` gone
     /// wrong is not a secret. Nil only when no secret could be made, and the
     /// agent does not serve without one.

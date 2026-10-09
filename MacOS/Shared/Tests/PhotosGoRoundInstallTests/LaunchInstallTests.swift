@@ -55,7 +55,7 @@ struct LaunchInstallTests {
         standing: @escaping @Sendable (LaunchInstall.Product) throws -> Standing,
         install: @escaping @Sendable (LaunchInstall.Product) throws -> [String] = { _ in ["done"] },
         agentAnswers: Bool = true,
-        wallpaperMismatch: String? = nil,
+        wallpaperIsRunning: Bool = true,
         wallpaperIsChosen: Bool = false
     ) -> LaunchInstall.Steps {
         LaunchInstall.Steps(
@@ -79,9 +79,9 @@ struct LaunchInstallTests {
                 recorder.note("wait for agent")
                 return agentAnswers
             },
-            wallpaperMismatch: { _ in
+            wallpaperIsRunning: { _ in
                 recorder.note("check running wallpaper")
-                return wallpaperMismatch
+                return wallpaperIsRunning
             },
             wallpaperIsChosen: { _ in
                 recorder.note("check chosen wallpaper")
@@ -97,7 +97,7 @@ struct LaunchInstallTests {
         _ variant: BuildVariant, _ recorder: Recorder, carried: LaunchInstall.Carried? = nil,
         standing: @escaping @Sendable (LaunchInstall.Product) throws -> Standing,
         install: @escaping @Sendable (LaunchInstall.Product) throws -> [String] = { _ in ["done"] },
-        agentAnswers: Bool = true, wallpaperMismatch: String? = nil,
+        agentAnswers: Bool = true, wallpaperIsRunning: Bool = true,
         wallpaperIsChosen: Bool = false,
         report: (String) -> Void = { _ in }
     ) -> [LaunchInstall.Outcome.Result] {
@@ -105,24 +105,70 @@ struct LaunchInstallTests {
             carried ?? everything, variant: variant,
             steps: steps(
                 recorder, standing: standing, install: install, agentAnswers: agentAnswers,
-                wallpaperMismatch: wallpaperMismatch, wallpaperIsChosen: wallpaperIsChosen),
+                wallpaperIsRunning: wallpaperIsRunning, wallpaperIsChosen: wallpaperIsChosen),
             report: report
         ).map(\.result)
     }
 
-    /// A Release relaunch over its own install: the agent restarted, and
-    /// nothing else touched. Syd, 2026-09-21: over an existing install,
-    /// "screensaver — nothing needs to change".
-    @Test("Release over its own install restarts the agent and changes nothing else")
+    /// A relaunch over its own install changes nothing — the agent included.
+    /// It was restarted on every launch until 2026-10-08; on 2026-09-24 that
+    /// took a healthy agent down and the Photos albums went unavailable. Syd,
+    /// 2026-10-05: "Don't reinstall or relaunch any of the services if they are
+    /// already running when running the app."
+    @Test("A launch over its own install changes nothing, and does not restart the agent", arguments: BuildVariant.allCases)
+    func relaunchChangesNothing(_ variant: BuildVariant) {
+        let recorder = Recorder()
+        let results = launch(variant, recorder, standing: { _ in .current })
+        #expect(!recorder.lines.contains("restart agent"))
+        #expect(!recorder.lines.contains { $0.hasPrefix("install") })
+        #expect(results[0] == .current)
+    }
+
+    @Test("Release over its own install asks each product its standing, and nothing more")
     func releaseRelaunch() {
         let recorder = Recorder()
         let results = launch(.release, recorder, standing: { _ in .current })
         #expect(
             recorder.lines == [
-                "standing agent", "restart agent", "wait for agent", "check running wallpaper",
-                "standing wallpaper", "standing saver",
+                "standing agent", "wait for agent", "standing wallpaper", "check chosen wallpaper",
+                "standing saver",
             ])
-        #expect(results == [.restarted, .current, .current])
+        #expect(results == [.current, .current, .current])
+    }
+
+    // MARK: - The agent's standing
+
+    /// Not running is acted on: started, with nothing installed over it.
+    @Test("An agent with no process is started, and not installed again")
+    func stoppedAgentIsStarted() {
+        let recorder = Recorder()
+        let results = launch(
+            .release, recorder, standing: { $0 == .agent ? .stopped : .current })
+        #expect(recorder.lines.prefix(3) == ["standing agent", "restart agent", "wait for agent"])
+        #expect(!recorder.lines.contains("install agent"))
+        #expect(results[0] == .restarted)
+    }
+
+    /// Syd, 2026-10-05: "don't keep the older versions".
+    @Test("An agent of a lesser version is installed over, though it is running")
+    func lesserAgentIsInstalled() {
+        let recorder = Recorder()
+        let results = launch(
+            .debug, recorder,
+            standing: { $0 == .agent ? .differs("version 0.4 (7), and this app carries 0.5 (2)") : .current })
+        #expect(recorder.lines.prefix(2) == ["standing agent", "install agent"])
+        #expect(results[0] == .installed)
+    }
+
+    /// Syd, 2026-10-05: "if the services are NEWER, leave them alone".
+    @Test("Services of a greater version are left alone, all three")
+    func newerIsLeftAlone() {
+        let recorder = Recorder()
+        let results = launch(
+            .release, recorder, standing: { _ in .newer("version 0.6 (1), and this app carries 0.5 (2)") })
+        #expect(!recorder.lines.contains("restart agent"))
+        #expect(!recorder.lines.contains { $0.hasPrefix("install") })
+        #expect(results == [.leftAlone, .leftAlone, .leftAlone])
     }
 
     @Test("Release on a clean Mac installs all three, the agent first")
@@ -131,7 +177,7 @@ struct LaunchInstallTests {
         let results = launch(.release, recorder, standing: { _ in .missing })
         #expect(
             recorder.lines == [
-                "standing agent", "install agent", "wait for agent", "check running wallpaper",
+                "standing agent", "install agent", "wait for agent",
                 "standing wallpaper", "check chosen wallpaper", "install wallpaper",
                 "standing saver", "install saver",
             ])
@@ -139,15 +185,14 @@ struct LaunchInstallTests {
     }
 
     /// Syd, 2026-09-21: "the Release installs the binaries by default, and the
-    /// other two don't" — except the agent, which every build installs and
-    /// restarts.
+    /// other two don't" — except the agent, which every build installs.
     @Test("A Debug or Claude launch installs the agent and leaves the other two", arguments: [BuildVariant.debug, .claude])
     func developmentLaunch(_ variant: BuildVariant) {
         let recorder = Recorder()
         let results = launch(variant, recorder, standing: { _ in .missing })
         #expect(
             recorder.lines == [
-                "standing agent", "install agent", "wait for agent", "check running wallpaper",
+                "standing agent", "install agent", "wait for agent",
                 "standing wallpaper", "check chosen wallpaper",
             ])
         #expect(results == [.installed, .leftAlone, .leftAlone])
@@ -166,18 +211,47 @@ struct LaunchInstallTests {
         #expect(results[1] == .installed)
     }
 
-    /// **What turned the desktop grey, 2026-09-21.** A ⌘R rebuilt the app; `pkd`
-    /// dropped the running extension because its bundle changed, and
-    /// `WallpaperAgent` never started it again. Nothing was running for the
-    /// mismatch test to find, so the launch let it be.
-    @Test("Any build registers its own wallpaper again when the appex changed since registering it", arguments: BuildVariant.allCases)
-    func staleRegistrationIsRenewed(_ variant: BuildVariant) {
+    /// An app replaced where it sits: registered, and for the old version.
+    @Test("Any build registers its wallpaper again when the one registered is of a lesser version", arguments: BuildVariant.allCases)
+    func lesserWallpaperIsRegisteredAgain(_ variant: BuildVariant) {
         let recorder = Recorder()
         let results = launch(
             variant, recorder,
-            standing: { $0 == .wallpaper ? .stale("replaced since it was registered") : .current })
+            standing: { $0 == .wallpaper ? .differs("version 0.4 (7), and this app carries 0.5 (2)") : .current })
         #expect(recorder.lines.contains("install wallpaper"))
         #expect(results[1] == .installed)
+    }
+
+    /// **What turned the desktop grey, 2026-09-21.** A ⌘R rebuilt the app; `pkd`
+    /// dropped the running extension because its bundle changed, and
+    /// `WallpaperAgent` never started it again. The version is the same, so
+    /// only this catches it. Syd, 2026-10-08: "chose but not running check".
+    @Test("Any build registers the wallpaper again when it is chosen and no extension is running", arguments: BuildVariant.allCases)
+    func chosenButNotRunningIsRegisteredAgain(_ variant: BuildVariant) {
+        let recorder = Recorder()
+        let results = launch(
+            variant, recorder, standing: { _ in .current }, wallpaperIsRunning: false,
+            wallpaperIsChosen: true)
+        #expect(recorder.lines.contains("check running wallpaper"))
+        #expect(recorder.lines.contains("install wallpaper"))
+        #expect(results[1] == .installed)
+    }
+
+    @Test("A chosen wallpaper whose extension is running is left as it is")
+    func chosenAndRunningIsLeft() {
+        let recorder = Recorder()
+        let results = launch(.release, recorder, standing: { _ in .current }, wallpaperIsChosen: true)
+        #expect(!recorder.lines.contains("install wallpaper"))
+        #expect(results[1] == .current)
+    }
+
+    /// Nobody chose it, so nothing should be showing, and nothing is wrong.
+    @Test("A wallpaper that is not chosen is not asked whether it is running")
+    func notChosenIsNotAskedWhetherItRuns() {
+        let recorder = Recorder()
+        let results = launch(.release, recorder, standing: { _ in .current }, wallpaperIsRunning: false)
+        #expect(!recorder.lines.contains("check running wallpaper"))
+        #expect(results[1] == .current)
     }
 
     /// A plain relaunch, nothing rebuilt: the wallpaper is left as it is.
@@ -186,29 +260,20 @@ struct LaunchInstallTests {
         let recorder = Recorder()
         let results = launch(.debug, recorder, standing: { _ in .current })
         #expect(!recorder.lines.contains("install wallpaper"))
-        #expect(results == [.restarted, .current, .leftAlone])
+        #expect(results == [.current, .current, .leftAlone])
     }
 
-    /// Syd, 2026-09-21: detect "whether or not the wallpaper agent that is
-    /// running matches the one in the app bundle".
-    @Test("Any build registers the wallpaper again when the one running is not this app's", arguments: BuildVariant.allCases)
-    func mismatchedWallpaperIsReplaced(_ variant: BuildVariant) {
-        let recorder = Recorder()
-        let results = launch(
-            variant, recorder, standing: { _ in .current }, wallpaperMismatch: "pid 7 runs from elsewhere")
-        #expect(recorder.lines.contains("install wallpaper"))
-        #expect(results[1] == .installed)
-    }
-
-    /// "Lay down the screensaver symlinks if not there" — and only then.
-    @Test("A Release launch leaves a saver that is there but not this app's link")
-    func saverAlreadyThereIsLeft() {
+    /// Syd, 2026-10-08, of the version rule: "this goes for the screensaver as
+    /// well". Until then a launch linked it "if not there" and left anything
+    /// else.
+    @Test("A Release launch links the saver again when the one there is of a lesser version")
+    func lesserSaverIsLinkedAgain() {
         let recorder = Recorder()
         let results = launch(
             .release, recorder,
-            standing: { $0 == .saver ? .differs("a copy is installed, not a link") : .current })
-        #expect(!recorder.lines.contains("install saver"))
-        #expect(results[2] == .leftAlone)
+            standing: { $0 == .saver ? .differs("version 0.4 (7), and this app carries 0.5 (2)") : .current })
+        #expect(recorder.lines.contains("install saver"))
+        #expect(results[2] == .installed)
     }
 
     @Test("Nothing carried asks nothing of the Mac")
@@ -320,8 +385,17 @@ struct LaunchInstallTests {
             progress: { announced.note($0) },
             report: { _ in })
         #expect(
-            announced.lines == [
-                "Restarting the agent…", "Waiting for the agent…", "Installing the screensaver…",
-            ])
+            announced.lines == ["Waiting for the agent…", "Installing the screensaver…"])
+    }
+
+    @Test("The spinner says the agent is starting only when it is")
+    func startingIsAnnounced() {
+        let announced = Recorder()
+        LaunchInstall.run(
+            .init(agent: agent), variant: .release,
+            steps: steps(Recorder(), standing: { _ in .stopped }),
+            progress: { announced.note($0) },
+            report: { _ in })
+        #expect(announced.lines == ["Starting the agent…"])
     }
 }

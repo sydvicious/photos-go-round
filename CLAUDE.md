@@ -130,10 +130,13 @@ into its own directory — never the arranged image, and never `Release DMG`.
 ## Launching a built app installs. Never launch one
 
 **Since 2026-09-21 every launch of `Photos-Go-Round.app`, in every
-configuration, installs and restarts its own agent**, and may register the
-wallpaper extension and restart `WallpaperAgent`. So launching an app you built
-— `open`, a ⌘R of the `Photos-Go-Round` scheme, a test host — changes Syd's
-running system. Build it; do not run it.
+configuration, installs its own agent**, and may register the wallpaper
+extension and restart `WallpaperAgent`. Since 2026-10-08 it leaves alone
+whatever is already installed at the same or a greater version and running,
+which a build of yours cannot count on: nothing of the `Claude` configuration
+is installed until Syd installs it. `Plans/Leave Running Services Alone.md`.
+So launching an app you built — `open`, a ⌘R of the `Photos-Go-Round` scheme, a
+test host — changes Syd's running system. Build it; do not run it.
 
 The `Claude` agent is Syd's to install, start, stop and remove, when you ask:
 

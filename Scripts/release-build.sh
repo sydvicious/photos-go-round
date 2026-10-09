@@ -54,8 +54,8 @@ NEEDS, ONCE PER MAC
 
 RESULT
   <output>/Photos-Go-Round <version> (<build>).dmg, and the stapled app beside it in
-  <output>/export. Launching the app installs and restarts its agent, as every
-  build does.
+  <output>/export. Launching the app installs its agent, as every build does,
+  unless one of the same or a greater version is already installed and running.
 HELPTEXT
 }
 

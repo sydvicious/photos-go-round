@@ -211,6 +211,10 @@ public enum Uninstall {
         if plan.parts.contains(.wallpaper) {
             for registration in plan.registrations {
                 PluginKit.remove(registration.path)
+                // The record of which version was registered goes with it.
+                if let preferences = WallpaperInstall.preferences(forExtension: registration.identifier) {
+                    WallpaperInstall.record(nil, in: preferences)
+                }
                 done.append("wallpaper: unregistered \(registration.identifier)")
                 done.append("  \(registration.path)")
             }

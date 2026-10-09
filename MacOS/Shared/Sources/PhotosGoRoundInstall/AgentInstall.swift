@@ -45,6 +45,9 @@ public enum AgentInstall {
         public var binary: URL
         /// What launchd will know it by — this build's own, never a constant.
         public var label: String
+        /// The version the bundle was built as, which the job description
+        /// records.
+        public var version: BundleVersion
         /// Where the job description goes.
         public var plist: URL
         /// Whether a job of this label is already loaded and would be booted out.
@@ -87,6 +90,7 @@ public enum AgentInstall {
         public var directoryExists: @Sendable (URL) -> Bool
         public var isExecutable: @Sendable (URL) -> Bool
         public var labelInBundle: @Sendable (URL) -> String?
+        public var versionInBundle: @Sendable (URL) -> BundleVersion?
         public var isJobLoaded: @Sendable (String) -> Bool
         public var runningAgents: @Sendable () -> [ForeignAgent]
 
@@ -94,12 +98,14 @@ public enum AgentInstall {
             directoryExists: @escaping @Sendable (URL) -> Bool,
             isExecutable: @escaping @Sendable (URL) -> Bool,
             labelInBundle: @escaping @Sendable (URL) -> String?,
+            versionInBundle: @escaping @Sendable (URL) -> BundleVersion?,
             isJobLoaded: @escaping @Sendable (String) -> Bool,
             runningAgents: @escaping @Sendable () -> [ForeignAgent]
         ) {
             self.directoryExists = directoryExists
             self.isExecutable = isExecutable
             self.labelInBundle = labelInBundle
+            self.versionInBundle = versionInBundle
             self.isJobLoaded = isJobLoaded
             self.runningAgents = runningAgents
         }
@@ -121,6 +127,7 @@ public enum AgentInstall {
                 else { return nil }
                 return label
             },
+            versionInBundle: { BundleVersion.read(from: $0) },
             isJobLoaded: { label in Launchctl.isLoaded(label) },
             runningAgents: { Launchctl.agentsOutsideLaunchd(named: executableName) }
         )
@@ -130,6 +137,7 @@ public enum AgentInstall {
         case noBundle(URL)
         case noExecutable(URL)
         case noLabel(URL)
+        case noVersion(URL)
         case stillLoaded(String)
         case didNotBootstrap(String)
         case didNotRestart(String)
@@ -146,6 +154,8 @@ public enum AgentInstall {
                 \(url.lastPathComponent) carries no \(labelKey)
                   it was built before the label moved into the bundle; rebuild it
                 """
+            case .noVersion(let url):
+                "\(url.lastPathComponent) carries no version and build number that can be read"
             case .stillLoaded(let label):
                 "\(label) is still loaded ten seconds after bootout"
             case .didNotBootstrap(let label):
@@ -167,12 +177,15 @@ public enum AgentInstall {
         let binary = bundle.appending(path: "Contents/MacOS/\(executableName)")
         guard surroundings.isExecutable(binary) else { throw Failure.noExecutable(binary) }
         guard let label = surroundings.labelInBundle(bundle) else { throw Failure.noLabel(bundle) }
+        // It could record nothing, and every launch after would install again.
+        guard let version = surroundings.versionInBundle(bundle) else { throw Failure.noVersion(bundle) }
 
         let path = binary.path(percentEncoded: false)
         return Plan(
             bundle: bundle,
             binary: binary,
             label: label,
+            version: version,
             plist: launchAgents.appending(path: "\(label).plist"),
             replacesLoadedJob: surroundings.isJobLoaded(label),
             // Anything not running from this very binary is somebody else's.
@@ -186,13 +199,21 @@ public enum AgentInstall {
         /// The job description at this path, or nil when there is none.
         public var job: @Sendable (URL) -> JobDescription?
         public var isJobLoaded: @Sendable (String) -> Bool
+        /// The process of the job with this label, or nil when it has none.
+        public var pid: @Sendable (String) -> Int32?
+        /// Whether the program a job names is still on disk.
+        public var programExists: @Sendable (String) -> Bool
 
         public init(
             job: @escaping @Sendable (URL) -> JobDescription?,
-            isJobLoaded: @escaping @Sendable (String) -> Bool
+            isJobLoaded: @escaping @Sendable (String) -> Bool,
+            pid: @escaping @Sendable (String) -> Int32?,
+            programExists: @escaping @Sendable (String) -> Bool
         ) {
             self.job = job
             self.isJobLoaded = isJobLoaded
+            self.pid = pid
+            self.programExists = programExists
         }
 
         public static let live = Installed(
@@ -200,21 +221,35 @@ public enum AgentInstall {
                 guard let data = try? Data(contentsOf: plist) else { return nil }
                 return try? PropertyListDecoder().decode(JobDescription.self, from: data)
             },
-            isJobLoaded: { Launchctl.isLoaded($0) }
+            isJobLoaded: { Launchctl.isLoaded($0) },
+            pid: { Launchctl.pid(of: $0) },
+            programExists: { FileManager.default.isExecutableFile(atPath: $0) }
         )
     }
 
-    /// Whether this bundle's agent is the one installed.
+    /// How the installed agent stands against the one this bundle carries.
     ///
-    /// **Current when the job description is the one this bundle would write
-    /// and launchd has it loaded.** Anything else is installed again: a
-    /// different binary is another copy of the app, and anything else in the
-    /// description is an older app's idea of the job.
+    /// **By the version the installed job records**, checked in this order:
     ///
-    /// **Whether the running process is up to date is not asked**, because
-    /// every launch restarts it. Syd, 2026-09-21: "yes, restart the agent on
-    /// every app launch". An app replaced at the same path leaves the plist
-    /// exactly right, and the restart is what puts the new binary to work.
+    /// 1. No job description: missing.
+    /// 2. One that records no version, or a lesser one: differs, and is
+    ///    installed again though it is running. Syd, 2026-10-05: "don't keep
+    ///    the older versions".
+    /// 3. Equal or greater, and its program gone or launchd without it: it
+    ///    cannot run as it is, so differs.
+    /// 4. Equal or greater, loaded, with no process: stopped, and started.
+    /// 5. Greater and running: newer. Equal and running: current. Both left
+    ///    alone.
+    ///
+    /// **Which copy of the app the job runs is not asked.** Syd, 2026-10-08,
+    /// of another copy at the same version and build: "leave them alone".
+    ///
+    /// **Nor is anything else in the description.** It was compared whole
+    /// until 2026-10-08, so that a job an older app wrote read as different;
+    /// an older app's job now records a lesser version or none.
+    ///
+    /// The agent was restarted on every launch from 2026-09-21 to 2026-10-08,
+    /// whatever this answered. `Plans/Leave Running Services Alone.md`.
     public static func standing(
         of bundle: URL,
         launchAgents: URL = URL.homeDirectory.appending(path: "Library/LaunchAgents"),
@@ -223,16 +258,17 @@ public enum AgentInstall {
     ) throws -> Standing {
         let plan = try plan(for: bundle, launchAgents: launchAgents, surroundings: surroundings)
         guard let job = installed.job(plan.plist) else { return .missing }
+        guard let has = job.version else { return .differs("the job records no version") }
 
-        let wanted = JobDescription(label: plan.label, program: plan.binary)
-        if job != wanted {
-            if job.programArguments != wanted.programArguments {
-                return .differs("the job runs \(job.programArguments.first ?? "nothing")")
-            }
-            return .differs("the job description is an older one")
+        let standing = Standing.comparing(installed: has, carried: plan.version)
+        if standing.needsInstall { return standing }
+
+        guard let program = job.programArguments.first, installed.programExists(program) else {
+            return .differs("the job's program is gone: \(job.programArguments.first ?? "it names none")")
         }
         guard installed.isJobLoaded(plan.label) else { return .differs("the job is not loaded") }
-        return .current
+        guard installed.pid(plan.label) != nil else { return .stopped }
+        return standing
     }
 
     /// Starts an installed job: loads its plist if launchd has not, and starts
@@ -264,7 +300,9 @@ public enum AgentInstall {
         return ["\(label) stopped; its plist is still installed"]
     }
 
-    /// Restarts an installed job: stops its process and starts it again.
+    /// Restarts an installed job: stops its process, if it has one, and starts
+    /// it. **Also how a launch starts a job that has no process**, where there
+    /// is nothing to stop.
     @discardableResult
     public static func restart(_ plan: Plan) throws -> [String] {
         guard Launchctl.kickstart(plan.label) else { throw Failure.didNotRestart(plan.label) }
@@ -296,7 +334,8 @@ public enum AgentInstall {
             throw Failure.stillLoaded(plan.label)
         }
 
-        try JobDescription(label: plan.label, program: plan.binary).write(to: plan.plist)
+        try JobDescription(label: plan.label, program: plan.binary, version: plan.version)
+            .write(to: plan.plist)
 
         Launchctl.bootstrap(plan.plist)
         guard Launchctl.isLoaded(plan.label) else { throw Failure.didNotBootstrap(plan.label) }

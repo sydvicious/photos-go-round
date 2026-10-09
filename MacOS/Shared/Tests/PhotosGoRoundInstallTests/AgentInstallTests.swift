@@ -18,6 +18,7 @@ struct AgentInstallTests {
         bundleExists: Bool = true,
         executable: Bool = true,
         label: String? = "com.sydpolk.photosgoround.server.debug",
+        version: BundleVersion? = BundleVersion(version: "0.5", build: "2"),
         loaded: Bool = false,
         running: [AgentInstall.ForeignAgent] = []
     ) -> AgentInstall.Surroundings {
@@ -25,6 +26,7 @@ struct AgentInstallTests {
             directoryExists: { _ in bundleExists },
             isExecutable: { _ in executable },
             labelInBundle: { _ in label },
+            versionInBundle: { _ in version },
             isJobLoaded: { _ in loaded },
             runningAgents: { running }
         )
@@ -173,9 +175,9 @@ struct AgentInstallTests {
         }
     }
 
-    /// An installed plist from before the key existed is a different job, so
-    /// the next app launch writes it again — which is how existing installs
-    /// get the key.
+    /// An installed plist from before the key existed still decodes, and is a
+    /// different job. That is what made the next app launch write it again
+    /// until 2026-10-08; such a plist records no version, which does it now.
     @Test("A plist without the app named is an older job description")
     func olderPlistIsReinstalled() throws {
         var older = JobDescription(label: "com.sydpolk.photosgoround.server", program: binary)
@@ -185,5 +187,53 @@ struct AgentInstallTests {
 
         #expect(decoded.associatedBundleIdentifiers == nil)
         #expect(decoded != JobDescription(label: "com.sydpolk.photosgoround.server", program: binary))
+    }
+
+    // MARK: - The version an install records
+
+    /// **Recorded at install, not read from the bundle later.** An app replaced
+    /// at the same path has the new version on disk under an agent still
+    /// running the old code. `Plans/Leave Running Services Alone.md`, Phase 2.
+    @Test("A plan carries the version its bundle was built as")
+    func planCarriesTheVersion() throws {
+        let plan = try AgentInstall.plan(for: bundle, surroundings: surroundings())
+        #expect(plan.version == BundleVersion(version: "0.5", build: "2"))
+    }
+
+    /// It could record nothing, and every launch after would install it again.
+    @Test("A bundle with no readable version is refused")
+    func noVersionIsRefused() {
+        #expect(throws: AgentInstall.Failure.noVersion(bundle)) {
+            try AgentInstall.plan(for: bundle, surroundings: surroundings(version: nil))
+        }
+    }
+
+    @Test("A job description records the version it was installed with, where launchd allows it")
+    func jobRecordsItsVersion() throws {
+        let version = try #require(BundleVersion(version: "0.5", build: "2"))
+        let job = JobDescription(
+            label: "com.sydpolk.photosgoround.server", program: binary, version: version)
+        let values = try #require(
+            try PropertyListSerialization.propertyList(from: job.encodedPlist(), format: nil)
+                as? [String: Any])
+
+        #expect(
+            values["EnvironmentVariables"] as? [String: String]
+                == ["PGR_INSTALLED_VERSION": "0.5", "PGR_INSTALLED_BUILD": "2"])
+
+        let decoded = try PropertyListDecoder().decode(JobDescription.self, from: job.encodedPlist())
+        #expect(decoded.version == version)
+    }
+
+    /// Every install made before versions were recorded.
+    @Test("A job description with no version recorded has none, and adds nothing to the plist")
+    func jobWithoutAVersion() throws {
+        let job = JobDescription(label: "com.sydpolk.photosgoround.server", program: binary)
+        let values = try #require(
+            try PropertyListSerialization.propertyList(from: job.encodedPlist(), format: nil)
+                as? [String: Any])
+
+        #expect(job.version == nil)
+        #expect(values["EnvironmentVariables"] == nil)
     }
 }

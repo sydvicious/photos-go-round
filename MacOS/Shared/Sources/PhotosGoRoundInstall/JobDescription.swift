@@ -37,10 +37,37 @@ public struct JobDescription: Codable, Equatable, Sendable {
     /// The app's identifier is the same in every build configuration, so every
     /// configuration's agent is filed under the one app.
     ///
-    /// **Optional only so an older plist still decodes.** One written before
-    /// this key existed reads as a different job, which is what makes the next
-    /// app launch write it again. Every plist this writes carries it.
+    /// **Optional only so an older plist still decodes.** Every plist this
+    /// writes carries it. One written before this key existed read as a
+    /// different job, which made the next app launch write it again; since
+    /// 2026-10-08 it is the version, which such a plist does not record.
     public var associatedBundleIdentifiers: [String]?
+    /// Where the install records the version it installed, and nothing else.
+    ///
+    /// **Recorded here, not read from the bundle later.** An app replaced at
+    /// the same path has the new version on disk under an agent still running
+    /// the old code, so the bundle would always read as equal. This plist is
+    /// written by the install and removed by the uninstall, so the record
+    /// cannot outlive what it describes. `Plans/Leave Running Services
+    /// Alone.md`, *Why the version is recorded at install*.
+    ///
+    /// **`EnvironmentVariables` because launchd defines the key**, so nothing
+    /// unknown goes into the plist. The agent does not read them.
+    ///
+    /// **Nil in a plist written before versions were recorded**, which is how
+    /// such an install reads as having no version and is installed again.
+    public var environmentVariables: [String: String]?
+
+    static let versionKey = "PGR_INSTALLED_VERSION"
+    static let buildKey = "PGR_INSTALLED_BUILD"
+
+    /// The version this job was installed with, or nil when it records none
+    /// or what it records is not a version.
+    public var version: BundleVersion? {
+        BundleVersion(
+            version: environmentVariables?[Self.versionKey],
+            build: environmentVariables?[Self.buildKey])
+    }
 
     /// Restart it when it fails, and leave it alone when it exits cleanly.
     public struct KeepAlive: Codable, Equatable, Sendable {
@@ -58,6 +85,7 @@ public struct JobDescription: Codable, Equatable, Sendable {
         case keepAlive = "KeepAlive"
         case processType = "ProcessType"
         case associatedBundleIdentifiers = "AssociatedBundleIdentifiers"
+        case environmentVariables = "EnvironmentVariables"
     }
 
     /// **`Adaptive`, not `Background`, since 2026-09-17.** macOS throttles a
@@ -75,13 +103,16 @@ public struct JobDescription: Codable, Equatable, Sendable {
     /// The program and nothing else: the agent's build decides its storage,
     /// and there is no choice left to pass. It passed `--prod` for a Release
     /// build until 2026-09-24, when each build got one set of assets.
-    public init(label: String, program: URL) {
+    public init(label: String, program: URL, version: BundleVersion? = nil) {
         self.label = label
         self.programArguments = [program.path(percentEncoded: false)]
         self.runAtLoad = true
         self.keepAlive = KeepAlive(successfulExit: false)
         self.processType = Self.adaptive
         self.associatedBundleIdentifiers = [Storage.identifier]
+        self.environmentVariables = version.map {
+            [Self.versionKey: $0.version, Self.buildKey: $0.build]
+        }
     }
 
     public func encodedPlist() throws -> Data {

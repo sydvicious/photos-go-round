@@ -31,8 +31,9 @@ final class Installer {
 
     /// Called once, from `applicationDidFinishLaunching`.
     ///
-    /// **Every build installs and restarts the agent; only Release does the
-    /// rest unasked.** `LaunchInstall.run` has the sequence.
+    /// **Every build installs the agent when it is missing, lesser or not
+    /// running, and leaves it alone otherwise; only Release does the rest
+    /// unasked.** `LaunchInstall.run` has the sequence.
     func startAtLaunch() {
         guard !startedAtLaunch else { return }
         startedAtLaunch = true

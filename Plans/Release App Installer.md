@@ -6,6 +6,9 @@ What it left open is in `TODO.md`.
 *2026-09-23: the first Developer ID signed, notarized Release was built from
 Organizer and installed on Syd's Mac, running production. `PLAN.md`,
 *Shipping it*.*
+*2026-10-08: the restart of the agent at every launch, and deciding what
+differs without version numbers, are both reversed. `Leave Running Services
+Alone.md`.*
 
 Every build of `Photo-Go-Round.app` carries the agent, the wallpaper extension
 and the screensaver inside its wrapper. At every launch it installs and restarts
