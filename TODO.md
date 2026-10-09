@@ -335,3 +335,11 @@ Syd, 2026-10-08: "main app ask photos for the correct size". `PHImageManager.req
 ## The uninstaller inside the app wrapper
 
 Syd, 2026-10-09: "Figure out a way to package the uninstaller inside the app wrapper itself." A copy is in `Contents/Helpers` today, and the one people are sent to is on the disk image.
+
+## The dashboard says widgets are not counted in it
+
+Syd, 2026-10-09: "Add a line in the agent dashboard somewhere that loads by widgets are not tracked in this dashboard". The widgets read Photos and folders themselves and never ask the agent, so nothing they load shows in its numbers.
+
+## The wallpaper's first registration failed once
+
+2026-10-09, 0.7 (5): on the first launch after an install the app asked for the wallpaper extension to be registered and gave up thirty seconds later, "did not register … in time". `pkd` logged "Failed to find plugin with UUID" at that moment, and nowhere else that day. A relaunch registered it, and an uninstall and fresh install after that registered it on the first launch. Not understood. It came an hour after extension records had been removed by hand and NotificationCenter restarted, which may or may not matter. The app tries once per launch; if this comes back, it should try again before giving up.
