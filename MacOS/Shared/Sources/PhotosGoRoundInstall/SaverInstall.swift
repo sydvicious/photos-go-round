@@ -70,13 +70,18 @@ public enum SaverInstall {
     public struct Surroundings: Sendable {
         public var directoryExists: @Sendable (URL) -> Bool
         public var isRunning: @Sendable (String) -> Bool
+        /// The version of the saver at this URL, read through a link, or nil
+        /// when nothing readable is there. `BundleVersion.read`.
+        public var versionAt: @Sendable (URL) -> BundleVersion?
 
         public init(
             directoryExists: @escaping @Sendable (URL) -> Bool,
-            isRunning: @escaping @Sendable (String) -> Bool
+            isRunning: @escaping @Sendable (String) -> Bool,
+            versionAt: @escaping @Sendable (URL) -> BundleVersion? = { _ in nil }
         ) {
             self.directoryExists = directoryExists
             self.isRunning = isRunning
+            self.versionAt = versionAt
         }
 
         public static let live = Surroundings(
@@ -86,13 +91,15 @@ public enum SaverInstall {
                     atPath: url.path(percentEncoded: false), isDirectory: &isDirectory)
                 return there && isDirectory.boolValue
             },
-            isRunning: { name in Shell.pgrepExact(name) }
+            isRunning: { name in Shell.pgrepExact(name) },
+            versionAt: { BundleVersion.read(from: $0) }
         )
     }
 
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case noBundle(URL)
         case notASaverBundle(URL)
+        case noVersion(URL)
         case copyDidNotArrive(URL)
 
         public var description: String {
@@ -101,6 +108,8 @@ public enum SaverInstall {
                 "no bundle at \(url.path(percentEncoded: false))"
             case .notASaverBundle(let url):
                 "\(url.lastPathComponent) is not a .saver bundle"
+            case .noVersion(let url):
+                "\(url.lastPathComponent) carries no version and build number that can be read"
             case .copyDidNotArrive(let url):
                 "nothing usable arrived at \(url.path(percentEncoded: false))"
             }
@@ -166,16 +175,18 @@ public enum SaverInstall {
         installed: @Sendable (URL) -> Installed = { SaverInstall.installed(at: $0) }
     ) throws -> Standing {
         let plan = try plan(for: source, into: directory, surroundings: surroundings)
-        switch installed(plan.destination) {
-        case .nothing:
-            return .missing
-        case .link(let target) where target == plan.source.path(percentEncoded: false):
-            return .current
-        case .link(let target):
-            return .differs("linked to \(target)")
-        case .bundle:
-            return .differs("a copy is installed, not a link")
+        guard let carried = surroundings.versionAt(plan.source) else {
+            throw Failure.noVersion(plan.source)
         }
+        let there = installed(plan.destination)
+        if there == .nothing { return .missing }
+        guard let has = surroundings.versionAt(plan.destination) else {
+            if case .link(let target) = there {
+                return .differs("linked to \(target), where no version can be read")
+            }
+            return .differs("a copy with no version that can be read")
+        }
+        return Standing.comparing(installed: has, carried: carried)
     }
 
     /// Installs a plan as a symlink to its source, for an app installing the

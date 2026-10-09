@@ -6,10 +6,20 @@ import Testing
 /// Whether what the app carries is already installed — the question a launch
 /// asks before installing anything.
 ///
+/// **By version number, since 2026-10-08.** Equal or greater is left alone;
+/// lesser, missing or unreadable is installed. `Plans/Leave Running Services
+/// Alone.md`.
+///
 /// Every fact about the Mac is answered by the test, so nothing here looks at
-/// launchd, `pkd` or a signature. `Plans/Release App Installer.md`, Phase 3.
+/// launchd, `pkd` or a bundle on disk.
 @Suite("Whether what the app carries is already installed")
 struct StandingTests {
+
+    /// What the app in these tests carries, in all three products.
+    private static let carried = BundleVersion(version: "0.5", build: "2")!
+    private static let lesser = BundleVersion(version: "0.4", build: "7")!
+    private static let lowerBuild = BundleVersion(version: "0.5", build: "1")!
+    private static let greater = BundleVersion(version: "0.6", build: "1")!
 
     // MARK: - Agent
 
@@ -25,12 +35,21 @@ struct StandingTests {
             directoryExists: { _ in true },
             isExecutable: { _ in true },
             labelInBundle: { _ in label },
+            versionInBundle: { _ in Self.carried },
             isJobLoaded: { _ in true },
             runningAgents: { [] })
     }
 
-    private func installed(job: JobDescription?, loaded: Bool = true) -> AgentInstall.Installed {
-        AgentInstall.Installed(job: { _ in job }, isJobLoaded: { _ in loaded })
+    private func installed(
+        job: JobDescription?, loaded: Bool = true, pid: Int32? = 501, programExists: Bool = true
+    ) -> AgentInstall.Installed {
+        AgentInstall.Installed(
+            job: { _ in job }, isJobLoaded: { _ in loaded }, pid: { _ in pid },
+            programExists: { _ in programExists })
+    }
+
+    private func job(_ version: BundleVersion?, program: URL? = nil) -> JobDescription {
+        JobDescription(label: label, program: program ?? binary, version: version)
     }
 
     private func agentStanding(_ installed: AgentInstall.Installed) throws -> Standing {
@@ -43,41 +62,70 @@ struct StandingTests {
         #expect(try agentStanding(installed(job: nil)) == .missing)
     }
 
-    @Test("The job this bundle would write, loaded, is current")
-    func theSameJobIsCurrent() throws {
-        let job = JobDescription(label: label, program: binary)
-        #expect(try agentStanding(installed(job: job)) == .current)
+    /// The launch that used to restart a healthy agent: 2026-09-24, 17:08.
+    @Test("A job of the same version, loaded and running, is current")
+    func theSameVersionIsCurrent() throws {
+        #expect(try agentStanding(installed(job: job(Self.carried))) == .current)
+    }
+
+    /// Every install made before versions were recorded.
+    @Test("A job that records no version differs")
+    func noVersionRecordedDiffers() throws {
+        #expect(try agentStanding(installed(job: job(nil))) == .differs("the job records no version"))
+    }
+
+    /// Syd, 2026-10-05: "don't keep the older versions" — though it is running.
+    @Test("A job of a lesser version differs, and says both", arguments: [StandingTests.lesser, StandingTests.lowerBuild])
+    func aLesserVersionDiffers(_ has: BundleVersion) throws {
+        #expect(
+            try agentStanding(installed(job: job(has)))
+                == .differs("version \(has), and this app carries 0.5 (2)"))
+    }
+
+    /// Syd, 2026-10-05: "if the services are NEWER, leave them alone".
+    @Test("A job of a greater version is newer, and says both")
+    func aGreaterVersionIsNewer() throws {
+        #expect(
+            try agentStanding(installed(job: job(Self.greater)))
+                == .newer("version 0.6 (1), and this app carries 0.5 (2)"))
     }
 
     /// Another copy of the app — a second archive somewhere else — wrote it.
-    @Test("A job running another copy's binary differs, and names it")
-    func anotherBinaryDiffers() throws {
+    /// Syd, 2026-10-08, of one at the same version and build: "leave them
+    /// alone".
+    @Test("Another copy's job at the same version is current")
+    func anotherCopyAtTheSameVersionIsCurrent() throws {
         let elsewhere = URL(filePath: "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Helpers/Photos-Go-Round Server.app/Contents/MacOS/Photos-Go-Round Server")
-        let job = JobDescription(label: label, program: elsewhere)
-        let standing = try agentStanding(installed(job: job))
-        #expect(standing == .differs("the job runs \(elsewhere.path(percentEncoded: false))"))
+        #expect(try agentStanding(installed(job: job(Self.carried, program: elsewhere))) == .current)
     }
 
-    /// An older app wrote a job description this one would not — the change
-    /// from `Background` to `Adaptive` on 2026-09-17 is the kind of thing.
-    @Test("A job description an older app wrote differs, though it runs the same binary")
-    func anOlderDescriptionDiffers() throws {
-        var job = JobDescription(label: label, program: binary)
-        job.processType = "Background"
-        #expect(try agentStanding(installed(job: job)).needsInstall)
+    /// A disk image ejected, or the other copy thrown away: nothing can run.
+    @Test("A job whose program is gone differs, and names it")
+    func programGoneDiffers() throws {
+        let standing = try agentStanding(installed(job: job(Self.greater), programExists: false))
+        #expect(standing == .differs("the job's program is gone: \(binary.path(percentEncoded: false))"))
     }
 
     @Test("A job description launchd has not loaded differs")
     func notLoadedDiffers() throws {
-        let job = JobDescription(label: label, program: binary)
-        #expect(try agentStanding(installed(job: job, loaded: false)) == .differs("the job is not loaded"))
+        #expect(
+            try agentStanding(installed(job: job(Self.carried), loaded: false))
+                == .differs("the job is not loaded"))
+    }
+
+    /// Not running is acted on, and by starting it rather than installing.
+    @Test("A loaded job with no process is stopped, whether its version is the same or greater", arguments: [StandingTests.carried, StandingTests.greater])
+    func noProcessIsStopped(_ has: BundleVersion) throws {
+        #expect(try agentStanding(installed(job: job(has), pid: nil)) == .stopped)
     }
 
     @Test("A bundle that is not an agent is refused before anything is compared")
     func brokenBundleThrows() {
         let broken = AgentInstall.Surroundings(
             directoryExists: { _ in true }, isExecutable: { _ in true },
-            labelInBundle: { _ in nil }, isJobLoaded: { _ in true }, runningAgents: { [] })
+            labelInBundle: { _ in nil },
+            versionInBundle: { _ in Self.carried },
+            isJobLoaded: { _ in true }, runningAgents: { [] })
         #expect(throws: AgentInstall.Failure.noLabel(server)) {
             try AgentInstall.standing(
                 of: server, launchAgents: agents, surroundings: broken,
@@ -89,14 +137,21 @@ struct StandingTests {
 
     private let savers = URL(filePath: "/tmp/pgr-test/Screen Savers")
     private let saver = URL(filePath: "/Applications/Photos-Go-Round.app/Contents/Resources/Photos-Go-Round Screensaver.saver")
+    private let otherSaver = "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Resources/Photos-Go-Round Screensaver.saver"
 
-    private func saverStanding(_ there: SaverInstall.Installed) throws -> Standing {
+    /// `there` is what sits at the saver's name, and `has` the version read
+    /// through it — nil for a link whose target is gone.
+    private func saverStanding(
+        _ there: SaverInstall.Installed, has: BundleVersion? = nil,
+        carries: BundleVersion? = StandingTests.carried
+    ) throws -> Standing {
         let saverPath = saver.path(percentEncoded: false)
         return try SaverInstall.standing(
             of: saver, into: savers,
             surroundings: SaverInstall.Surroundings(
                 directoryExists: { $0.path(percentEncoded: false) == saverPath },
-                isRunning: { _ in false }),
+                isRunning: { _ in false },
+                versionAt: { $0.path(percentEncoded: false) == saverPath ? carries : has }),
             installed: { _ in there })
     }
 
@@ -105,24 +160,48 @@ struct StandingTests {
         #expect(try saverStanding(.nothing) == .missing)
     }
 
-    /// **What an app replaced at the same path finds, and it is right as it
-    /// stands.** Syd, 2026-09-21: over an existing install, "screensaver —
-    /// nothing needs to change".
-    @Test("A link to this very saver is current")
-    func saverLinkedHere() throws {
-        #expect(try saverStanding(.link(to: saver.path(percentEncoded: false))) == .current)
+    /// A link to this app's saver, a link into another copy, and a copy
+    /// `pgr_install saver` laid down are all judged by the version in them.
+    @Test("A saver there at the same version is current, however it got there")
+    func saverSameVersion() throws {
+        let here = saver.path(percentEncoded: false)
+        for there in [SaverInstall.Installed.link(to: here), .link(to: otherSaver), .bundle] {
+            #expect(try saverStanding(there, has: Self.carried) == .current)
+        }
     }
 
-    @Test("A link to another copy of the app differs, and names it")
-    func saverLinkedElsewhere() throws {
-        let other = "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Resources/Photos-Go-Round Screensaver.saver"
-        #expect(try saverStanding(.link(to: other)) == .differs("linked to \(other)"))
+    @Test("A saver there at a lesser version differs, and says both")
+    func saverLesser() throws {
+        #expect(
+            try saverStanding(.link(to: otherSaver), has: Self.lesser)
+                == .differs("version 0.4 (7), and this app carries 0.5 (2)"))
     }
 
-    /// What `pgr_install saver` lays down from a build directory.
-    @Test("A copy of the same name differs: the app installs a link, never a copy")
-    func saverCopyDiffers() throws {
-        #expect(try saverStanding(.bundle) == .differs("a copy is installed, not a link"))
+    @Test("A saver there at a greater version is newer")
+    func saverGreater() throws {
+        #expect(
+            try saverStanding(.bundle, has: Self.greater)
+                == .newer("version 0.6 (1), and this app carries 0.5 (2)"))
+    }
+
+    /// The other copy of the app was thrown away, and the link dangles.
+    @Test("A link whose saver cannot be read differs, and names where it points")
+    func saverLinkUnreadable() throws {
+        #expect(
+            try saverStanding(.link(to: otherSaver), has: nil)
+                == .differs("linked to \(otherSaver), where no version can be read"))
+    }
+
+    @Test("A copy with no version that can be read differs")
+    func saverCopyUnreadable() throws {
+        #expect(try saverStanding(.bundle, has: nil) == .differs("a copy with no version that can be read"))
+    }
+
+    @Test("A carried saver with no version is refused")
+    func saverCarriesNoVersion() {
+        #expect(throws: SaverInstall.Failure.noVersion(saver)) {
+            try saverStanding(.nothing, carries: nil)
+        }
     }
 
     // MARK: - The saver on disk
@@ -172,53 +251,115 @@ struct StandingTests {
         #expect(SaverInstall.installed(at: destination) == .link(to: source.path(percentEncoded: false)))
     }
 
+    /// A saver made by this test, read through a link to it: the version a
+    /// launch compares is the one in the saver the link names.
+    @Test("A saver's version is read through a link to it")
+    func versionIsReadThroughALink() throws {
+        let folder = FileManager.default.temporaryDirectory
+            .appending(path: "pgr-standing-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let bundle = folder.appending(path: "real.saver")
+        try FileManager.default.createDirectory(
+            at: bundle.appending(path: "Contents"), withIntermediateDirectories: true)
+        try PropertyListSerialization.data(
+            fromPropertyList: ["CFBundleShortVersionString": "0.5", "CFBundleVersion": "2"],
+            format: .xml, options: 0
+        ).write(to: bundle.appending(path: "Contents/Info.plist"))
+        let link = folder.appending(path: "link.saver")
+        try FileManager.default.createSymbolicLink(at: link, withDestinationURL: bundle)
+        let dangling = folder.appending(path: "dangling.saver")
+        try FileManager.default.createSymbolicLink(
+            at: dangling, withDestinationURL: folder.appending(path: "gone.saver"))
+
+        #expect(BundleVersion.read(from: link) == Self.carried)
+        #expect(BundleVersion.read(from: dangling) == nil)
+    }
+
     // MARK: - Wallpaper
 
     private let appex = URL(filePath: "/Applications/Photos-Go-Round.app/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex")
+    private let otherAppex = "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex"
     private let identifier = "com.sydpolk.photosgoround.wallpaper.extension"
 
+    private var registeredHere: WallpaperInstall.Registration {
+        .init(identifier: identifier, path: appex.path(percentEncoded: false))
+    }
+
+    /// `gone` are paths whose bundles are no longer there.
     private func wallpaperStanding(
-        _ registered: [WallpaperInstall.Registration], changed: Date? = nil
+        _ registered: [WallpaperInstall.Registration], recorded: BundleVersion? = StandingTests.carried,
+        carries: BundleVersion? = StandingTests.carried, gone: Set<String> = []
     ) throws -> Standing {
         let identifier = identifier
         return try WallpaperInstall.standing(
             of: appex,
             surroundings: WallpaperInstall.Surroundings(
                 directoryExists: { _ in true },
-                identifierAt: { _ in identifier },
+                identifierAt: { gone.contains($0) ? nil : identifier },
                 registrations: { registered },
-                changedAt: { _ in changed }))
+                versionAt: { _ in carries },
+                recordedVersion: { _ in recorded }))
     }
 
-    @Test("Registered from this very appex is current")
+    @Test("Registered at the version this app carries is current, from this appex or another copy's")
     func wallpaperCurrent() throws {
-        let ours = WallpaperInstall.Registration(identifier: identifier, path: appex.path(percentEncoded: false))
-        #expect(try wallpaperStanding([ours]) == .current)
+        #expect(try wallpaperStanding([registeredHere]) == .current)
+        #expect(try wallpaperStanding([.init(identifier: identifier, path: otherAppex)]) == .current)
+    }
+
+    /// Every registration made before versions were recorded.
+    @Test("Registered with no version recorded differs")
+    func wallpaperNoVersionRecorded() throws {
+        #expect(
+            try wallpaperStanding([registeredHere], recorded: nil)
+                == .differs("registered, with no version recorded"))
     }
 
     /// **An app replaced at the same path.** The registration still names the
-    /// right place and describes the old bundle. Syd, 2026-09-21: "unregister
-    /// the extension, re-register the extension, tickle Wallpaper agent".
-    @Test("Registered here before the appex last changed differs")
-    func wallpaperReplacedSinceRegistered() throws {
-        let registered = Date(timeIntervalSince1970: 1_790_000_000)
-        let ours = WallpaperInstall.Registration(
-            identifier: identifier, path: appex.path(percentEncoded: false), registered: registered)
+    /// right place and was made for the old bundle. Syd, 2026-09-21:
+    /// "unregister the extension, re-register the extension, tickle Wallpaper
+    /// agent".
+    @Test("Registered at a lesser version differs, and says both")
+    func wallpaperLesser() throws {
         #expect(
-            try wallpaperStanding([ours], changed: registered.addingTimeInterval(60))
-                == .stale("replaced since it was registered"))
-        #expect(try wallpaperStanding([ours], changed: registered.addingTimeInterval(-60)) == .current)
+            try wallpaperStanding([registeredHere], recorded: Self.lesser)
+                == .differs("version 0.4 (7), and this app carries 0.5 (2)"))
     }
 
-    /// Re-registering restarts `WallpaperAgent`, which the person sees; doing
-    /// it on every launch because a date would not parse would be worse.
-    @Test("A registration with no date, or an appex whose change cannot be read, is current")
-    func wallpaperUnknownAgeIsCurrent() throws {
-        let undated = WallpaperInstall.Registration(identifier: identifier, path: appex.path(percentEncoded: false))
-        #expect(try wallpaperStanding([undated], changed: Date()) == .current)
-        let dated = WallpaperInstall.Registration(
-            identifier: identifier, path: appex.path(percentEncoded: false), registered: Date())
-        #expect(try wallpaperStanding([dated], changed: nil) == .current)
+    @Test("Registered at a greater version is newer")
+    func wallpaperGreater() throws {
+        #expect(
+            try wallpaperStanding([registeredHere], recorded: Self.greater)
+                == .newer("version 0.6 (1), and this app carries 0.5 (2)"))
+    }
+
+    @Test("Not registered at all is not installed")
+    func wallpaperMissing() throws {
+        #expect(try wallpaperStanding([]) == .missing)
+    }
+
+    /// Whatever version was recorded for it, nothing is there to run.
+    @Test("Registered only from a bundle that is gone differs, and names where")
+    func wallpaperBundleGone() throws {
+        let standing = try wallpaperStanding(
+            [.init(identifier: identifier, path: otherAppex)], recorded: Self.greater, gone: [otherAppex])
+        #expect(standing == .differs("registered from \(otherAppex), which is gone"))
+    }
+
+    /// Debug and Claude builds register beside Release, and are not this one.
+    @Test("Another configuration's registration does not count as this one's")
+    func otherConfigurationIsNotOurs() throws {
+        let debug = WallpaperInstall.Registration(
+            identifier: "com.sydpolk.photosgoround.wallpaper.debug.extension",
+            path: "/elsewhere/Photos-Go-Round Wallpaper.appex")
+        #expect(try wallpaperStanding([debug]) == .missing)
+    }
+
+    @Test("A carried appex with no version is refused")
+    func wallpaperCarriesNoVersion() {
+        #expect(throws: WallpaperInstall.Failure.noVersion(appex)) {
+            try wallpaperStanding([registeredHere], carries: nil)
+        }
     }
 
     // MARK: - The chosen wallpaper
@@ -253,95 +394,34 @@ struct StandingTests {
 
     // MARK: - The running extension
 
-    private func mismatch(_ running: [WallpaperInstall.Running], changed: Date?) -> String? {
+    /// Whether an extension of this build is running at all — what a launch
+    /// asks of a wallpaper that is chosen. Syd, 2026-10-08: "chose but not
+    /// running check".
+    private func isRunning(_ running: [WallpaperInstall.Running]) -> Bool {
         let identifier = identifier
-        return WallpaperInstall.mismatch(
-            of: appex, running: running,
+        return WallpaperInstall.isRunning(
+            appex, running: running,
             surroundings: WallpaperInstall.Surroundings(
                 directoryExists: { _ in true },
                 identifierAt: { $0.contains("Debug") ? "com.sydpolk.photosgoround.wallpaper.debug.extension" : identifier },
-                registrations: { [] },
-                changedAt: { _ in changed }))
+                registrations: { [] }))
     }
 
-    private let replacedAt = Date(timeIntervalSince1970: 1_790_000_000)
-
-    @Test("None running is no mismatch")
+    @Test("No extension process is not running")
     func noneRunning() {
-        #expect(mismatch([], changed: replacedAt) == nil)
+        #expect(!isRunning([]))
     }
 
-    @Test("Running from this appex, started after it last changed, matches")
-    func runningHereMatches() {
-        let here = WallpaperInstall.Running(
-            pid: 7, appex: appex.path(percentEncoded: false), started: replacedAt.addingTimeInterval(60))
-        #expect(mismatch([here], changed: replacedAt) == nil)
-    }
-
-    /// An app replaced under a running extension.
-    @Test("Running from this appex, started before it was replaced, does not match")
-    func runningStaleDoesNotMatch() {
-        let stale = WallpaperInstall.Running(
-            pid: 7, appex: appex.path(percentEncoded: false), started: replacedAt.addingTimeInterval(-60))
-        #expect(mismatch([stale], changed: replacedAt) == "pid 7 started before its appex was replaced")
-    }
-
-    @Test("Running from another copy of the app does not match, and says where")
-    func runningElsewhereDoesNotMatch() {
-        let other = "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Library/Wallpaper/Photos-Go-Round Wallpaper.appex"
-        let elsewhere = WallpaperInstall.Running(pid: 8, appex: other, started: replacedAt.addingTimeInterval(60))
-        #expect(mismatch([elsewhere], changed: replacedAt) == "pid 8 runs from \(other)")
+    @Test("An extension running from this appex, or from another copy's, is running")
+    func runningHereOrElsewhere() {
+        #expect(isRunning([.init(pid: 7, appex: appex.path(percentEncoded: false))]))
+        #expect(isRunning([.init(pid: 8, appex: otherAppex)]))
     }
 
     /// Syd's Debug extension running beside a Release app is not the Release
-    /// app's business.
-    @Test("Another configuration's running extension is passed over")
-    func otherConfigurationIsPassedOver() {
-        let debug = WallpaperInstall.Running(
-            pid: 9, appex: "/Users/x/DerivedData/Debug/Photos-Go-Round Wallpaper.appex", started: nil)
-        #expect(mismatch([debug], changed: replacedAt) == nil)
-    }
-
-    @Test("A start time that cannot be read counts as a mismatch")
-    func unreadableStartMismatches() {
-        let unknown = WallpaperInstall.Running(pid: 7, appex: appex.path(percentEncoded: false), started: nil)
-        #expect(mismatch([unknown], changed: replacedAt) != nil)
-    }
-
-    @Test("Not registered at all is not installed")
-    func wallpaperMissing() throws {
-        #expect(try wallpaperStanding([]) == .missing)
-    }
-
-    @Test("Registered from another copy differs, and names where")
-    func wallpaperElsewhere() throws {
-        let other = "/Volumes/Disk Image/Photos-Go-Round.app/Contents/Extensions/Photos-Go-Round Wallpaper.appex"
-        let standing = try wallpaperStanding([.init(identifier: identifier, path: other)])
-        #expect(standing == .differs("registered from \(other)"))
-    }
-
-    /// Debug and Claude builds register beside Release, and are not this one.
-    @Test("Another configuration's registration does not count as this one's")
-    func otherConfigurationIsNotOurs() throws {
-        let debug = WallpaperInstall.Registration(
-            identifier: "com.sydpolk.photosgoround.wallpaper.debug.extension",
-            path: "/elsewhere/Photos-Go-Round Wallpaper.appex")
-        #expect(try wallpaperStanding([debug]) == .missing)
-    }
-
-    // MARK: - The live facts
-
-    /// Ordering, not timing: the file is made by this test, so it cannot have
-    /// changed before the process running the test started.
-    @Test("A file made by this process changed after this process started")
-    func liveCtimeFollowsStart() throws {
-        let file = FileManager.default.temporaryDirectory
-            .appending(path: "pgr-standing-\(UUID().uuidString)")
-        try Data([0]).write(to: file)
-        defer { try? FileManager.default.removeItem(at: file) }
-
-        let started = try #require(CodeIdentity.startedAt(getpid()))
-        let changed = try #require(CodeIdentity.changedAt(file))
-        #expect(changed > started)
+    /// app's wallpaper running.
+    @Test("Another configuration's running extension does not count")
+    func otherConfigurationIsNotRunning() {
+        #expect(!isRunning([.init(pid: 9, appex: "/Users/x/DerivedData/Debug/Photos-Go-Round Wallpaper.appex")]))
     }
 }

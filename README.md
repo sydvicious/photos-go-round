@@ -13,13 +13,13 @@ screensaver, widgets, and apps across Apple's platforms. The library problem
 
 Open `Photos-Go-Round.xcodeproj`. Everything below is the Debug configuration; Release is Archive, moved to `/Applications` by hand.
 
-**The app installs the rest.** Every build carries the agent, the wallpaper extension and the screensaver in its bundle. Each launch installs and restarts its agent; a Release launch also registers the wallpaper and links the screensaver. The Help menu installs or uninstalls any of the three, in any build. Nothing is copied out of the app.
+**The app installs the rest.** Every build carries the agent, the wallpaper extension and the screensaver in its bundle. Each launch installs its agent when it is missing, not running or of a lesser version, and leaves it alone otherwise; a Release launch does the same for the wallpaper and the screensaver. The Help menu installs or uninstalls any of the three, in any build. Nothing is copied out of the app.
 
 **⌘B builds, ⌘R installs**, since 2026-09-19. Building an install scheme changes nothing.
 
 | To | Scheme | Key |
 |---|---|---|
-| Run the app, which installs and restarts its agent | **Photos-Go-Round** | ⌘R |
+| Run the app, which installs its agent when it needs to | **Photos-Go-Round** | ⌘R |
 | Install the wallpaper or the screensaver from it | Help › Install Wallpaper, Install Screensaver | |
 | Install the agent, and restart it | **Install Agent** | ⌘R |
 | Install the wallpaper extension | **Install Wallpaper Extension** | ⌘R |

@@ -6,14 +6,16 @@ Three products run outside the app: the agent, the wallpaper extension and the s
 
 **At every launch, every build:**
 
-1. **The agent** — installed if it is not, then restarted.
+1. **The agent** — installed if it is missing, if the one installed is of a lesser version or records none, or if it cannot run; started if it is installed and has no process. One of the same or a greater version that is running is left alone.
 2. Nothing more until it answers, up to ninety seconds — a first launch in a fresh account builds its storage from nothing, and took over twenty seconds in one. While it waits, the install log says why, once per change: no port published yet, no secret yet, a refused secret, a timeout, or a refused connection.
-3. **The wallpaper** — registered again if the extension running is not this app's, if this app's registration is older than its appex, or if it is not registered but is still the chosen wallpaper.
+3. **The wallpaper** — registered again if the one registered is of a lesser version or has none recorded, if it is not registered but is still the chosen wallpaper, or if it is the chosen wallpaper and no extension is running.
 
 **A Release build also**, at launch:
 
 - registers the wallpaper if it is not registered;
-- links the screensaver if nothing is at its name.
+- links the screensaver if nothing is at its name, or what is there is of a lesser version or has none that can be read.
+
+**Version numbers decide**, since 2026-10-08: the marketing version, then the build number. The agent's is recorded in its plist when it is installed, and the wallpaper's in the build's preferences when it is registered; the screensaver's is read from the saver at its name. So a rebuild that keeps its version and build is left alone at launch — the Help menu's Install, or the `Install …` scheme, puts it in place.
 
 **The Help menu**, in any build: Install Photos-Go-Round Service, Install Wallpaper, Install Screensaver — each installs whatever is there — and Uninstall for each, which removes this build's copy and never another configuration's.
 
@@ -67,7 +69,7 @@ One thing ⌘B still does, and it is Xcode's doing rather than an install: **bui
 
 `Claude` is what an agent working on this project builds; you will not normally choose it.
 
-The app itself is not installed: run the **Photos-Go-Round** scheme from Xcode. **Launching it installs and restarts its own agent**, pointing the plist at the copy inside the app — so after a ⌘R of the app, an agent the **Install Agent** scheme installed is replaced by the app's.
+The app itself is not installed: run the **Photos-Go-Round** scheme from Xcode. **Launching it installs its own agent when none is installed, or the one installed is of a lesser version**, pointing the plist at the copy inside the app. An agent the **Install Agent** scheme installed at the same version is left as it is.
 
 `pgr_ctl` is not installed either. Build the **pgr_ctl** scheme and put the product on your `PATH` — a copy or a symlink into `~/bin`. Do not reach for `swift run pgr_ctl`: it writes a `.build` directory into the checkout, and nothing generated belongs there.
 

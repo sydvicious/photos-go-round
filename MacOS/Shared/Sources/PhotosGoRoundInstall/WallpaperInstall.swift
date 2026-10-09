@@ -1,4 +1,5 @@
 import Foundation
+import PhotosGoRoundAgentAPI
 
 /// Registering the wallpaper extension: what would happen, and then it
 /// happening.
@@ -22,15 +23,9 @@ public enum WallpaperInstall {
     public struct Registration: Equatable, Sendable {
         public var identifier: String
         public var path: String
-        /// When `pkd` recorded it. **The registration's own time, not the
-        /// bundle's** — measured 2026-09-21: an appex last changed at 03:02:50
-        /// read 03:16:48 when registered at 03:16:48, and a later `pluginkit
-        /// -a` moved it on. Nil when the line carried none that parsed.
-        public var registered: Date?
-        public init(identifier: String, path: String, registered: Date? = nil) {
+        public init(identifier: String, path: String) {
             self.identifier = identifier
             self.path = path
-            self.registered = registered
         }
     }
 
@@ -116,20 +111,24 @@ public enum WallpaperInstall {
         /// What the bundle at this path says its identifier is, now.
         public var identifierAt: @Sendable (String) -> String?
         public var registrations: @Sendable () -> [Registration]
-        /// When the appex's executable last changed — its `ctime`, which a copy
-        /// of the app into place always moves. `CodeIdentity.changedAt`.
-        public var changedAt: @Sendable (URL) -> Date?
+        /// The version of the appex at this URL. `BundleVersion.read`.
+        public var versionAt: @Sendable (URL) -> BundleVersion?
+        /// The version recorded when the extension of this identifier was last
+        /// registered. `recordedVersion(in:)`.
+        public var recordedVersion: @Sendable (String) -> BundleVersion?
 
         public init(
             directoryExists: @escaping @Sendable (URL) -> Bool,
             identifierAt: @escaping @Sendable (String) -> String?,
             registrations: @escaping @Sendable () -> [Registration],
-            changedAt: @escaping @Sendable (URL) -> Date? = { _ in nil }
+            versionAt: @escaping @Sendable (URL) -> BundleVersion? = { _ in nil },
+            recordedVersion: @escaping @Sendable (String) -> BundleVersion? = { _ in nil }
         ) {
             self.directoryExists = directoryExists
             self.identifierAt = identifierAt
             self.registrations = registrations
-            self.changedAt = changedAt
+            self.versionAt = versionAt
+            self.recordedVersion = recordedVersion
         }
 
         public static let live = Surroundings(
@@ -141,8 +140,10 @@ public enum WallpaperInstall {
             },
             identifierAt: { path in PluginKit.identifier(ofBundleAt: path) },
             registrations: { PluginKit.registrations(for: extensionPoint) },
-            changedAt: { appex in
-                (Bundle(url: appex)?.executableURL).flatMap(CodeIdentity.changedAt)
+            versionAt: { BundleVersion.read(from: $0) },
+            recordedVersion: { identifier in
+                WallpaperInstall.preferences(forExtension: identifier)
+                    .flatMap { WallpaperInstall.recordedVersion(in: $0) }
             }
         )
     }
@@ -150,6 +151,7 @@ public enum WallpaperInstall {
     public enum Failure: Error, Equatable, CustomStringConvertible {
         case noBundle(URL)
         case notOurExtension(URL, read: String?)
+        case noVersion(URL)
         case didNotRegister(String, at: URL)
         case didNotUnregister(String, at: URL)
 
@@ -162,6 +164,8 @@ public enum WallpaperInstall {
                 \(url.lastPathComponent) has no Photos-Go-Round wallpaper identifier \
                 (read "\(read ?? "")")
                 """
+            case .noVersion(let url):
+                "\(url.lastPathComponent) carries no version and build number that can be read"
             case .didNotRegister(let identifier, let url):
                 """
                 \(identifier) did not register from \(url.path(percentEncoded: false)) in time
@@ -203,38 +207,82 @@ public enum WallpaperInstall {
         return Plan(appex: appex, identifier: identifier, judged: judged)
     }
 
-    /// Whether this appex is the one registered for its identifier.
+    /// How the registered extension stands against the appex this app carries.
     ///
-    /// **Current only when registered from this very path, since the appex
-    /// last changed.** The app carries it in `Contents/Library/Wallpaper`,
-    /// where LaunchServices does not look, so nothing registers it but an
-    /// install. Registered from anywhere else is another copy of the app, or a
-    /// dead one, and `plan` already knows which of those to remove.
+    /// **By the version recorded when it was registered**, since 2026-10-08:
+    /// lesser or none differs, equal is current, greater is newer.
+    ///
+    /// **Which copy of the app it is registered from is not asked**, so long
+    /// as that copy is still there. Registered only from bundles that are gone
+    /// differs whatever was recorded, and `plan` removes those.
     ///
     /// **An app replaced at the same path leaves the registration pointing at
-    /// the right place and describing the old bundle.** Syd, 2026-09-21, for
-    /// an install over an existing one: "unregister the extension, re-register
-    /// the extension, tickle Wallpaper agent". A registration older than the
-    /// appex's executable is that case. One whose date or `ctime` cannot be
-    /// read is taken as current: re-registering restarts `WallpaperAgent`,
-    /// which is visible, and doing it on every launch would be worse.
+    /// the right place and made for the old bundle.** Syd, 2026-09-21, for an
+    /// install over an existing one: "unregister the extension, re-register
+    /// the extension, tickle Wallpaper agent". The recorded version is lesser
+    /// then. It was caught by the registration's date against the appex's
+    /// `ctime` until 2026-10-08. `Plans/Leave Running Services Alone.md`.
     public static func standing(
         of appex: URL,
         surroundings: Surroundings = .live
     ) throws -> Standing {
         let plan = try plan(for: appex, surroundings: surroundings)
-        if let ours = plan.judged.first(where: { $0.verdict == .ours }) {
-            if let registered = ours.registration.registered,
-                let changed = surroundings.changedAt(appex), changed > registered
-            {
-                return .stale("replaced since it was registered")
-            }
-            return .current
+        guard let carried = surroundings.versionAt(appex) else { throw Failure.noVersion(appex) }
+
+        let registered = plan.judged.filter { $0.registration.identifier == plan.identifier }
+        guard let first = registered.first else { return .missing }
+        guard registered.contains(where: { !$0.verdict.isDead }) else {
+            return .differs("registered from \(first.registration.path), which is gone")
         }
-        let elsewhere = plan.judged.map(\.registration)
-            .filter { $0.identifier == plan.identifier }
-        guard let other = elsewhere.first else { return .missing }
-        return .differs("registered from \(other.path)")
+        guard let has = surroundings.recordedVersion(plan.identifier) else {
+            return .differs("registered, with no version recorded")
+        }
+        return Standing.comparing(installed: has, carried: carried)
+    }
+
+    // MARK: - The version registered
+
+    static let recordedVersionKey = "wallpaperRegisteredVersion"
+    static let recordedBuildKey = "wallpaperRegisteredBuild"
+
+    /// The preferences of the build whose extension this identifier is — each
+    /// configuration's own, so the three records do not collide — or nil for
+    /// an identifier that is no configuration's.
+    static func preferences(forExtension identifier: String) -> UserDefaults? {
+        guard
+            let variant = BuildVariant.allCases.first(where: {
+                $0.wallpaperExtensionIdentifier == identifier
+            })
+        else { return nil }
+        // A process cannot open its own domain as a suite; it is the standard one.
+        return UserDefaults(suiteName: MacHostEnvironment.preferenceDomain(variant: variant))
+            ?? .standard
+    }
+
+    /// The version of the extension last registered, or nil when none is
+    /// recorded or what is there is not a version.
+    ///
+    /// **Written down because `pkd` keeps none.** `pluginkit -m -D -v` printed
+    /// `…wallpaper.extension((null))` for the Release registration on
+    /// 2026-10-08. And not read from the appex, for the reason the agent's is
+    /// not read from its bundle: an app replaced at the same path holds the new
+    /// version under a registration made for the old one. `Plans/Leave Running
+    /// Services Alone.md`, *Why the version is recorded at install*.
+    static func recordedVersion(in defaults: UserDefaults) -> BundleVersion? {
+        BundleVersion(
+            version: defaults.string(forKey: recordedVersionKey),
+            build: defaults.string(forKey: recordedBuildKey))
+    }
+
+    /// Records the version just registered, or withdraws the record for nil.
+    static func record(_ version: BundleVersion?, in defaults: UserDefaults) {
+        if let version {
+            defaults.set(version.version, forKey: recordedVersionKey)
+            defaults.set(version.build, forKey: recordedBuildKey)
+        } else {
+            defaults.removeObject(forKey: recordedVersionKey)
+            defaults.removeObject(forKey: recordedBuildKey)
+        }
     }
 
     /// Where `WallpaperAgent` keeps what each display and space shows.
@@ -276,12 +324,10 @@ public enum WallpaperInstall {
         public var pid: Int32
         /// The appex its executable sits in.
         public var appex: String
-        public var started: Date?
 
-        public init(pid: Int32, appex: String, started: Date?) {
+        public init(pid: Int32, appex: String) {
             self.pid = pid
             self.appex = appex
-            self.started = started
         }
     }
 
@@ -300,41 +346,35 @@ public enum WallpaperInstall {
             let path = Shell.run("/bin/ps", ["-o", "comm=", "-p", String(pid)]).output
             guard let end = path.range(of: ".appex/Contents/MacOS/") else { return nil }
             let appex = String(path[path.startIndex..<end.lowerBound]) + ".appex"
-            return Running(pid: pid, appex: appex, started: CodeIdentity.startedAt(pid))
+            return Running(pid: pid, appex: appex)
         }
     }
 
-    /// Why a running extension of this appex's identifier is not this appex,
-    /// or nil when every one that is running is.
+    /// Whether an extension of this appex's identifier is running, from this
+    /// copy of the app or another.
     ///
-    /// Syd, 2026-09-21: "we are going to have to detect whether or not the
-    /// wallpaper agent that is running matches the one in the app bundle". Two
-    /// ways not to: it runs from somewhere else — another copy of the app — or
-    /// it runs from here and started before the appex last changed, which is an
-    /// app replaced under a running extension. **Another configuration's
-    /// process is not this one's business** and is passed over.
+    /// **What a launch asks of a wallpaper that is chosen.** A rebuild makes
+    /// `pkd` drop the running extension, `WallpaperAgent` does not start it
+    /// again, and the desktop stays grey — measured 2026-09-21. The version is
+    /// the same then, so this is what catches it. Syd, 2026-10-08: "chose but
+    /// not running check".
     ///
-    /// A start or change time that cannot be read counts as a mismatch: the
-    /// cost is one re-registration, which Syd called "not a disaster".
-    public static func mismatch(
-        of appex: URL,
+    /// **Which copy it runs from, and how long it has been running, are not
+    /// asked**; until 2026-10-08 both made a mismatch that registered it again.
+    /// **Another configuration's process is not this one's business** and does
+    /// not count.
+    ///
+    /// *Unmeasured:* that a chosen wallpaper always has a process. `Plans/Leave
+    /// Running Services Alone.md`, *Not running*.
+    public static func isRunning(
+        _ appex: URL,
         running: [Running],
         surroundings: Surroundings = .live
-    ) -> String? {
-        let ourPath = appex.path(percentEncoded: false)
-        guard let ours = surroundings.identifierAt(ourPath) else { return nil }
-        for process in running where surroundings.identifierAt(process.appex) == ours {
-            if process.appex != ourPath {
-                return "pid \(process.pid) runs from \(process.appex)"
-            }
-            guard let started = process.started, let changed = surroundings.changedAt(appex) else {
-                return "could not tell when pid \(process.pid) started or its appex changed"
-            }
-            if changed > started {
-                return "pid \(process.pid) started before its appex was replaced"
-            }
+    ) -> Bool {
+        guard let ours = surroundings.identifierAt(appex.path(percentEncoded: false)) else {
+            return false
         }
-        return nil
+        return running.contains { surroundings.identifierAt($0.appex) == ours }
     }
 
     /// Whether an identifier is one of this project's wallpaper extensions,
@@ -364,14 +404,10 @@ public enum WallpaperInstall {
     /// the first `(` and the path is everything from the first `/`, which is
     /// unambiguous because a bundle path is absolute and nothing before it
     /// contains a slash.
-    /// `2026-09-19 22:07:04 +0000`, as `pluginkit -v` prints it.
-    static let registrationDate: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss Z"
-        return formatter
-    }()
-
+    ///
+    /// **The version in the brackets is not read.** It is `(null)` as often as
+    /// not — the Release registration's was on 2026-10-08 — so the install
+    /// records its own. `recordedVersion(in:)`.
     public static func parseRegistrations(_ output: String) -> [Registration] {
         output.split(separator: "\n").compactMap { line in
             guard let openParen = line.firstIndex(of: "("),
@@ -382,12 +418,7 @@ public enum WallpaperInstall {
                 .trimmingCharacters(in: .whitespaces)
             let path = String(line[firstSlash...]).trimmingCharacters(in: .whitespaces)
             guard !identifier.isEmpty, !path.isEmpty else { return nil }
-            // The date is the tab-separated field just before the path.
-            let date = line[line.startIndex..<firstSlash]
-                .split(separator: "\t").last
-                .map { $0.trimmingCharacters(in: .whitespaces) }
-                .flatMap { registrationDate.date(from: $0) }
-            return Registration(identifier: identifier, path: path, registered: date)
+            return Registration(identifier: identifier, path: path)
         }
     }
 
@@ -443,6 +474,11 @@ public enum WallpaperInstall {
         }
         done.append("registered \(plan.identifier)")
         done.append("  \(plan.appex.path(percentEncoded: false))")
+        if let preferences = preferences(forExtension: plan.identifier) {
+            let version = BundleVersion.read(from: plan.appex)
+            record(version, in: preferences)
+            done.append("  version \(version?.description ?? "unreadable, so none recorded")")
+        }
 
         // **WallpaperAgent does not re-acquire the desktop from the new process
         // on its own** — measured 2026-09-16: the extension was killed above,

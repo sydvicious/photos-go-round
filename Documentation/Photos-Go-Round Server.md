@@ -52,8 +52,9 @@ someone else's sandbox and an Apple TV across the network be the same kind of
 client. See **SERVICE**.
 
 **It is meant to run as a LaunchAgent**, so that launchd starts it at login and
-restarts it if it stops. `Photos-Go-Round.app` installs and restarts it at every
-launch, since 2026-09-21, from the copy inside its own bundle; the app's Help
+restarts it if it stops. `Photos-Go-Round.app` installs it at launch from the
+copy inside its own bundle, unless one of the same or a greater version is
+already installed and running; the app's Help
 menu installs or uninstalls it by hand, and ⌘R on the **Install Agent** scheme
 is still the development route.
 Nothing else has to be running for it to work, and it expects to be there before
@@ -632,8 +633,8 @@ it stops. `serviceSecret` is what every request must carry: 64 hex digits, made
 on first launch and kept, and never withdrawn — it names the user, not the
 process. A value the agent could not have made is replaced. Neither is listed by
 `pgr_ctl get`. Only this user can read the domain, which is the whole of why the
-secret works. **To rotate it**, delete it and restart the agent, which the next
-launch of the app does anyway; every client reads it again on its next request:
+secret works. **To rotate it**, delete it and restart the agent; every client
+reads it again on its next request:
 
     defaults delete com.sydpolk.photosgoround.debug serviceSecret
 

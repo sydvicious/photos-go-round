@@ -150,8 +150,8 @@ struct ServiceGate: Sendable {
 
     static let cookieLifetimeSeconds = 400 * 24 * 60 * 60
 
-    /// **Derived from the secret, not made per launch.** The app restarts the
-    /// agent on every launch of its own, and a per-launch value would blank
+    /// **Derived from the secret, not made per launch.** The agent restarts
+    /// whenever an app installs over it, and a per-launch value would blank
     /// every open dashboard each time. Not the secret itself either: the
     /// browser keeps what it is given in its own files.
     static func cookieValue(for secret: String) -> String {

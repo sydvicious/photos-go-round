@@ -10,8 +10,8 @@ import Security
 /// its own preference domain — which only its user can read — and refuses any
 /// request that does not carry it. `Plans/Multi-user Support.md`.
 ///
-/// **Kept, not remade each launch.** The app restarts the agent on every launch
-/// of its own; a new secret each time would send every running client back to
+/// **Kept, not remade each launch.** The agent restarts whenever an app
+/// installs over it, or launchd starts it again; a new secret each time would send every running client back to
 /// re-read it. It names the user, not the process, so unlike the port it is
 /// never withdrawn.
 public enum ServiceSecret {

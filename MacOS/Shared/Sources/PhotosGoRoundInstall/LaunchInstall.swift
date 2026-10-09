@@ -17,6 +17,10 @@ import PhotosGoRoundAgentAPI
 /// what is left is Syd's list, 2026-09-21: the wallpaper unregistered and
 /// registered again with `WallpaperAgent` tickled, the screensaver untouched,
 /// the agent stopped and started. `Plans/Release App Installer.md`, Phase 4.
+///
+/// **That list is done only when the app that replaced it is of a greater
+/// version**, since 2026-10-08: each install records the version it installed,
+/// and a launch compares. `Plans/Leave Running Services Alone.md`.
 public enum LaunchInstall {
 
     public enum Product: String, CaseIterable, Sendable {
@@ -105,9 +109,8 @@ public enum LaunchInstall {
         public var uninstall: @Sendable (Product) throws -> [String]
         /// Blocks until this build's agent answers, or gives up and says false.
         public var agentAnswers: @Sendable () -> Bool
-        /// Why a running wallpaper extension of this build is not this app's,
-        /// or nil when none is running or every one is.
-        public var wallpaperMismatch: @Sendable (URL) -> String?
+        /// Whether a wallpaper extension of this build is running at all.
+        public var wallpaperIsRunning: @Sendable (URL) -> Bool
         /// Whether the wallpaper somebody chose is this appex's extension.
         public var wallpaperIsChosen: @Sendable (URL) -> Bool
 
@@ -117,7 +120,7 @@ public enum LaunchInstall {
             restartAgent: @escaping @Sendable (URL) throws -> [String] = { _ in [] },
             uninstall: @escaping @Sendable (Product) throws -> [String] = { _ in [] },
             agentAnswers: @escaping @Sendable () -> Bool = { true },
-            wallpaperMismatch: @escaping @Sendable (URL) -> String? = { _ in nil },
+            wallpaperIsRunning: @escaping @Sendable (URL) -> Bool = { _ in true },
             wallpaperIsChosen: @escaping @Sendable (URL) -> Bool = { _ in false }
         ) {
             self.standing = standing
@@ -125,7 +128,7 @@ public enum LaunchInstall {
             self.restartAgent = restartAgent
             self.uninstall = uninstall
             self.agentAnswers = agentAnswers
-            self.wallpaperMismatch = wallpaperMismatch
+            self.wallpaperIsRunning = wallpaperIsRunning
             self.wallpaperIsChosen = wallpaperIsChosen
         }
 
@@ -161,8 +164,8 @@ public enum LaunchInstall {
             agentAnswers: {
                 AgentProbe.answers(preferences: MacHostEnvironment().preferences)
             },
-            wallpaperMismatch: { appex in
-                WallpaperInstall.mismatch(of: appex, running: WallpaperInstall.runningExtensions())
+            wallpaperIsRunning: { appex in
+                WallpaperInstall.isRunning(appex, running: WallpaperInstall.runningExtensions())
             },
             wallpaperIsChosen: { appex in
                 guard let identifier = PluginKit.identifier(ofBundleAt: appex.path(percentEncoded: false))
@@ -178,10 +181,11 @@ public enum LaunchInstall {
             case notCarried
             case current
             case installed
-            /// The agent, already installed, stopped and started again.
+            /// The agent, installed and with no process, started.
             case restarted
-            /// Nothing asked of it at launch: a Debug or Claude build's
-            /// wallpaper that is not running, or a saver already there.
+            /// Nothing asked of it at launch: one of a greater version than
+            /// this app carries, or a Debug or Claude build's wallpaper or
+            /// saver.
             case leftAlone
             case uninstalled
             case failed(String)
@@ -190,24 +194,33 @@ public enum LaunchInstall {
         public var result: Result
     }
 
-    /// What a launch does. Syd, 2026-09-21, for every build:
+    /// What a launch does.
     ///
-    /// 1. **The agent**: installed if it is not, and restarted either way —
-    ///    "restart the agent on every app launch".
-    /// 2. **Nothing more until it answers** — "the agent has to be up and
-    ///    running first". One that never does fails the other two with that
-    ///    reason.
-    /// 3. **The wallpaper**: registered again if the extension running is not
-    ///    this app's, or if it is registered from this app's appex but the appex
-    ///    has changed since — a rebuild or a replaced app, after which `pkd` has
-    ///    dropped the running extension and `WallpaperAgent` leaves the desktop
-    ///    grey. Measured 2026-09-21. And if it is not registered at all but is
-    ///    still the chosen wallpaper, since a rebuild can drop the registration
-    ///    too — "yes, re-register it in any build". A Release build also
-    ///    registers it when it is not registered — "install wallpaper if not
-    ///    installed and running".
-    /// 4. **The screensaver, Release only**: linked "if not there". A link or
-    ///    copy already at its name is left, and said so.
+    /// **One rule for all three, since 2026-10-08.** Syd, 2026-10-05: "Don't
+    /// reinstall or relaunch any of the services if they are already running
+    /// when running the app", and 2026-10-08: "if the running thingie has an
+    /// equal or greater version, leave it alone. If it is lesser, or
+    /// missing/unreadable, reinstall." `Standing` is that judgement, and
+    /// `Plans/Leave Running Services Alone.md` the plan.
+    ///
+    /// 1. **The agent**, every build: installed when it is missing, lesser or
+    ///    unable to run; started when it is installed and has no process; left
+    ///    alone otherwise. It was restarted on every launch from 2026-09-21,
+    ///    which on 2026-09-24 took a healthy agent down and the Photos albums
+    ///    with it.
+    /// 2. **Nothing more until it answers** — Syd, 2026-09-21: "the agent has
+    ///    to be up and running first". One that never does fails the other two
+    ///    with that reason.
+    /// 3. **The wallpaper**, every build: registered again when the one
+    ///    registered is lesser, has no version recorded, or is registered only
+    ///    from a bundle that is gone. When it is not registered at all, a
+    ///    Release build registers it, and any build does if it is still the
+    ///    chosen wallpaper, since a rebuild can make `pkd` drop the
+    ///    registration — "yes, re-register it in any build". And when it is
+    ///    chosen with no extension running, which is what a rebuild at the
+    ///    same version leaves: a grey desktop, measured 2026-09-21.
+    /// 4. **The screensaver, Release only**: linked when nothing is at its
+    ///    name, or what is there is lesser or cannot be read.
     ///
     /// **Blocks** — ten seconds on launchd, thirty on `pkd`, ninety for the
     /// agent to answer (`AgentProbe.patience`) — so the caller runs it off the
@@ -244,10 +257,18 @@ public enum LaunchInstall {
             attempt(.agent) {
                 let standing = try steps.standing(.agent, agent)
                 report("agent: \(standing)")
-                if standing.needsInstall { return try install(.agent, agent) }
-                progress("Restarting the agent…")
-                for line in try steps.restartAgent(agent) { report("agent: \(line)") }
-                return .restarted
+                switch standing {
+                case .missing, .differs:
+                    return try install(.agent, agent)
+                case .stopped:
+                    progress("Starting the agent…")
+                    for line in try steps.restartAgent(agent) { report("agent: \(line)") }
+                    return .restarted
+                case .current:
+                    return .current
+                case .newer:
+                    return .leftAlone
+                }
             }
         } else {
             report("agent: not carried")
@@ -277,26 +298,31 @@ public enum LaunchInstall {
                 switch product {
                 // 3. The wallpaper.
                 case .wallpaper:
-                    if let why = steps.wallpaperMismatch(bundle) {
-                        report("wallpaper: the running extension is not this app's: \(why)")
-                        return try install(.wallpaper, bundle)
-                    }
                     let standing = try steps.standing(.wallpaper, bundle)
                     report("wallpaper: \(standing)")
-                    // Every build: its own registration, gone stale under it.
-                    if case .stale = standing { return try install(.wallpaper, bundle) }
-                    // Every build: gone altogether, and still what was chosen.
-                    if standing == .missing, steps.wallpaperIsChosen(bundle) {
-                        report("wallpaper: not registered, but it is the chosen wallpaper")
+                    switch standing {
+                    // Every build: registered, and lesser or unable to run.
+                    case .differs:
                         return try install(.wallpaper, bundle)
-                    }
-                    guard release else {
-                        if standing.needsInstall {
-                            report("wallpaper: a \(variant.description) registers it from the Help menu")
+                    case .missing:
+                        // Every build: gone altogether, and still what was chosen.
+                        if steps.wallpaperIsChosen(bundle) {
+                            report("wallpaper: not registered, but it is the chosen wallpaper")
+                            return try install(.wallpaper, bundle)
                         }
-                        return standing.needsInstall ? .leftAlone : .current
+                        guard release else {
+                            report("wallpaper: a \(variant.description) registers it from the Help menu")
+                            return .leftAlone
+                        }
+                        return try install(.wallpaper, bundle)
+                    case .current, .newer, .stopped:
+                        // Every build: chosen, and nothing running to show it.
+                        if steps.wallpaperIsChosen(bundle), !steps.wallpaperIsRunning(bundle) {
+                            report("wallpaper: it is the chosen wallpaper, and no extension is running")
+                            return try install(.wallpaper, bundle)
+                        }
+                        return standing == .current ? .current : .leftAlone
                     }
-                    return standing.needsInstall ? try install(.wallpaper, bundle) : .current
                 // 4. The screensaver.
                 case .saver:
                     guard release else {
@@ -306,11 +332,9 @@ public enum LaunchInstall {
                     let standing = try steps.standing(.saver, bundle)
                     report("saver: \(standing)")
                     switch standing {
-                    case .missing: return try install(.saver, bundle)
+                    case .missing, .differs: return try install(.saver, bundle)
                     case .current: return .current
-                    case .differs, .stale:
-                        report("saver: already there, left alone")
-                        return .leftAlone
+                    case .newer, .stopped: return .leftAlone
                     }
                 case .agent:
                     return .notCarried
