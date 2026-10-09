@@ -1,8 +1,8 @@
 # Summary
 
 Photos-Go-Round Widgets.app: a self-contained App Store app for macOS, iOS, iPadOS and visionOS, with
-watchOS widgets served by the iPhone app. It shows your photographs in widgets of every size the
-platform offers, and it must pass App Store review. Syd, 2026-09-26.
+watchOS widgets served by the iPhone app. It shows your photographs in widgets of every Home Screen
+size the platform offers, and it must pass App Store review. Syd, 2026-09-26.
 
 # Rationale
 
@@ -30,7 +30,7 @@ design that works the same on the Mac and on devices that never had an agent.
     as a setting.
 - *iOS and iPadOS* — the same widgets in an app on the iOS App Store. Before the Mac's menubar
   app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested on his own
-  phone, not in a simulator.
+  phone, not in a simulator. The app itself is planned in `Plans/PGR Widgets - iOS.md`.
   - Investigate how widgets work on iPhone Duo.
   - Find out whether the widget can query Photos while the phone is locked.
   - Read the extension's memory on the phone, where the 30 MB ceiling is expected to be enforced.
@@ -111,7 +111,8 @@ design that works the same on the Mac and on devices that never had an agent.
   measured.
 - **The menubar app has a second TinyCache of its own, for previews of the widgets.** A preview
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
-- **Widgets in every size the platform offers.** No families left out.
+- **Widgets in every Home Screen size the platform offers.** The Lock Screen's own sizes on iPhone
+  and iPad, a circle, a rectangle and a line of text, are left out. Syd, 2026-10-09.
 - **A widget waiting for its first photograph shows the app's icon, greyed over, and
   "Scanning…".** Syd, 2026-10-09. When something has gone wrong it says what instead.
 - **One photograph fades into the next.** Syd, 2026-10-08: "I want the fade transition". Later, a
@@ -312,6 +313,15 @@ The peak waits for the iOS app, where it is listed in *Phases*.
   until it is next chosen.
 - *Each counting is logged*, as `counted <source>, <n> pictures in <t> s`. A count taken by the
   walk that chooses is not: it cost nothing more.
+
+- *The counts stand in for a database.* The screensaver and the wallpaper ask the agent, which
+  draws uniformly from its catalogue, a row for every photograph. The widget asks no agent and has
+  no catalogue, so it weighs its sources instead. Syd, 2026-10-09, asked whether the widget could
+  draw from the agent's database, and left it: "this is fine for now, I guess". When the widgets
+  have the shared database this plan calls for, a widget draws from that and the counts go.
+  Reading the agent's own database from today's widget would take a read-only sandbox exception
+  for its path, and would work only where there is an agent. *Not checked: whether SQLite can open
+  the agent's live database read-only from inside the sandbox.*
 
 **Measured 2026-10-09, a Debug build of 0.8**, on the widget gallery's first asking. Each source was
 counted once: the two Photos collections at 8452 and 80 pictures, in 0.18 s and 0.15 s, and the
@@ -1485,6 +1495,7 @@ Read from Apple's reference pages for `PHImageManager` and `PHImageRequestOption
 # References
 
 - `Plans/Product Strategy.md` — the four products, and this one's place among them.
+- `Plans/PGR Widgets - iOS.md` — the iOS and iPadOS app, planned separately. Syd, 2026-10-09.
 - `Plans/PLAN.md`, Phase 8 (Mac widget) and Phase 5 (iOS widget).
 - `Plans/PLAN.md`, *Widgets on macOS, and where the store actually lives* — the App Group analysis.
 - `Plans/Logging.md` — the logging rules every binary follows.
