@@ -180,6 +180,23 @@ struct FakeLibrary: PhotoLibraryPictures {
     var collections: [String: (width: Int, height: Int)?] = [:]
     var counts: [String: Int] = [:]
     var refusing = false
+    /// The size of the photographs the person picked for the app, when access
+    /// is limited to some, and how many of them there are.
+    var selected: (width: Int, height: Int)?
+    var selectedHolds = 1
+
+    func selectedCount() throws -> Int {
+        if refusing { throw Refused() }
+        return selected == nil ? 0 : selectedHolds
+    }
+
+    func selectedPicture(fitting box: CGSize) throws -> LibraryPicture? {
+        if refusing { throw Refused() }
+        guard let selected else { return nil }
+        return LibraryPicture(
+            image: try makeImage(width: selected.width, height: selected.height),
+            originalWidth: 4032, originalHeight: 3024)
+    }
 
     func count(inCollection identifier: String) throws -> Int {
         if refusing { throw Refused() }

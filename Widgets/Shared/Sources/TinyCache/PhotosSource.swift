@@ -45,6 +45,41 @@ public protocol PhotoLibraryPictures: Sendable {
     /// None when the collection is gone, and an error when the library will
     /// not answer at all.
     func count(inCollection identifier: String) throws -> Int
+
+    /// A picture chosen at random from the photographs the person picked for
+    /// the app, when its access is limited to a selection. Nil when nothing is
+    /// picked, and nil with any other access: this is never a way to the whole
+    /// library.
+    func selectedPicture(fitting box: CGSize) throws -> LibraryPicture?
+
+    /// How many photographs the person picked for the app. None with access
+    /// that is not limited to a selection.
+    func selectedCount() throws -> Int
+}
+
+/// The photographs a person picked for the app, when they gave it limited
+/// access. `Plans/PGR Widgets - iOS.md`, *Limited access*.
+public struct SelectedPhotosSource: CountedSource {
+    private let library: any PhotoLibraryPictures
+
+    public init(library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
+        self.library = library
+    }
+
+    /// A collection's is `photos|` and its identifier, which this cannot be.
+    public var countName: String { "photos-selected" }
+
+    public func pictureCount() throws -> Int {
+        try library.selectedCount()
+    }
+
+    public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        guard let picture = try library.selectedPicture(fitting: box) else { return nil }
+        return try PictureResizer().write(
+            picture.image, originalType: "photos",
+            originalWidth: picture.originalWidth, originalHeight: picture.originalHeight,
+            to: destination)
+    }
 }
 
 /// One Photos collection. Each is a source of its own, so that an album of one
@@ -91,6 +126,34 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         try pictures(inCollection: identifier)?.count ?? 0
     }
 
+    public func selectedCount() throws -> Int {
+        try selected()?.count ?? 0
+    }
+
+    public func selectedPicture(fitting box: CGSize) throws -> LibraryPicture? {
+        guard let assets = try selected(), assets.count > 0 else { return nil }
+        return Self.picture(of: assets.object(at: Int.random(in: 0..<assets.count)), fitting: box)
+    }
+
+    /// The photographs the person picked for the app. Nil unless access is
+    /// limited to a selection: with limited access "every photograph" is the
+    /// selection, and with full access it is the whole library, which is
+    /// never shown.
+    private func selected() throws -> PHFetchResult<PHAsset>? {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else {
+            throw Refused(status: Self.name(of: status))
+        }
+        guard status == .limited else { return nil }
+        return PHAsset.fetchAssets(with: Self.imagesOnly)
+    }
+
+    private static var imagesOnly: PHFetchOptions {
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        return options
+    }
+
     /// The collection's photographs, none of them fetched yet. Nil when the
     /// collection is gone.
     private func pictures(inCollection identifier: String) throws -> PHFetchResult<PHAsset>? {
@@ -100,20 +163,24 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         guard status == .authorized || status == .limited else {
             throw Refused(status: Self.name(of: status))
         }
+        // With a selection, the selection is the source. A smart album can
+        // still be fetched then, holding the picked photographs that are in
+        // it, and those would be counted twice.
+        guard status == .authorized else { return nil }
         guard
             let collection = PHAssetCollection.fetchAssetCollections(
                 withLocalIdentifiers: [identifier], options: nil
             ).firstObject
         else { return nil }
-        let imagesOnly = PHFetchOptions()
-        imagesOnly.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
-        return PHAsset.fetchAssets(in: collection, options: imagesOnly)
+        return PHAsset.fetchAssets(in: collection, options: Self.imagesOnly)
     }
 
     public func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
         guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
-        let asset = assets.object(at: Int.random(in: 0..<assets.count))
+        return Self.picture(of: assets.object(at: Int.random(in: 0..<assets.count)), fitting: box)
+    }
 
+    private static func picture(of asset: PHAsset, fitting box: CGSize) -> LibraryPicture? {
         let options = PHImageRequestOptions()
         // The caller is a widget building a timeline, on a thread it may block.
         options.isSynchronous = true

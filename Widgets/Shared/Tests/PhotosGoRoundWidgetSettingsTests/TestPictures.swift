@@ -1,0 +1,1 @@
+../TinyCacheTests/TestPictures.swift

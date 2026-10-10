@@ -19,12 +19,36 @@ public struct ChosenSources: Sendable {
         self.preferences = preferences
     }
 
+    /// The photographs the person picked for the app, as a source. There is
+    /// one of it, so its locator is only a name.
+    public static let selectedPhotos = SourceSpec(kind: .photosSelection, locator: "selected")
+
+    /// Whether the selection is a source now, which it is while Photos access
+    /// is limited to one.
+    public var holdsSelectedPhotos: Bool {
+        preferences.sources.contains { $0.kind == .photosSelection }
+    }
+
+    /// Makes the selection a source, or stops it being one. The collections
+    /// chosen with full access are left as they are either way: the person may
+    /// give full access back.
+    public func keepSelectedPhotos(_ keep: Bool) {
+        guard keep != holdsSelectedPhotos else { return }
+        let others = preferences.sources.filter { $0.kind != .photosSelection }
+        preferences.setSources(keep ? others + [Self.selectedPhotos] : others)
+    }
+
     public var collections: [SourceSpec] {
         preferences.sources.filter { $0.kind == .photosCollection }
     }
 
     public var filesAndFolders: [SourceSpec] {
         preferences.sources.filter { $0.kind == .folder || $0.kind == .file }
+    }
+
+    /// Every source that is switched on, which is what a widget shows from.
+    public var shown: [SourceSpec] {
+        preferences.sources.filter(\.enabled)
     }
 
     /// What Done in the collections sheet does: `ticked` becomes the set of
@@ -43,6 +67,15 @@ public struct ChosenSources: Sendable {
             $0.kind == .photosCollection && have.insert($0.locator).inserted
         }
         preferences.setSources(kept + added)
+    }
+
+    /// Stores what a source is called and where it sits now, when Photos says
+    /// that has changed. The source stays where it is in the list.
+    public func describe(_ locator: String, as description: SourceDescription) {
+        var stored = preferences.sources
+        guard let index = stored.firstIndex(where: { $0.locator == locator }) else { return }
+        stored[index].description = description
+        preferences.setSources(stored)
     }
 
     public func remove(_ source: SourceSpec) {

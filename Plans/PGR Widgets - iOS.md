@@ -18,32 +18,51 @@ The order is Syd's, 2026-10-09: the settings view first, in the app alone, and t
 after it. The to-dos under each phase are Claude's.
 
 - **Phase 1** — The app, with the settings view and no widget.
-  - Limited Photos access: the "Selected Photos" row and its button.
-  - The count on each row, and red for a source that is wrong.
   - The alert, and the picker again, when a source is wrong at opening.
-  - The files and folders list, with adding and removing.
-  - The sources are written into the App Group container.
-  - The preview, at Apple's table of sizes, and the control that changes its size.
-  - Try the preview both ways: scrolling off with the lists, and stuck at the top.
-  - The "How to add a widget" page and the About page.
+  - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
   - An iOS widget extension target, compiling the Mac's source files.
   - The widget reads the sources from the App Group container.
+  - The widget's list of sources takes the selection: `Settings.source(for:)` knows folders and
+    collections only.
   - The extension records each size it is handed, and the preview uses them.
   - Spike: can the extension open a folder the app chose?
 - **Phase 3** — What can only be found out on the phone. The to-dos are the ones under *iOS and
   iPadOS* in `Plans/Photos-Go-Round Widgets.md`.
 - **Phase 4** — The App Store: versioning, TestFlight, submission.
+- **Phase 5** — A full first-time launch wizard, after everything else.
+  - The "How to add a widget" page is part of it.
 
 # TODO
 
 The iOS app's to-dos are kept here while the work is on its branch. `TODO.md` at the top level is
 the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 
+- **Before the Photos prompt appears there is nothing on screen to say the app is waiting.** On a
+  simulator booted a minute earlier the prompt took ten seconds or more to come up, and the screen
+  showed "No collections chosen." meanwhile.
+- **The sheet reads the whole library again every second while it counts.** Each read is a
+  round trip to Photos for every collection. The Mac's picker asks its agent every three seconds.
+  Look at whether that makes the sheet slow on a real library.
+- **Two full test runs each failed one unrelated suite, while the Mac was overloaded.** Seven tests in
+  the agent's `PhotosEndpointTests` ("Key 'authorization' not found"), then one in
+  `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
+  that fail when the Mac is busy are still worth a look.
+- **A request to Photos for a picture has no time limit.** The preview no longer makes two at
+  once, which is what never came back; see *One fetch at a time*. A single request that Photos
+  does not answer would still be waited on for ever, by the preview and by a widget. Decide what
+  each does then.
+- **Look at the faces with the app icon on a device.** The icon is now a 1024-pixel picture; the
+  plain-icon and greyed faces have not been looked at since.
+- **The size control as shapes, not words.** In place of "Small", "Medium" and "Large", small
+  rounded rectangles in the proportions of each size. Syd, 2026-10-10: "we need little
+  proportionately sized round rects in the shape of the preview, but let's not do that work until
+  later", and "It will also give us fewer strings to localize as well".
 - **Hidden, in other languages.** Hidden is left out of the pickers by its kind, which PhotoKit
   gives, and not by the name "Hidden". Check on a real library, and with the phone in another
   language, that Hidden always arrives with that kind. If it ever has to be found by name, the
   name is localized and every language's has to be searched for. Syd, 2026-10-10.
+- **Redesign with all controls in the nav bar.** Syd, 2026-10-10.
 
 # Design Decisions
 
@@ -66,8 +85,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   Mac's.** The Mac's target and its release are left alone. Syd, 2026-10-09.
 - **One screen, three parts, top to bottom: the preview, the collections, the files and folders.**
   Syd, 2026-10-09.
-- **Besides it: a short "How to add a widget" page, and an About page with the version.** Reached
-  from a button on the settings screen. Syd, 2026-10-09.
+- **A short "How to add a widget" page, as part of the launch-time wizard.** Syd, 2026-10-09,
+  and 2026-10-10 for where it goes.
+- **No About page.** Dropped. Syd, 2026-10-10.
 - **The preview's size can be changed, among the sizes the platform's widgets come in.** iPhone and
   iPad offer different ones. Syd, 2026-10-09.
 - **The collections list shows the collections that are chosen.** As in the Mac app's Settings
@@ -77,22 +97,34 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   2026-10-09.
 - **At first launch the app asks for Photos access by itself, and the collections sheet comes up
   once the person has answered.** Nobody has to find the button first. Syd, 2026-10-09.
-- **When Photos access is refused, no sheet comes up.** The collections list says access is off,
-  with a button to the system's settings; files and folders still work. Syd, 2026-10-09.
+- **A full first-time launch wizard comes last, as a phase of its own.** Syd, 2026-10-10.
+- **Files and folders are not the priority, and may not be done at all.** The preview comes
+  first. Syd, 2026-10-10.
+- **When Photos access is refused, no sheet comes up.** The collections list has one row: a
+  warning icon, "No Photos Access", and a "Settings…" button. The heading's button stays, greyed
+  out. Files and folders still work. Syd, 2026-10-09 and 2026-10-10.
 - **With limited Photos access, the photographs the person picked are one source, "Selected
-  Photos".** Full or none is what Syd prefers, and the system always offers limited. A button
-  beside the row changes which are picked; the system's ask on every run is turned off. Syd,
-  2026-10-09.
+  Photos".** Full or none is what Syd prefers, and the system always offers limited. The
+  heading's button changes which are picked, and the row has no button of its own; the system's
+  ask on every run is turned off. Syd, 2026-10-09 and 2026-10-10. The row cannot be swiped away;
+  Claude's, 2026-10-10.
 - **The whole Photos library is never chosen for anyone.** A person's library holds things that
   are not fit to put on a screen; only what they chose is shown. Syd, 2026-10-09.
 - **With nothing chosen, the preview and the widgets show the Photos-Go-Round app icon.** Plain,
   in full colour, with no words. On iOS and iPadOS only; the Mac widget keeps its sentence. Syd,
   2026-10-09.
+- **The button that opens the sheet is beside the "Photos" heading, drawn as the photo-library
+  icon.** So it is right under the preview. Syd, 2026-10-10.
+- **"Files and Folders" has a button beside its heading too, drawn as a folder.** It is greyed
+  out until adding files and folders is built. Syd, 2026-10-10.
+- **The window can be no smaller than shows a small widget whole, the size control, the "Photos"
+  heading with its button, and one row.** At the standard text size. Syd, 2026-10-10.
 - **A button opens the whole library as a checkbox tree, in a sheet.** That is where collections
   are chosen, as in the Mac app's picker. Syd, 2026-10-09.
 - **Hidden is never offered, here or in the Mac app's picker.** Syd, 2026-10-10: "neither one
   should have `Hidden`".
-- **"Recently Saved" is offered in both.** Syd, 2026-10-10.
+- **"Recently Saved" is never offered, here or in the Mac app's picker.** It is told by PhotoKit's
+  number for it, not by its name. Syd, 2026-10-10: "Ditch "recently saved"".
 - **Anything with the `wholeLibrary` kind is never offered, here or in the Mac app's picker.**
   That is the collection PhotoKit titles *Recents*. Syd, 2026-10-10: "anything that has the
   `wholeLibrary` tag should be excluded".
@@ -103,8 +135,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   2026-10-09.
 - **With sources chosen and no picture to be had, the preview and the widgets show the app icon
   greyed over, with "No Photos found".** Every source red, or every source empty. Syd, 2026-10-09.
-- **A source is removed by a swipe on its row, by an Edit button's delete mode, or, for a
-  collection, by unticking it in the sheet.** All three. Syd, 2026-10-09.
+- **A source is removed by a swipe on its row, or, for a collection, by unticking it in the
+  sheet.** There is no Edit button. Syd, 2026-10-10.
+- **The settings screen has no toolbar.** The space is the preview's. Syd, 2026-10-10.
 - **Trouble that should pass leaves the source in place, red, until it has passed.** No connection
   is the example. Syd, 2026-10-09.
 - **Any other trouble is put to the person when the app is opened or brought forward: an alert,
@@ -143,14 +176,31 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **The real size comes from the system: the extension records each size it is handed, and the
   preview reads them.** Apple's table of sizes stands in until then. Widgets differ in size from
   phone to phone, the Duo especially. Syd, 2026-10-09.
-- **The layout is the same on an iPad in landscape: one scrolling column.** Not the preview beside
-  the lists. Syd, 2026-10-09.
+- **The layout goes by the window's shape, on every device.** Wider than it is tall: the preview
+  on the left and the sources on the right. Otherwise the preview is pinned on top. This replaces
+  one column for an iPad in landscape. Syd, 2026-10-10.
+- **The preview shows the largest size that fits without cropping, or the smallest, and goes on
+  doing so as the window changes.** A size the person picks is theirs from then on, cropped if it
+  has to be. Syd, 2026-10-10.
+- **Nothing counted before is trusted when the app comes forward.** The sheet's counts and the
+  preview's are both taken afresh, so photographs added in Photos meanwhile show. Syd, 2026-10-10.
+- **The preview fetches one picture at a time.** Two requests to Photos at once do not come back.
+- **The source list is read again each time the app comes forward.** A collection renamed or
+  moved in Photos takes its new name and place; one that has gone is red. Syd, 2026-10-10.
 - **The view scrolls vertically.** The preview is never cropped in height; a person scrolls down
   to the settings when they don't fit under it. Syd, 2026-10-09.
-- **Whether the preview stays at the top while the lists scroll is to be tested both ways.** Syd,
-  2026-10-09.
+- **The preview stays at the top and the sources scroll under it.** Tried both ways. Syd,
+  2026-10-10: "I want the pinned behavior".
+- **The preview's space is the full width of the screen.** A widget that fits the Home Screen
+  fits here.
 - **The preview's picture changes by itself every few seconds, and on a tap.** A small slideshow,
   not a widget's five minutes. Syd, 2026-10-09.
+- **The preview's space is as tall as the largest size, or as tall as still leaves the
+  collections in sight under it, whichever is less; the widget is centered in it.** A size bigger
+  than the space is cropped, top and bottom as at the sides. Choosing another size moves nothing
+  else. Syd, 2026-10-10.
+- **The app carries a full-resolution picture of its icon, and the faces use it.** Syd,
+  2026-10-10.
 - **When Photos access is turned off later, the chosen collections stay, red.** The list says
   access is off, with the button to the system's settings; none is removed. Syd, 2026-10-09.
 - **On a phone the sizes are small, medium and large, and all three fit.** The really big widgets
@@ -331,6 +381,68 @@ the phone.
 **Where its pictures come from.** The app's own TinyCache, as already decided, so a preview never
 takes a picture a widget was going to show. The app is not held to the extension's 30 MB.
 
+**Nothing jumps when the size changes.** Syd, 2026-10-10: "Please have the view surrounding the
+preview be sized for the largest image (at least on iphone), and center the preview in it. Having
+everything jump around is annoying". So the preview keeps room as tall as the tallest size the
+device offers, 354 points on a 393-point phone, and the widget sits in the middle of it. It is
+done the same way on an iPad, where the tallest sizes are large and extra large.
+
+**And never so tall that the collections are out of sight.** Syd, 2026-10-10: "the surround for
+the preview needs to be the minimum of the largest picture or the largest picture that will still
+fit and allow us to see the collections underneath. If the user selects a picture bigger than
+that, crop it and center it". So the space is the lesser of two heights: the tallest size, and
+what is left of the screen once the collections are allowed for. A widget taller than the space
+is centered in it and loses the same from top and bottom, as one wider than the view loses from
+its sides. It is still never shrunk.
+
+- **"See the collections underneath"** is the size control, the "Photos" heading with its button,
+  and one row, 180 points in all. Claude first kept three rows; Syd gave the number on 2026-10-10
+  with the smallest window. See *A window that is resized*.
+- **Claude's reading of "the largest picture that will still fit":** the room itself, to the
+  point, and not the next size down. With 300 points of room a large widget is cropped to 300,
+  where taking the next size down would crop it to a medium's 158.
+- **On an upright iPhone 17 there is room for the largest size**, so nothing is cropped there.
+  Seen 2026-10-10 on the simulator. The cropped case, a phone on its side or a short window, has
+  been tested as arithmetic and not yet looked at.
+
+**The icon in the faces is a picture carried with the view.** Syd, 2026-10-10: "include a full
+resolution picture of the app icon in the bundle, and use it". The only icon an iOS app can load
+of its own is the 120-pixel one the Home Screen uses, which was blurred at a widget's size, and a
+widget extension has none at all. So a 1024-pixel picture, exported from
+`Artwork/PhotosGoRound.icon` by Icon Composer's own tool, is among the resources of the
+`PhotosGoRoundWidgetFace` target, and whatever links that target has it: the app now, the widget
+extension later. `Plans/App Icon.md` has the command that makes it.
+
+**Where the preview starts.** Syd, 2026-10-10: "the initial setting for which preview to show is
+the largest that will fit without cropping, or the smallest". The space the widget is drawn in is
+measured once it is laid out, and the largest size that is no wider and no taller than it is
+chosen; when none fits, the smallest. It is done once. After that the size is the person's, and a
+change of room, such as turning the phone, does not change it for them. Until the screen and the
+space are known the preview is on the smallest.
+
+**On its side.** Syd, 2026-10-10, first: "We are not going to support landscape on iPhone". Then:
+"Change that. On landscape, the preview moves to the left, with the sources on the right." So
+when the window is wider than it is tall the preview has a column of its own on the left, as wide
+as the widest size or half the window if that is less, and the two lists scroll on the right. The
+preview's space there is the height of the window less the size control; nothing has to be kept
+in sight under it. Since the same day it goes by the window's shape on every device; see *A
+window that is resized*.
+
+**Pinned.** Syd, 2026-10-09: "we should try it having the preview stick and the rest scrollable.
+will have to test both ways." A development build had a pin button that switched between the two.
+On 2026-10-10, once the preview's width was right: "I want the pinned behavior". So the preview
+stays at the top and the two lists scroll under it; the button and the scrolling-away layout are
+gone. The room kept under it for the collections matters more now, since the preview never
+scrolls out of their way.
+
+**As wide as the screen.** Syd, 2026-10-10: "The iPhone 17e started with the initial size of
+"Small", despite the fact that "Large" fits fine." The preview was a row in the list, and a list
+keeps a margin at each side; with the preview's own padding its space on that 390-point phone
+was about 326 points, and a medium or large widget there is 338. Neither fitted "without
+cropping", so it started on small. The Home Screen has room for them, so the preview's space now
+runs edge to edge, above the list and not in it. Not seen by Claude on a 390-point simulator:
+two of Syd's were running, and no more than two run at once.
+
 **The preview is a small slideshow.** Syd, 2026-10-09: its picture changes by itself every few
 seconds, and also when the person taps it. He chose that over changing only on a tap, and over
 every five minutes as a widget does. So a person sees many of their pictures in the widget's shape
@@ -391,11 +503,7 @@ What follows from it:
 - **The files and folders can be a long way down.** With forty collections chosen, the second
   list starts forty rows below the first, and the preview has scrolled off the top by the time a
   person reaches it.
-- **Whether the preview scrolls away with the rest is to be tried both ways.** Syd, 2026-10-09:
-  "we should try it having the preview stick and the rest scrollable. will have to test both
-  ways." One way the preview scrolls off with the lists; the other it stays at the top and the
-  lists scroll under it. With the preview stuck, a large widget leaves about six rows of a phone's
-  screen for the lists, and a tall one on an iPad or the Mac leaves less than it sounds.
+- **The preview does not scroll away.** It is pinned; see *Pinned*.
 - **An empty list** has no rows. It still needs its heading and its add button, and perhaps a line
   saying nothing is chosen.
 - **In SwiftUI** a `List` takes whatever height it is given and scrolls inside it, so rows that
@@ -404,17 +512,26 @@ What follows from it:
 
 ## Taking a source out of a list
 
-Offered three ways on 2026-10-09, Syd: "all three". So on iOS and iPadOS a source leaves its list
-by any of these:
+On iOS and iPadOS a source leaves its list in one of two ways:
 
 - **A swipe to the left on its row**, in both lists.
-- **An Edit button**, which puts the lists into delete mode with a red minus beside each row.
 - **Unticking it in the sheet**, for a collection, and pressing Done.
 
-Claude's reading: "all three" is all three ways together, so a collection can be swiped away or
-deleted in Edit mode as well as unticked. The Mac keeps what it has, select a row and press the
-minus button, with unticking for collections. In SwiftUI one `onDelete` on a list's rows gives the
-swipe and the Edit button's delete mode together.
+Offered three ways on 2026-10-09, with an Edit button that put the lists into delete mode as the
+third, Syd said "all three". On 2026-10-10, with the preview pinned at the top: "let's ditch the
+Edit button as well and claim the toolbar space that it the Pin used to live in". So the Edit
+button is gone, and with it the screen's navigation bar, which held nothing else. The Mac keeps
+what it has: select a row and press the minus button, with unticking for collections.
+
+**What the missing bar means later.** The "How to add a widget" page was to be reached from a
+button on this screen. It is part of the launch-time wizard now, so this screen needs no button
+for it.
+
+**A file or folder has only the swipe.** A collection can also be unticked in the sheet; a file or
+folder has no sheet, so with the Edit button gone the swipe is its one way out. Syd, 2026-10-10:
+"the only thing that bothers me is how to remove files/folder sources, but swipe is probably good
+enough." A swipe is not something a person is shown, so if files and folders are built this is
+the place to look again.
 
 **Not said:** whether removing a source asks "are you sure". The Mac app does not ask.
 
@@ -439,9 +556,16 @@ can no longer be opened, is treated as a collection that is gone is. The alert c
 is opened or brought forward, then the Files browser so the person can choose it again, and it is
 removed if they do not.
 
-**The count**, Claude's reading: the number of pictures in the source; the widget already counts each source to weigh
-its picks (`Plans/Photos-Go-Round Widgets.md`, *Seen with 0.7 (5) installed*), and the Mac's picker
-shows a count beside each album.
+**The count** is the number of pictures in the source, at the right of its row. Syd, 2026-10-10,
+on why the "Selected Photos" row has no button: "we want that space for the count". It is counted
+by the code a widget weighs its sources with (`SourceCounts`), so the row and the widget agree on
+what is empty.
+
+- **Counted each time the app comes forward**, and after Done in the sheet. A row keeps its old
+  figure until the new one is in.
+- **No figure where there is none to be had:** a collection that has gone, any collection while
+  Photos access is off, a source that cannot be read.
+- **A single file shows 1.** Syd, 2026-10-10.
 
 **Which trouble is which, proposed:**
 
@@ -548,10 +672,15 @@ kind of face for a library it may not read (`CollectionPickerView.unauthorized`)
   `wholeLibrary` tag should be excluded". It went the way Hidden did: one rule, in
   `LibrarySectionGroup.grouped`, and the iOS sheet's own copy of it is gone. A *Recents* source
   somebody chose on the Mac before this stays in the Settings list until they remove it there.
-- **"Recently Saved" stays in both.** It is one of the smart albums PhotoKit does not name, so it
-  arrives as an unnamed kind and is listed under *Utilities*. On Syd's Mac it held 37,550
-  photographs when it was measured on 2026-08-26 (`SystemPhotoLibrary.kind(of:)`), which is close
-  to everything; it is offered because he asked for it.
+- **Recently Saved**, in every picker. First Syd wanted it kept: "Both should have "Recently
+  Saved"". Then, 2026-10-10: "Ditch "recently saved"". PhotoKit has no name for its subtype, so
+  it is told by the number, 1000000218, measured on a Mac on 2026-08-26
+  (`Plans/Apple Photos Plan.md`, *Subtypes this document does not know about*), and given a kind
+  of its own, `recentlySaved`, which the pickers leave out. Its title is never looked at, so the
+  device's language does not matter. Seen 2026-10-10 on the iPhone simulator: it was in the
+  sheet's *Utilities* before the change and not after, so the number is the same on iOS there.
+  The other smart albums PhotoKit does not name, such as Captured by Me, are still listed. A
+  Recently Saved source chosen before this stays in the list until it is removed.
 
 **Asked of the running agent, 2026-10-10.** Syd sent the Mac picker's *Utilities* section as it
 was that morning, with Hidden in it: "You are wrong. This is from Photos-Go-Round on the mac right
@@ -584,6 +713,79 @@ section.
 
 **One difference that is left.** On the Mac a section heading opens and shuts its section. Here
 only folders open and shut. Not said: whether sections should too.
+
+**A wizard, later.** Syd, 2026-10-10: "we need a full-blown first-time launch wizard. Add a stage
+after everything else for that in the plan". It is Phase 5. Until then first launch is what is
+built: the Photos prompt by itself, then the collections sheet. Syd, 2026-10-10: "the "how to
+add a widgets page" is part of the launch-time wizard". What its other steps are was not said;
+choosing collections is the obvious one.
+
+**Read again each time the app comes forward.** Syd, 2026-10-10: "we need to refresh the source
+list when the app is activated". So whenever the app is opened or brought forward:
+
+- What is stored is read afresh.
+- Each chosen collection is looked up in the library as it is now. One renamed in Photos, or
+  moved to another folder, takes its new name and place, and that is stored. One that is no
+  longer there stays in the list, red.
+- The library itself is asked, not the picker's sections, so a collection the pickers now leave
+  out, chosen before they did, is still found.
+- When the library cannot be read, nothing is called gone: that is no evidence that anything is.
+- With Photos access off, no one collection is singled out; the list says access is off.
+
+The alert and the picker for a source that has gone, and its removal, are not built yet. This is
+the looking; that is what is done about it.
+
+**And nothing counted before is trusted.** Syd, 2026-10-10: "we need to get the refresh of the
+library better. Repro case: Fresh sim. Launch app. Allow access. Choose Favorites (0 photos).
+Dismiss chooser. Switch to Photos. Mark two photos as favorites. Switch back to PGR. No Photos
+chosen", and "even if I kill the app and relaunch there are no photos chosen". Two things were
+keeping an old answer:
+
+- **The preview's counts.** To weigh its sources the preview remembers how many pictures each
+  holds, on disk, for an hour, as a widget does. Favorites had been counted at none, so for an
+  hour it was not asked again, through any number of launches. Now the counts are forgotten each
+  time the app comes forward, and a preview showing "No Photos found" goes back to "Scanning…"
+  and fetches at once.
+- **The sheet's counts.** The catalog the sheet reads the library through keeps each count it
+  has taken for as long as it lives, which was the life of the app. Now there is a new one each
+  time the app comes forward.
+
+- **A count of none, anywhere.** Syd, 2026-10-10, chose to fix the same fault for the widgets,
+  which have no moment of coming forward: nothing is remembered of an empty source, and it is
+  counted again at each pick. That is in the shared code (`SeveralSources`), so the Mac's widget
+  has it too once it is built from this source.
+
+Seen 2026-10-10 on the simulator, with Favorites chosen while empty: a photograph marked as a
+favorite in Photos was in the preview after the app was relaunched, and still after switching to
+Photos and back.
+
+## One fetch at a time
+
+The preview sat on "Scanning…" for good, twice on 2026-10-10. Both times a debugger showed two
+of the app's threads inside PhotoKit's synchronous request for an image, each waiting on the
+Photos daemon for leave to open the photograph's file, and neither ever answered. One such request
+by itself comes straight back.
+
+Two were being made because three things can ask the preview for its next picture, and two of
+them often ask together: the slideshow's turn, and the fetch made at once when sources change or
+are looked at afresh. A tap is the third. So the preview now fetches one picture at a time. A
+change asked for while one is under way waits for it, and however many ask meanwhile, one more
+fetch follows.
+
+Claude had first put the stall down to the simulator's Photos daemon, because restarting the
+simulator cleared it. It cleared because that launch happened to make one request.
+
+The Mac's widget holds a lock across its timeline (`PhotoTimeline.lock`), which keeps its
+requests apart the same way. The iOS widget extension will compile that file. Whether two
+processes asking at once, the app and a widget, can do the same thing was not tried.
+
+**How "no access" looks.** Syd, 2026-10-10, looking at the *Photos access off* preview: "you
+should leave a grayed out button. And I would combine the row of "Photos access is off" with a
+button that says "Settings...". Should look like the icon, "No Photos Access" text, and
+"Settings..." button". So it is one row where there were two, and the photo-library button in the
+heading is always drawn: pressable with full access, greyed out without it. Claude's reading:
+greyed out also before the person has answered the prompt. With limited access it brings up the
+system's picker.
 
 **Not said about first launch:**
 
@@ -640,10 +842,25 @@ already published to the App Store." So the limited case has to be built. From t
   button.
 
 **A button of ours changes the picked photographs.** Syd, 2026-10-09: a button beside the
-"Selected Photos" row brings up the system's picker
-(`PHPhotoLibrary.presentLimitedLibraryPicker(from:)`), and the system's ask on every run is turned
-off with `PHPhotoLibraryPreventAutomaticLimitedAccessAlert` in `Info.plist`. So the person is
-asked when they want to change it, and not each time the app opens.
+"Selected Photos" row brings up the system's picker. On 2026-10-10, with the photo-library button
+in the heading by then, he made it that one alone, and the row has no button: "we want that space
+for the count". It calls `PHPhotoLibrary.presentLimitedLibraryPicker(from:)`, and the system's ask
+on every run is turned off with `PHPhotoLibraryPreventAutomaticLimitedAccessAlert` in
+`Info.plist`. So the person is asked when they want to change it, and not each time the app
+opens.
+
+**How the selection is kept.** It is a source like any other, of a kind of its own
+(`photos_selection`), in the same stored list, so a widget finds it where it finds the rest. The
+app adds it when it finds access limited and takes it out when it finds access is anything else,
+each time it comes forward. `ChosenSources.keepSelectedPhotos`.
+
+- **Collections chosen with full access stay stored.** They are out of sight while access is
+  limited, and back when full access is. Claude's, 2026-10-10.
+- **While access is limited a collection gives no pictures.** A limited library still answers for
+  a smart album such as Favorites, with the picked photographs that are in it, and those would be
+  counted twice. `SystemPhotoLibraryPictures`.
+- **With full access the selection gives none**, so it is never every photograph.
+- **The row is not removable.**
 
 From memory, not checked: the Mac has no limited answer, so there it is full or none already.
 
@@ -653,6 +870,11 @@ the Mac the widget extension turned out to share what the app was granted
 same on iOS is to be seen on the phone, with the locked-phone question already listed.
 
 ## The files and folders
+
+**Not the priority, and perhaps not at all.** Syd, 2026-10-10, asking for the preview next: "We
+may not even do files and folders. We probably will but it's not the priority." The list and its
+heading are on the screen and removal works; nothing can be added yet. If they are not done, the
+list comes off the screen, and what this section says is for when they are.
 
 **Single files as well as folders.** Syd, 2026-10-09: the bottom list takes both, as the Mac's
 does, so the shared view is the same everywhere. The Mac app has a menu item for each, *Add
@@ -734,7 +956,7 @@ the ios app". So these, which the sections above mark as not said, are not asked
 
 - Whether its Settings window grows and scrolls as this view does.
 - Whether it has the first-launch flow, and the alerts when a source goes wrong.
-- Where its About and "How to add a widget" pages are reached from.
+- Where its "How to add a widget" page is reached from.
 - Whether its preview is tried stuck at the top as well.
 
 What is already decided about it stands: it shows this same view, and it takes the same bundle
@@ -754,32 +976,87 @@ does not.
 
 ## iPad
 
-The same view, and the same order top to bottom, whichever way the iPad is held. Syd, 2026-10-09:
-in landscape too it is one scrolling column, the preview on top and the lists under it. He chose
-that over the preview on the left with the lists scrolling on the right. A landscape iPad is wide
-and short, so a large preview takes most of its height and the lists begin near the bottom; the
-trial of the preview stuck at the top is where that gets looked at.
+The same view as on a phone, laid out by its window's shape. On 2026-10-09 Syd chose one
+scrolling column for an iPad in landscape, over the preview on the left with the lists on the
+right; on 2026-10-10 the rule by shape replaced it, so an iPad in landscape now has the preview
+on the left.
 
 In a narrow window, where the app is as narrow as a phone, a widget wider than the view is cropped
 at its sides, as above.
 
+**A window that is resized.** Syd, 2026-10-10: "We need to worry about people resizing the app on
+iPad". An iPad app's window can be dragged to almost any shape. Two decisions came of it, the
+same day.
+
+- **The layout goes by the window's shape, on every device.** A window wider than it is tall has
+  the preview in a column on the left and the sources on the right; any other has the preview
+  pinned on top. Syd chose that over an iPad keeping one column whatever its window's shape, and
+  it replaces his choice of 2026-10-09 that an iPad in landscape is one column. It had gone by
+  the height class, which is compact only on an iPhone on its side, so an iPad window dragged
+  short and wide kept the one column with almost no height for the preview.
+- **"The largest that will completely show rule still holds."** So the size shown is chosen
+  again each time the space changes, not once: the largest that fits without cropping, or the
+  smallest. That holds until the person picks a size. Claude's reading: from then on theirs
+  stays, through any resizing, cropped and centered when it is bigger than its space, which is
+  what he asked of a size the person selects.
+- **Width is cropped**, as before: a widget wider than its space loses the same from each side.
+
+**The smallest window.** Syd, 2026-10-10: "The minimum size of the window should be large enough
+for a small widget preview to completely show, the size controls, and the "Photos" title and the
+"Choose..." button, plus one row, at the standard text size. At larger sizes, the text will be cut
+off, but at least you can get to the button." So:
+
+- **What is kept in sight under the preview is one row, not three.** The padding round the
+  preview, the size control, the heading with its button, and one row: 180 points at the standard
+  text size. Claude had kept three rows, a number he had not given.
+- **The window's smallest size is a small widget's height and that 180**, and at least 320 points
+  wide, or the small widget and its margins if that is more. The window's own margins are added.
+- **It is asked of the system through the window's scene** (`sizeRestrictions`). From memory, not
+  checked: an iPad honours that in its resizable windows. Not seen: Claude's simulators were not
+  run while Syd was using his.
+- **The preview's space can no longer come to nothing** in a window on top, since the window
+  cannot be made that short.
+
+**"Choose…" beside "Photos".** Syd, 2026-10-10: "I think we need to have a "Choose..." button to
+the right of "Photos" so that it will be right below the preview." It was a row at the foot of
+the collections, "Choose Collections…", which a long list pushed out of sight.
+
+**A button in each heading, as a picture.** Syd, 2026-10-10, first: "Instead of "Choose...",
+let's make it a plus button. I realize that the chooser is not just additive, but that is good
+enough. And put a plus button to the right of "Files and Folders" as well". Then: "instead of the
+plus, for photos, let's use the same photo library icon as things like messages do, and for Files
+and Folders, let's use a folder."
+
+- **Photos:** the system's symbol `photo.on.rectangle.angled`, which is Claude's best match from
+  memory for the photo-library icon Messages uses; not compared side by side.
+- **Files and Folders:** the system's `folder` symbol.
+- **No words to translate** in either; VoiceOver is told "Choose collections" and "Add files or
+  folders".
+- **The folder button is greyed out** and cannot be pressed until adding files and folders is
+  built. Syd chose that over building it now and over taking the section off the screen.
+
+**The iPhone Duo.** Syd, 2026-10-10, of the rule by shape: "that will probably adapt better for
+iPhone Duo as well. Later, I will run Xcode 27.1 and set up a Duo sim and check it out, but I want
+to test everything else first".
+
 ## Besides the settings screen
 
-Syd, 2026-10-09: the app has two more pages, reached from a button on the settings screen.
+**How to add a widget.** A short page for a person who has just installed the app and does not
+know how a widget gets onto the Home Screen. The steps differ a little between iPhone, iPad and
+the Mac, so the page's words are one of the things that differ by platform. Syd, 2026-10-09.
 
-- **How to add a widget.** A short page for a person who has just installed the app and does not
-  know how a widget gets onto the Home Screen. The steps differ a little between iPhone, iPad and
-  the Mac, so the page's words are one of the things that differ by platform.
-- **About.** The app's name, its version and build, and whatever else the Mac app's About window
-  says that applies here (`MacOS/Desktop/Sources/AboutView.swift`).
+**No About page.** On 2026-10-09 Syd chose both a "How to add a widget" page and an About page
+with the version, over an About page only and over the one screen being the whole app. On
+2026-10-10: "at this point, I think we are going to drop the about". So nothing in the app shows
+its version and build; the system's own settings and the App Store listing do.
 
-He chose both over an About page only, and over the one screen being the whole app. From memory of
-the review guidelines, not checked: App Review rejects an app that is only a shell for its
-extension, and these pages with the settings and the preview are what the app is besides its
+From memory of the review guidelines, not checked: App Review rejects an app that is only a shell
+for its extension. The settings, the preview and the how-to page are what this app is besides its
 widgets.
 
-**Not said:** what the button looks like and where on the screen it is; whether the two are one
-page or two; and whether the Mac's menubar app has them in its Settings window or in its menu.
+**The how-to page is part of the launch-time wizard.** Syd, 2026-10-10. So it is built in Phase
+5, and the settings screen has no button for it. Not said: whether a person can see it again
+after the first launch.
 
 ## Identity
 

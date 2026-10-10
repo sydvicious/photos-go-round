@@ -23,6 +23,10 @@ public struct SourceKind: RawRepresentable, Sendable, Hashable, Codable {
     public static let file = SourceKind("file")
     /// An album, smart album, or Favorites in the system Photos library.
     public static let photosCollection = SourceKind("photos_collection")
+    /// The photographs a person picked for the app, when its access to the
+    /// system Photos library is limited to a selection. There is no album to
+    /// name: the selection is whatever the system lets the app see.
+    public static let photosSelection = SourceKind("photos_selection")
     /// One pinned asset in the system Photos library.
     public static let photosAsset = SourceKind("photos_asset")
     /// An album in Google Photos.

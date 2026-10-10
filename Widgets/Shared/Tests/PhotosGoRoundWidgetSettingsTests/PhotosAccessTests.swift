@@ -11,7 +11,8 @@ struct PhotosAccessTests {
     let preferences = Preferences(suiteName: scratchSuiteName("photos-access"))
 
     func model(_ library: SampleLibrary) -> SettingsModel {
-        SettingsModel(sources: ChosenSources(preferences: preferences), library: library)
+        SettingsModel(
+            sources: ChosenSources(preferences: preferences), library: library, preview: .sample())
     }
 
     @Test("The first time, the app asks by itself, and the sheet comes up once access is given")

@@ -315,6 +315,11 @@ The peak waits for the iOS app, where it is listed in *Phases*.
   counted. A Photos collection gives its count without a picture being fetched.
 - *A source that fails, or gives no picture though its count said it had some, is forgotten*, and
   counted again next time.
+- *Nothing is remembered of an empty source.* It is counted again at each pick, which costs
+  little, there being nothing in it. Syd, 2026-10-10. A count of none used to stand for the hour
+  like any other, so an album counted while empty went on being taken for empty for an hour after
+  photographs were added: he chose Favorites with nothing in it, marked two photographs as
+  favorites, and got none. `Plans/PGR Widgets - iOS.md`.
 - *A photograph in two chosen albums counts twice.*
 - *A source that grows or shrinks is weighed by its old size for up to an hour*, or, a folder,
   until it is next chosen.

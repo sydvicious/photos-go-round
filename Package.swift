@@ -60,6 +60,11 @@ let package = Package(
         // app later, which is why it is here and not in either.
         // `Plans/PGR Widgets - iOS.md`.
         .library(name: "PhotosGoRoundWidgetSettings", targets: ["PhotosGoRoundWidgetSettings"]),
+        // What a widget draws: a photograph fitted on black, or one of the
+        // faces it shows without one. A target of its own, depending on
+        // nothing, so a widget extension can link it without the settings and
+        // the app's preview draws exactly what a widget does.
+        .library(name: "PhotosGoRoundWidgetFace", targets: ["PhotosGoRoundWidgetFace"]),
         // A product only so the Xcode targets can link it. The two executables
         // are Xcode targets as well as package ones now, and an Xcode target
         // reaches a package's *products* — a bare target is invisible to it.
@@ -109,8 +114,18 @@ let package = Package(
             swiftSettings: everyTarget
         ),
         .target(
+            name: "PhotosGoRoundWidgetFace",
+            path: "Widgets/Shared/Sources/PhotosGoRoundWidgetFace",
+            // The app icon at full size, for the faces without a photograph.
+            resources: [.process("Resources")],
+            swiftSettings: everyTarget
+        ),
+        .target(
             name: "PhotosGoRoundWidgetSettings",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary"],
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetFace",
+                "TinyCache",
+            ],
             path: "Widgets/Shared/Sources/PhotosGoRoundWidgetSettings",
             swiftSettings: everyTarget
         ),
@@ -197,7 +212,8 @@ let package = Package(
         .testTarget(
             name: "PhotosGoRoundWidgetSettingsTests",
             dependencies: [
-                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetSettings",
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetFace",
+                "PhotosGoRoundWidgetSettings", "TinyCache",
             ],
             path: "Widgets/Shared/Tests/PhotosGoRoundWidgetSettingsTests",
             swiftSettings: everyTarget

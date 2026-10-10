@@ -124,6 +124,19 @@ public struct SystemPhotoLibrary: PhotoLibrary {
     /// names, so the iOS build warned that the switch was not exhaustive, and
     /// naming `.moment` would warn that it is deprecated. A plain `default`
     /// gives it the answer every other unlisted type already gets.
+    /// What a smart album is when the SDK has no name for its subtype.
+    ///
+    /// **Recently Saved is told by its number.** It is not in `PhotosTypes.h`,
+    /// and its title is in whatever language the device is in. Measured
+    /// 2026-08-26 on a Mac: subtype 1000000218, 37,550 photographs. Syd,
+    /// 2026-10-10: "Ditch "recently saved"", so it has a kind of its own, which
+    /// the pickers leave out. Every other unnamed one is listed as it was.
+    static func kind(ofUnnamedSmartAlbum subtype: Int) -> LibraryCollectionKind {
+        subtype == recentlySavedSubtype ? .recentlySaved : .otherSmartAlbum
+    }
+
+    private static let recentlySavedSubtype = 1_000_000_218
+
     static func kind(of collection: PHAssetCollection) -> LibraryCollectionKind {
         switch collection.assetCollectionType {
         case .album:
@@ -156,7 +169,7 @@ public struct SystemPhotoLibrary: PhotoLibrary {
                 .smartAlbumAnimated, .smartAlbumLongExposures, .smartAlbumRAW,
                 .smartAlbumCinematic, .smartAlbumSpatial, .smartAlbumScreenRecordings:
                 .mediaType
-            default: .otherSmartAlbum
+            default: Self.kind(ofUnnamedSmartAlbum: collection.assetCollectionSubtype.rawValue)
             }
         default: .otherSmartAlbum
         }

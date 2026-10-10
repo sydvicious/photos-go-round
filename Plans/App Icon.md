@@ -100,3 +100,17 @@ swift "Artwork/App Icon/Scripts/pane-thumbnail.swift" 214 130 "MacOS/Screensaver
 How the pane finds the picture, the cache that hides a new one until it is
 removed, and why only the Release saver can show it are in
 `Screensaver Plan.md`, *The tile in the Screen Saver pane*.
+
+**The widgets carry a picture of the whole icon.** A widget's faces without a
+photograph, and the Widgets app's preview of them, show the app icon, and
+nothing on iOS hands an app its own icon at that size. So
+`Widgets/Shared/Sources/PhotosGoRoundWidgetFace/Resources/PhotosGoRoundIcon.png`,
+1024 × 1024, is committed, exported by Icon Composer's own tool. Syd,
+2026-10-10: "include a full resolution picture of the app icon in the bundle,
+and use it". Make it again whenever the icon changes:
+
+```bash
+"$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool" "Artwork/PhotosGoRound.icon" --export-image --output-file "Widgets/Shared/Sources/PhotosGoRoundWidgetFace/Resources/PhotosGoRoundIcon.png" --platform iOS --rendition Default --width 1024 --height 1024 --scale 1
+```
+
+`Plans/PGR Widgets - iOS.md`.

@@ -10,7 +10,8 @@ struct SettingsModelTests {
     let preferences = Preferences(suiteName: scratchSuiteName("settings-model"))
     var model: SettingsModel {
         SettingsModel(
-            sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized))
+            sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized),
+            preview: .sample())
     }
 
     func album(_ identifier: String, _ title: String) -> SourceSpec {
@@ -91,6 +92,27 @@ struct SettingsModelTests {
 
         #expect(model.collections.map(\.title) == ["Cats"])
         #expect(preferences.sources == [album("A2", "Cats")])
+    }
+
+    @Test("The preview is told what is chosen, at the start and after each change")
+    func previewFollows() {
+        let model = model
+        #expect(model.preview.content == .nothingChosen)
+
+        model.chooseCollections([album("A2", "Cats")])
+        #expect(model.preview.content == .scanning)
+
+        model.remove(model.collections[0])
+        #expect(model.preview.content == .nothingChosen)
+    }
+
+    @Test("A source that is switched off is not among what the preview shows")
+    func previewSkipsWhatIsOff() {
+        var cats = album("A2", "Cats")
+        cats.enabled = false
+        preferences.setSources([cats])
+
+        #expect(model.preview.content == .nothingChosen)
     }
 
     @Test("Reading again shows what something else has written since")

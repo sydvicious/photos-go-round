@@ -143,16 +143,39 @@ struct SeveralSourcesTests {
         #expect(counts(in: scratch).read() == ["coins": .init(pictures: 40, counted: last)])
     }
 
-    @Test("A source that holds no pictures is remembered as holding none")
-    func remembersNone() throws {
+    @Test("A source that holds no pictures is counted again each time: nothing is remembered of an empty one")
+    func emptyIsNotRemembered() throws {
         let scratch = try ScratchFolder()
         let empty = StubSource([], named: "empty")
 
         #expect(try several([empty], in: scratch).writePicture(fitting: box, to: written(in: scratch)) == nil)
         #expect(try several([empty], in: scratch).writePicture(fitting: box, to: written(in: scratch)) == nil)
 
-        #expect(empty.timesCounted == 1)
-        #expect(counts(in: scratch).read() == ["empty": .init(pictures: 0, counted: Self.start)])
+        #expect(empty.timesCounted == 2)
+        #expect(counts(in: scratch).read().isEmpty)
+    }
+
+    @Test("A source that was empty gives a picture as soon as it has one, without waiting out the hour")
+    func emptyThenFilled() throws {
+        let scratch = try ScratchFolder()
+        let album = try ScratchFolder()
+        let source = FolderSource(folder: album.url)
+        let sources = SeveralSources([source], remembering: counts(in: scratch), now: { Self.start })
+        #expect(try sources.writePicture(fitting: box, to: written(in: scratch)) == nil)
+
+        try album.picture("first.jpg")
+
+        #expect(try sources.writePicture(fitting: box, to: written(in: scratch)) != nil)
+    }
+
+    @Test("A count of none left on disk by an earlier build is not believed")
+    func oldCountOfNone() throws {
+        let scratch = try ScratchFolder()
+        let source = try stub(in: scratch, named: "coins")
+        try counts(in: scratch).write(["coins": .init(pictures: 0, counted: Self.start)])
+
+        #expect(try several([source], in: scratch).writePicture(fitting: box, to: written(in: scratch)) != nil)
+        #expect(source.timesCounted == 1)
     }
 
     @Test("When nothing was counted, the counts on disk are left as they were")
@@ -222,7 +245,7 @@ struct SeveralSourcesTests {
         #expect(counts(in: scratch).read() == ["working": .init(pictures: 1, counted: Self.start)])
     }
 
-    @Test("A source that finds it holds none while writing is passed over, and remembered as holding none")
+    @Test("A source that finds it holds none while writing is passed over, and counted again next time")
     func passesOverASourceFoundEmpty() throws {
         let scratch = try ScratchFolder()
         let emptied = StubSource([], named: "emptied", counting: 5, finding: 0)
@@ -231,13 +254,9 @@ struct SeveralSourcesTests {
         #expect(try several([emptied, working], in: scratch).writePicture(fitting: box, to: written(in: scratch)) != nil)
         #expect(try several([emptied, working], in: scratch).writePicture(fitting: box, to: written(in: scratch)) != nil)
 
-        #expect(emptied.timesAsked == 1)
-        #expect(emptied.timesCounted == 1)
-        #expect(
-            counts(in: scratch).read() == [
-                "emptied": .init(pictures: 0, counted: Self.start),
-                "working": .init(pictures: 1, counted: Self.start),
-            ])
+        #expect(emptied.timesAsked == 2)
+        #expect(emptied.timesCounted == 2)
+        #expect(counts(in: scratch).read() == ["working": .init(pictures: 1, counted: Self.start)])
     }
 
     @Test("A source that cannot be counted is passed over, and nothing is remembered of it")

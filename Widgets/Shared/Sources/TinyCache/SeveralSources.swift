@@ -104,7 +104,7 @@ public struct SeveralSources: PictureSource {
             do {
                 let picked = try source.writePictureAndCount(fitting: box, to: destination)
                 if let pictures = picked.pictures {
-                    known[source.countName] = .init(pictures: pictures, counted: moment)
+                    Self.remember(pictures, of: source, at: moment, among: &known)
                 } else if picked.resize == nil {
                     known[source.countName] = nil
                 }
@@ -120,10 +120,26 @@ public struct SeveralSources: PictureSource {
 
     /// How many pictures `source` holds: its count in `known` while that
     /// stands, and a new one, put in `known`, when it does not.
+    /// Keeps a source's count, unless it is none.
+    ///
+    /// **Nothing is remembered of an empty source**, since 2026-10-10. A count
+    /// stands for an hour, so an album counted while it was empty went on being
+    /// taken for empty for an hour after photographs were added to it: Syd
+    /// chose Favorites with nothing in it, marked two photographs as favorites,
+    /// and got none of them. An empty source is counted again at each pick,
+    /// which costs little, there being nothing in it to count.
+    private static func remember(
+        _ pictures: Int, of source: any CountedSource, at moment: Date,
+        among known: inout [String: RememberedCounts.Count]
+    ) {
+        known[source.countName] = pictures > 0 ? .init(pictures: pictures, counted: moment) : nil
+    }
+
     private func count(
         _ source: any CountedSource, at moment: Date, among known: inout [String: RememberedCounts.Count]
     ) throws -> Int {
-        if let last = known[source.countName] {
+        // A count of none is never believed, whoever wrote it: see `remember`.
+        if let last = known[source.countName], last.pictures > 0 {
             // A count from after now has no age to go by: the clock has been
             // set back.
             let age = moment.timeIntervalSince(last.counted)
@@ -131,7 +147,7 @@ public struct SeveralSources: PictureSource {
         }
         let began = ContinuousClock.now
         let pictures = try source.pictureCount()
-        known[source.countName] = .init(pictures: pictures, counted: moment)
+        Self.remember(pictures, of: source, at: moment, among: &known)
         onCount?(
             Counting(name: source.countName, pictures: pictures, seconds: (ContinuousClock.now - began) / .seconds(1)))
         return pictures

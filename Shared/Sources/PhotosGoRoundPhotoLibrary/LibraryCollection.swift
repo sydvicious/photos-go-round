@@ -98,6 +98,7 @@ public enum LibraryCollectionKind: String, Sendable, Equatable, Hashable, CaseIt
     /// Apple adds after it shipped. Listed rather than hidden: a collection a
     /// person can see in Photos and not here is a bug they cannot diagnose.
     case otherSmartAlbum
+    case recentlySaved
 
     /// Whether a library holds exactly one collection of this kind, so that
     /// the kind alone identifies it.
@@ -112,7 +113,8 @@ public enum LibraryCollectionKind: String, Sendable, Equatable, Hashable, CaseIt
         switch self {
         case .wholeLibrary, .favorites, .recentlyAdded, .hidden, .photoStream, .unableToUpload:
             true
-        case .userAlbum, .syncedAlbum, .sharedAlbum, .imported, .mediaType, .otherSmartAlbum:
+        case .userAlbum, .syncedAlbum, .sharedAlbum, .imported, .mediaType, .otherSmartAlbum,
+            .recentlySaved:
             false
         }
     }
@@ -152,7 +154,7 @@ extension LibraryCollectionKind {
         case .userAlbum, .syncedAlbum, .wholeLibrary, .favorites, .recentlyAdded: .albums
         case .sharedAlbum, .photoStream: .sharing
         case .mediaType: .mediaTypes
-        case .imported, .hidden, .unableToUpload, .otherSmartAlbum: .utilities
+        case .imported, .hidden, .unableToUpload, .otherSmartAlbum, .recentlySaved: .utilities
         }
     }
 }
@@ -169,6 +171,11 @@ public struct LibrarySectionGroup: Sendable, Equatable {
 }
 
 extension LibrarySectionGroup {
+    /// The kinds no picker lists. See `grouped`.
+    private static let neverOffered: Set<LibraryCollectionKind> = [
+        .hidden, .wholeLibrary, .recentlySaved,
+    ]
+
     /// Groups collections into Photos' four sections, each sorted by name.
     ///
     /// **Sections keep their sidebar order; collections sort by name.** The
@@ -183,10 +190,10 @@ extension LibrarySectionGroup {
     /// library with no shared albums should not be told it has a Sharing
     /// section with nothing in it.
     ///
-    /// **Hidden and the whole library are never offered, since 2026-10-10.**
-    /// Syd, of the Mac's picker and the Widgets app's: "neither one should have
-    /// `Hidden`", and "anything that has the `wholeLibrary` tag should be
-    /// excluded". What a person hid in Photos is not something to put on a
+    /// **Hidden, the whole library and Recently Saved are never offered, since
+    /// 2026-10-10.** Syd, of the Mac's picker and the Widgets app's: "neither
+    /// one should have `Hidden`", "anything that has the `wholeLibrary` tag
+    /// should be excluded", and "Ditch "recently saved"". What a person hid in Photos is not something to put on a
     /// desktop, a screensaver or a widget, and neither is nearly everything
     /// they have: "we never choose the whole photo library". Both are told by
     /// kind, not by title. They are left out here, where every picker gets its
@@ -196,9 +203,7 @@ extension LibrarySectionGroup {
     public static func grouped(_ collections: [LibraryCollection]) -> [LibrarySectionGroup] {
         LibrarySection.allCases.compactMap { section in
             let members = collections
-                .filter {
-                    $0.section == section && $0.kind != .hidden && $0.kind != .wholeLibrary
-                }
+                .filter { $0.section == section && !Self.neverOffered.contains($0.kind) }
                 .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
             guard !members.isEmpty else { return nil }
             return LibrarySectionGroup(section: section, collections: members)
