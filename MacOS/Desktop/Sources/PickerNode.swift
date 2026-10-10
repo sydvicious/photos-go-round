@@ -1,4 +1,5 @@
 import Foundation
+import PhotosGoRoundAgentAPI
 
 /// One line in the collection picker.
 ///

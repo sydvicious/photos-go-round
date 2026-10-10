@@ -50,6 +50,11 @@ let package = Package(
         // no agent and no HTTP behind them, so it depends on nothing else here.
         // `Plans/Photos-Go-Round Widgets.md`.
         .library(name: "TinyCache", targets: ["TinyCache"]),
+        // The Widgets app's settings: which sources are chosen, and the screen
+        // that chooses them. Linked by the iOS app now and by the Mac's menubar
+        // app later, which is why it is here and not in either.
+        // `Plans/PGR Widgets - iOS.md`.
+        .library(name: "PhotosGoRoundWidgetSettings", targets: ["PhotosGoRoundWidgetSettings"]),
         // A product only so the Xcode targets can link it. The two executables
         // are Xcode targets as well as package ones now, and an Xcode target
         // reaches a package's *products* — a bare target is invisible to it.
@@ -90,6 +95,12 @@ let package = Package(
         .target(
             name: "TinyCache",
             path: "Widgets/Shared/Sources/TinyCache",
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "PhotosGoRoundWidgetSettings",
+            dependencies: ["PhotosGoRoundAgentAPI"],
+            path: "Widgets/Shared/Sources/PhotosGoRoundWidgetSettings",
             swiftSettings: everyTarget
         ),
         // Terminal output, shared by the two executables and by nothing else.
@@ -168,6 +179,12 @@ let package = Package(
             name: "TinyCacheTests",
             dependencies: ["TinyCache"],
             path: "Widgets/Shared/Tests/TinyCacheTests",
+            swiftSettings: everyTarget
+        ),
+        .testTarget(
+            name: "PhotosGoRoundWidgetSettingsTests",
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundWidgetSettings"],
+            path: "Widgets/Shared/Tests/PhotosGoRoundWidgetSettingsTests",
             swiftSettings: everyTarget
         ),
         .testTarget(

@@ -18,7 +18,8 @@ The order is Syd's, 2026-10-09: the settings view first, in the app alone, and t
 after it. The to-dos under each phase are Claude's.
 
 - **Phase 1** — The app, with the settings view and no widget.
-  - An iOS app target, in the existing Xcode project.
+  - Carve the Photos reading out of the kit into a shared target, on a branch of its own. The
+    collections sheet waits for it.
   - The app asks for Photos access at first launch, and then brings up the collections sheet.
   - The collections list, and the sheet that chooses them.
   - The files and folders list, with adding and removing.
@@ -97,12 +98,19 @@ after it. The to-dos under each phase are Claude's.
 - **Each folder has its own option for including its subfolders, changed by tapping its row.** It
   starts off. As on the Mac. Syd, 2026-10-09.
 - **The Mac menubar app's Settings window has this same view.** Syd, 2026-10-09.
+- **Nothing about the menubar app is decided until there is a good version of the iOS app.** Its
+  questions wait. Syd, 2026-10-09.
 - **A widget changes every five minutes, until there are settings for it.** As on the Mac. Syd,
   2026-10-09.
 - **Nothing in this view sets how often a widget changes.** That is to be each widget's own
   setting, and it belongs to the widget (`Plans/Photos-Go-Round Widgets.md`, *Design Decisions*).
 - **Everything in `Plans/Photos-Go-Round Widgets.md` holds here.** A normal app, Photos the
   expected source, and a TinyCache of the app's own for the preview.
+- **The Photos reading is carved out of the kit into a shared target of its own,
+  `PhotosGoRoundPhotoLibrary`, on a separate branch.** The Widgets app links that and not the kit.
+  Syd, 2026-10-09.
+- **The tree that files collections under their folders is one builder, in
+  `PhotosGoRoundAgentAPI`.** The Mac app and the Widgets app both draw from it. Syd, 2026-10-09.
 - **The settings view and its models are a package target, `PhotosGoRoundWidgetSettings`, in
   `Widgets/Shared/Sources`, beside `TinyCache`.** The iOS app and the Mac's menubar app both link it, and its models are tested by
   the `Package Tests` scheme. Syd, 2026-10-09.
@@ -503,14 +511,32 @@ kind of face for a library it may not read (`CollectionPickerView.unauthorized`)
 
 - Whether the Mac's menubar app does the same at its first launch. It is to show this same view.
 
-**What carries over from the Mac's code.**
+**One copy of what the Mac already has.** Asked on 2026-10-09 how the Widgets code should get the
+tree-building and the Photos reading, both of which were tied to the Mac, Syd chose one copy that
+everything uses over new code beside the old.
 
-- `CollectionTree.swift` and `FolderNode` are Foundation only: how albums are filed under folders.
+- **The tree builder**, `Foldered` and `FolderNode`, is in `PhotosGoRoundAgentAPI`, which the Mac
+  app and the Widgets settings both link. It was in the Mac app's own target. The Mac app keeps
+  only which of its types are laid out that way.
+- **The Photos reading is in the kit**, and it is not a small piece: seven files and about 1,900
+  lines in `MacOS/Shared/Sources/PhotosGoRoundKit/Photos`, with collections, assets and image
+  data behind one protocol, `PhotoLibrary`, and one PhotoKit type, `SystemPhotoLibrary`. About 25
+  files of the agent, the kit and their tests use it.
+- **The kit compiles for iOS as it is.** Checked 2026-10-09, for the simulator. So the Widgets
+  settings could have linked the whole kit and moved nothing. Syd chose the other way: the Photos
+  reading is carved out into a shared target of its own, on a separate branch because of its
+  size, and the Widgets app links that. The kit then depends on the new target, as everything
+  that reads Photos does.
+- **The new target is `PhotosGoRoundPhotoLibrary`**, after the `PhotoLibrary` protocol at its
+  centre. Syd, 2026-10-09.
+- **Not said:** where its branch starts from.
+
+**What else carries over.**
+
 - `CollectionPickerView` imports AppKit for one thing, the checkbox with a mixed state, which
   SwiftUI's `Toggle` doesn't have. On iOS that is a button drawn with one of three symbols.
 - `CollectionsModel` asks the agent for the library over HTTP. Here the library is read in the
-  app's own process. The code that reads it, `PhotosCollectionCatalog`, is in the kit, under
-  `MacOS/`; whether it builds for iOS was not checked.
+  app's own process, through the carved-out target.
 
 **Limited access: the picked photographs are one source.** On iOS the Photos prompt has three
 answers: full access, none, and limited, where the person picks particular photographs for this
@@ -618,6 +644,19 @@ those that is cross platform is widget, and that would have macOS, iOS, ans Shar
 work, but for me, will pay off over time." It was written up as `Plans/Project Source Reorg 2.md`,
 and the same day he set it aside: "let's not do that source reorg", and "Keep the plan, but put at
 the top "DEFERED"". That plan is marked deferred and nothing in it is under way.
+
+## The menubar app's questions wait
+
+Syd, 2026-10-09: "we are not answering question about menubar app until we have a good version of
+the ios app". So these, which the sections above mark as not said, are not asked until then:
+
+- Whether its Settings window grows and scrolls as this view does.
+- Whether it has the first-launch flow, and the alerts when a source goes wrong.
+- Where its About and "How to add a widget" pages are reached from.
+- Whether its preview is tried stuck at the top as well.
+
+What is already decided about it stands: it shows this same view, and it takes the same bundle
+identifier.
 
 ## One view for three platforms
 

@@ -31,7 +31,7 @@ project it finds no test bundles:
 xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" -derivedDataPath "$HOME/.claude/build/photos-go-round/DerivedData"
 ```
 
-That covers all six package test targets. `Package Tests.xctestplan` is
+That covers all seven package test targets. `Package Tests.xctestplan` is
 what lists them.
 
 **Nothing generated goes in the repository.** Syd, 2026-09-19: "I really don't
