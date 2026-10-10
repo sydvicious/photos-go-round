@@ -35,22 +35,31 @@ public struct LibraryPicture: @unchecked Sendable {
     }
 }
 
+/// Which of a source's pictures is wanted.
+public enum PicturePick: Sendable {
+    /// One chosen at random, each with the same chance.
+    case any
+    /// The first the library lists.
+    case first
+}
+
 public protocol PhotoLibraryPictures: Sendable {
-    /// A picture chosen at random from the collection, at the largest size
-    /// that fits `box`, in pixels. Nil when the collection is gone or has no
-    /// pictures, and an error when the library will not answer at all.
-    func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture?
+    /// A picture from the collection, at the largest size that fits `box`, in
+    /// pixels. Nil when the collection is gone or has no pictures, and an
+    /// error when the library will not answer at all.
+    func picture(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick
+    ) throws -> LibraryPicture?
 
     /// How many pictures the collection holds, without fetching any of them.
     /// None when the collection is gone, and an error when the library will
     /// not answer at all.
     func count(inCollection identifier: String) throws -> Int
 
-    /// A picture chosen at random from the photographs the person picked for
-    /// the app, when its access is limited to a selection. Nil when nothing is
-    /// picked, and nil with any other access: this is never a way to the whole
-    /// library.
-    func selectedPicture(fitting box: CGSize) throws -> LibraryPicture?
+    /// A picture from the photographs the person picked for the app, when its
+    /// access is limited to a selection. Nil when nothing is picked, and nil
+    /// with any other access: this is never a way to the whole library.
+    func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture?
 
     /// How many photographs the person picked for the app. None with access
     /// that is not limited to a selection.
@@ -61,9 +70,11 @@ public protocol PhotoLibraryPictures: Sendable {
 /// access. `Plans/PGR Widgets - iOS.md`, *Limited access*.
 public struct SelectedPhotosSource: CountedSource {
     private let library: any PhotoLibraryPictures
+    private let pick: PicturePick
 
-    public init(library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
+    public init(library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(), pick: PicturePick = .any) {
         self.library = library
+        self.pick = pick
     }
 
     /// A collection's is `photos|` and its identifier, which this cannot be.
@@ -74,7 +85,7 @@ public struct SelectedPhotosSource: CountedSource {
     }
 
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
-        guard let picture = try library.selectedPicture(fitting: box) else { return nil }
+        guard let picture = try library.selectedPicture(fitting: box, pick: pick) else { return nil }
         return try PictureResizer().write(
             picture.image, originalType: "photos",
             originalWidth: picture.originalWidth, originalHeight: picture.originalHeight,
@@ -87,12 +98,20 @@ public struct SelectedPhotosSource: CountedSource {
 public struct PhotosSource: CountedSource {
     private let collection: String
     private let library: any PhotoLibraryPictures
+    private let pick: PicturePick
 
-    /// - Parameter collection: A Photos collection by its local identifier,
-    ///   which is what a Photos source's locator is in the app's preferences.
-    public init(collection: String, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
+    /// - Parameters:
+    ///   - collection: A Photos collection by its local identifier, which is
+    ///     what a Photos source's locator is in the app's preferences.
+    ///   - pick: Which of its pictures it writes: any, for a widget's turn, or
+    ///     the first, for a picture that is wanted at once.
+    public init(
+        collection: String, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
+        pick: PicturePick = .any
+    ) {
         self.collection = collection
         self.library = library
+        self.pick = pick
     }
 
     public var countName: String { "photos|\(collection)" }
@@ -102,7 +121,9 @@ public struct PhotosSource: CountedSource {
     }
 
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
-        guard let picture = try library.picture(inCollection: collection, fitting: box) else { return nil }
+        guard let picture = try library.picture(inCollection: collection, fitting: box, pick: pick) else {
+            return nil
+        }
         return try PictureResizer().write(
             picture.image, originalType: "photos",
             originalWidth: picture.originalWidth, originalHeight: picture.originalHeight,
@@ -130,9 +151,16 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         try selected()?.count ?? 0
     }
 
-    public func selectedPicture(fitting box: CGSize) throws -> LibraryPicture? {
+    public func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? {
         guard let assets = try selected(), assets.count > 0 else { return nil }
-        return Self.picture(of: assets.object(at: Int.random(in: 0..<assets.count)), fitting: box)
+        return Self.picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
+    }
+
+    private static func index(_ pick: PicturePick, among count: Int) -> Int {
+        switch pick {
+        case .any: Int.random(in: 0..<count)
+        case .first: 0
+        }
     }
 
     /// The photographs the person picked for the app. Nil unless access is
@@ -175,9 +203,11 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         return PHAsset.fetchAssets(in: collection, options: Self.imagesOnly)
     }
 
-    public func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
+    public func picture(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick
+    ) throws -> LibraryPicture? {
         guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
-        return Self.picture(of: assets.object(at: Int.random(in: 0..<assets.count)), fitting: box)
+        return Self.picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
     }
 
     private static func picture(of asset: PHAsset, fitting box: CGSize) -> LibraryPicture? {

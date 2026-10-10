@@ -12,19 +12,43 @@ final class ScriptedPictures: PreviewPictures {
     enum Answer { case picture(String), none, failure }
 
     private let script: Mutex<[Answer]>
+    private let firsts: Mutex<[Answer]>
+    private let lastTime: String?
     private let asked = Mutex<[CGSize]>([])
-    private let forgotten = Mutex(0)
+    private let called = Mutex<[String]>([])
 
-    /// How many times it was told to forget what it had learned.
-    var timesForgotten: Int { forgotten.withLock { $0 } }
+    /// Which of its three questions it was asked, in order.
+    var calls: [String] { called.withLock { $0 } }
 
-    func forget() { forgotten.withLock { $0 += 1 } }
+    /// - Parameters:
+    ///   - last: The picture it gave last time, if it has one kept.
+    ///   - first: What it answers when asked for the first source's first
+    ///     picture; with none scripted, that there is none.
+    init(_ script: [Answer], last: String? = nil, first: [Answer] = []) {
+        self.script = Mutex(script)
+        self.firsts = Mutex(first)
+        self.lastTime = last
+    }
 
-    init(_ script: [Answer]) { self.script = Mutex(script) }
+    func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? {
+        called.withLock { $0.append("last") }
+        return lastTime.map { URL(filePath: "/pictures/\($0)") }
+    }
+
+    func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        called.withLock { $0.append("first") }
+        let answer = firsts.withLock { $0.isEmpty ? Answer.none : $0.removeFirst() }
+        switch answer {
+        case .picture(let name): return URL(filePath: "/pictures/\(name)")
+        case .none: return nil
+        case .failure: throw CocoaError(.fileReadUnknown)
+        }
+    }
 
     var boxesAsked: [CGSize] { asked.withLock { $0 } }
 
     func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        called.withLock { $0.append("next") }
         asked.withLock { $0.append(box) }
         let answer = script.withLock { $0.isEmpty ? Answer.none : $0.removeFirst() }
         switch answer {
@@ -32,6 +56,32 @@ final class ScriptedPictures: PreviewPictures {
         case .none: return nil
         case .failure: throw CocoaError(.fileReadUnknown)
         }
+    }
+}
+
+/// Pictures whose first is held back until the test lets it go, so that what
+/// is on screen meanwhile can be looked at.
+final class HeldPictures: PreviewPictures {
+    private let waiting = Mutex(false)
+    private let gate = DispatchSemaphore(value: 0)
+
+    /// Whether the first picture has been asked for and is being held.
+    var isHoldingFirst: Bool { waiting.withLock { $0 } }
+
+    func letGo() { gate.signal() }
+
+    func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? {
+        URL(filePath: "/pictures/last.jpg")
+    }
+
+    func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        waiting.withLock { $0 = true }
+        gate.wait()
+        return URL(filePath: "/pictures/first.jpg")
+    }
+
+    func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        URL(filePath: "/pictures/next.jpg")
     }
 }
 
@@ -60,7 +110,6 @@ final class SlowPictures: PreviewPictures {
         return URL(filePath: "/pictures/\(number).jpg")
     }
 
-    func forget() {}
 }
 
 @MainActor
@@ -339,7 +388,7 @@ struct PreviewModelTests {
         #expect(preview.content == .picture(URL(filePath: "/pictures/2.jpg")))
     }
 
-    @Test("Looking again forgets what was learned, and a preview that found nothing looks afresh")
+    @Test("Looking again, a preview that found nothing looks afresh")
     func lookingAgain() async {
         let pictures = ScriptedPictures([.none, .picture("a.jpg")])
         let preview = preview(pictures)
@@ -349,7 +398,6 @@ struct PreviewModelTests {
 
         preview.lookAgain()
 
-        #expect(pictures.timesForgotten == 1)
         #expect(preview.content == .scanning)
         await preview.advance()
         #expect(preview.content == picture("a.jpg"))
@@ -364,7 +412,6 @@ struct PreviewModelTests {
 
         preview.lookAgain()
 
-        #expect(pictures.timesForgotten == 1)
         #expect(preview.content == picture("a.jpg"))
     }
 
@@ -413,6 +460,94 @@ struct PreviewModelTests {
         let preview = PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1)
 
         #expect(preview.tallest == 0)
+    }
+
+    @Test("With nothing to show yet, last time's picture is up while the first is fetched")
+    func lastTimeMeanwhile() async {
+        let pictures = HeldPictures()
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3)
+        preview.show([.folder("/pictures")])
+
+        let advancing = Task { await preview.advance() }
+        // Two seconds at most: a preview that never asks for the first
+        // picture fails this test and does not hang it.
+        var waits = 0
+        while !pictures.isHoldingFirst, waits < 400 {
+            try? await Task.sleep(for: .milliseconds(5))
+            waits += 1
+        }
+        #expect(pictures.isHoldingFirst)
+        #expect(preview.content == picture("last.jpg"))
+
+        pictures.letGo()
+        await advancing.value
+        #expect(preview.content == picture("first.jpg"))
+    }
+
+    @Test("The first picture is the first source's own, and the usual pick is not made for it")
+    func firstPictureFirst() async {
+        let pictures = ScriptedPictures([.picture("weighted.jpg")], first: [.picture("first.jpg")])
+        let preview = preview(pictures)
+        preview.show([.folder("/pictures")])
+
+        await preview.advance()
+        #expect(preview.content == picture("first.jpg"))
+        #expect(pictures.calls == ["last", "first"])
+
+        await preview.advance()
+        #expect(preview.content == picture("weighted.jpg"))
+        #expect(pictures.calls == ["last", "first", "next"])
+    }
+
+    @Test("When no source has a first picture to give, the usual pick follows at once")
+    func noFirstPicture() async {
+        let pictures = ScriptedPictures([.picture("weighted.jpg")])
+        let preview = preview(pictures)
+        preview.show([.folder("/pictures")])
+
+        await preview.advance()
+
+        #expect(preview.content == picture("weighted.jpg"))
+        #expect(pictures.calls == ["last", "first", "next"])
+    }
+
+    @Test("When no picture can be had now, last time's does not stay up")
+    func lastTimeDoesNotStay() async {
+        let pictures = ScriptedPictures([], last: "last.jpg")
+        let preview = preview(pictures)
+        preview.show([.folder("/pictures")])
+
+        await preview.advance()
+
+        #expect(preview.content == .noPhotos)
+    }
+
+    @Test("After the sources change it starts over: last time's, then the first")
+    func startsOverForNewSources() async {
+        let pictures = ScriptedPictures([], first: [.picture("a.jpg"), .picture("b.jpg")])
+        let preview = preview(pictures)
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+
+        preview.show([.folder("/other")])
+        await preview.advance()
+
+        #expect(preview.content == picture("b.jpg"))
+        #expect(pictures.calls == ["last", "first", "last", "first"])
+    }
+
+    @Test("Coming forward again with a picture up does not start over")
+    func comingForwardKeepsGoing() async {
+        let pictures = ScriptedPictures([.picture("weighted.jpg")], first: [.picture("first.jpg")])
+        let preview = preview(pictures)
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+
+        preview.lookAgain()
+        await preview.advance()
+
+        #expect(preview.content == picture("weighted.jpg"))
+        #expect(pictures.calls == ["last", "first", "next"])
     }
 
     @Test("A picture is asked for at the widget's size in pixels")

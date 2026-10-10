@@ -32,6 +32,22 @@ struct SelectedPhotosSourceTests {
         #expect(resize.originalType == "photos")
     }
 
+    @Test("Asked for its first picture, it writes the first of the picked photographs")
+    func firstPicture() throws {
+        let scratch = try ScratchFolder()
+        let written = scratch.url.appending(path: "written.jpg")
+        var library = FakeLibrary()
+        library.selected = (width: 400, height: 300)
+        library.first = (width: 200, height: 100)
+
+        _ = try #require(
+            try SelectedPhotosSource(library: library, pick: .first).writePicture(fitting: box, to: written))
+
+        let size = try #require(pixelSize(of: written))
+        #expect(size.width == 200)
+        #expect(size.height == 100)
+    }
+
     @Test("With nothing picked, or with access that is not limited to a selection, there is nothing")
     func nothing() throws {
         let scratch = try ScratchFolder()

@@ -13,11 +13,13 @@ struct WidgetsApp: App {
     @State private var model = SettingsModel(
         sources: ChosenSources(preferences: Self.shared), library: SystemPhotoLibrary(),
         preview: PreviewModel(
-            pictures: CachedPreviewPictures(directory: Self.previewCache),
+            pictures: Self.pictures,
             device: Self.device,
             // Not known until there is a window; `ScreenReader` supplies it.
             screen: nil, scale: 1),
-        counts: LibrarySourceCounts())
+        // The same thing counts for the rows and picks for the preview, so
+        // a source is counted once.
+        counts: Self.pictures)
 
     var body: some Scene {
         WindowGroup {
@@ -60,6 +62,8 @@ struct WidgetsApp: App {
         else { return }
         _ = await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: controller)
     }
+
+    private static let pictures = CachedPreviewPictures(directory: previewCache)
 
     /// Where the preview keeps its pictures: the app's own, apart from any
     /// widget's.

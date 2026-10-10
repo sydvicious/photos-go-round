@@ -58,6 +58,13 @@ public struct TinyCache: Sendable {
     }
 
     /// The pictures waiting their turn, in the order they arrived.
+    /// The picture that was shown last, if it is still kept. Nothing is asked
+    /// of the source, so it is there at once: a picture to put up while a new
+    /// one is fetched.
+    public func lastShown() throws -> URL? {
+        try pictures(in: shownFolder).last
+    }
+
     public func waiting() throws -> [URL] {
         try pictures(in: waitingFolder)
     }

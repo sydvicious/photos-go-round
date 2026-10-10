@@ -143,11 +143,12 @@ public final class SettingsModel {
     /// renamed or moved in Photos takes its new name and place, and one that
     /// is no longer there is wrong.
     ///
-    /// **And nothing counted before is trusted.** Syd, 2026-10-10, with
-    /// Favorites chosen while empty and two photographs then marked as
-    /// favorites in Photos: "Switch back to PGR. No Photos chosen", and "even
-    /// if I kill the app and relaunch". The sheet's counts and the preview's
-    /// are both started over.
+    /// **And every source is counted again, behind the pictures.** Syd,
+    /// 2026-10-10, with Favorites chosen while empty and two photographs then
+    /// marked as favorites in Photos: "Switch back to PGR. No Photos chosen",
+    /// and "even if I kill the app and relaunch". The sheet's counts are
+    /// started over, and each row's new count is what the preview's picks
+    /// are weighed by from then on.
     public func start() async {
         reload()
         catalog = PhotosCollectionCatalog(library: library)

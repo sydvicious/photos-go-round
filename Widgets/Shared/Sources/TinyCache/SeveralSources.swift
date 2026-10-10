@@ -77,8 +77,19 @@ public struct SeveralSources: PictureSource {
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         let remembered = counts.read()
         var known = remembered
-        // A count that could not be written is taken again next time.
-        defer { if known != remembered { try? counts.write(known) } }
+        // Only what changed here is written, over the file as it is by then:
+        // someone else may have counted a source of their own meanwhile. A
+        // count that could not be written is taken again next time.
+        defer {
+            let changed = Set(remembered.keys).union(known.keys).filter { remembered[$0] != known[$0] }
+            if !changed.isEmpty {
+                try? counts.update { current in
+                    for name in changed {
+                        current[name] = known[name]
+                    }
+                }
+            }
+        }
 
         var trouble: (any Error)?
         var holding: [(source: any CountedSource, pictures: Int)] = []

@@ -184,15 +184,19 @@ struct FakeLibrary: PhotoLibraryPictures {
     /// is limited to some, and how many of them there are.
     var selected: (width: Int, height: Int)?
     var selectedHolds = 1
+    /// The size of the first photograph, in a collection or among the picked,
+    /// when it is to be told apart from one picked at random.
+    var first: (width: Int, height: Int)?
 
     func selectedCount() throws -> Int {
         if refusing { throw Refused() }
         return selected == nil ? 0 : selectedHolds
     }
 
-    func selectedPicture(fitting box: CGSize) throws -> LibraryPicture? {
+    func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? {
         if refusing { throw Refused() }
-        guard let selected else { return nil }
+        guard var selected else { return nil }
+        if pick == .first, let first { selected = first }
         return LibraryPicture(
             image: try makeImage(width: selected.width, height: selected.height),
             originalWidth: 4032, originalHeight: 3024)
@@ -204,9 +208,12 @@ struct FakeLibrary: PhotoLibraryPictures {
         return counts[identifier] ?? 1
     }
 
-    func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
+    func picture(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick
+    ) throws -> LibraryPicture? {
         if refusing { throw Refused() }
-        guard let size = collections[identifier] ?? nil else { return nil }
+        guard var size = collections[identifier] ?? nil else { return nil }
+        if pick == .first, let first { size = first }
         return LibraryPicture(
             image: try makeImage(width: size.width, height: size.height),
             originalWidth: 4032, originalHeight: 3024)

@@ -26,6 +26,28 @@ struct TinyCacheTests {
         FileManager.default.fileExists(atPath: file.path(percentEncoded: false))
     }
 
+    @Test("The picture shown last can be had again, without asking the source")
+    func lastShown() throws {
+        let scratch = try ScratchFolder()
+        let (cache, source) = try cache(in: scratch)
+        let shown = try cache.take(upTo: 1, from: noon, every: 60)
+
+        let last = try cache.lastShown()
+
+        #expect(last?.lastPathComponent == shown.first?.file.lastPathComponent)
+        #expect(last != nil)
+        #expect(source.timesAsked == 1)
+    }
+
+    @Test("A cache that has shown nothing has no last picture, and fetches none to have one")
+    func noLastShown() throws {
+        let scratch = try ScratchFolder()
+        let (cache, source) = try cache(in: scratch)
+
+        #expect(try cache.lastShown() == nil)
+        #expect(source.timesAsked == 0)
+    }
+
     @Test("With nothing cached, the first picture comes straight from the source")
     func worksWithNoCache() throws {
         let scratch = try ScratchFolder()

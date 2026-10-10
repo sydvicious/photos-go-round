@@ -21,9 +21,20 @@ public protocol PreviewPictures: Sendable {
     /// file; nil when there is none to be had. May block.
     func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL?
 
-    /// Forgets what has been learned about the sources, such as how many
-    /// pictures each held, so that they are looked at afresh.
-    func forget()
+    /// The picture given last time for these sources at this size, if it is
+    /// still kept. Nothing is asked of the sources, so it is there at once.
+    func last(for sources: [SourceSpec], fitting box: CGSize) -> URL?
+
+    /// The first picture of the first source that has one. The sources are
+    /// not counted and nothing is weighed, so it is the quickest picture
+    /// there is to fetch. Nil when none has a picture. May block.
+    func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL?
+}
+
+extension PreviewPictures {
+    public func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? { nil }
+
+    public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? { nil }
 }
 
 @MainActor
@@ -51,6 +62,8 @@ public final class PreviewModel {
     /// asked for meanwhile.
     private var isFetching = false
     private var askedMeanwhile = false
+    /// Whether these sources have had their quick first picture.
+    private var started = false
     private var showing: WidgetFamily
     /// Whether the person has picked a size for themselves.
     private var personChose = false
@@ -139,18 +152,21 @@ public final class PreviewModel {
     public func show(_ sources: [SourceSpec]) {
         guard sources != self.sources else { return }
         self.sources = sources
+        started = false
         content = sources.isEmpty ? .nothingChosen : .scanning
     }
 
-    /// Looks at the sources afresh, as when the app comes forward.
+    /// Looks at the sources again, as when the app comes forward.
     ///
-    /// What was learned about them is forgotten, so photographs added in
-    /// Photos meanwhile are found: a collection that was empty an hour ago
-    /// would otherwise go on being taken for empty. A preview that had found
-    /// nothing goes back to scanning, which fetches at once; one showing a
-    /// photograph keeps it until its next change.
+    /// A preview that had found nothing goes back to scanning, which fetches
+    /// at once: photographs may have been added in Photos meanwhile. One
+    /// showing a photograph keeps it until its next change.
+    ///
+    /// What was counted is kept. The rows count each source again when the
+    /// app comes forward, and what they find is what the next picks are
+    /// weighed by; Syd, 2026-10-10, chose that over counting everything again
+    /// before the next picture.
     public func lookAgain() {
-        pictures.forget()
         if content == .noPhotos {
             content = .scanning
         }
@@ -192,6 +208,25 @@ public final class PreviewModel {
         let box = CGSize(width: size.width * scale, height: size.height * scale)
         guard box != .zero else { return }
         let pictures = pictures
+        if !started {
+            // Nothing is showing yet, and the usual pick counts every source
+            // before it fetches. So first what costs least: the picture kept
+            // from last time, which is a file on disk; then the first source's
+            // first picture, which asks Photos about one collection. Syd,
+            // 2026-10-10.
+            let last = try? await BlockingWork.run { pictures.last(for: asked, fitting: box) }
+            guard asked == sources else { return }
+            if let last {
+                content = .picture(last)
+            }
+            let first = try? await BlockingWork.run { try pictures.first(from: asked, fitting: box) }
+            guard asked == sources else { return }
+            started = true
+            if let first {
+                content = .picture(first)
+                return
+            }
+        }
         // Off the main actor, and off the cooperative pool: fetching reads
         // PhotoKit or walks a folder, and both block.
         let picture = try? await BlockingWork.run { try pictures.next(from: asked, fitting: box) }

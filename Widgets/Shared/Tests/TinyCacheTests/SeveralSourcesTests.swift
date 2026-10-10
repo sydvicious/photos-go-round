@@ -4,6 +4,26 @@ import Testing
 
 @testable import TinyCache
 
+/// A source that, while it is being counted, sees someone else write a count
+/// of their own to the same file: a row being counted while a pick is made.
+private struct Meddled: CountedSource {
+    let countName = "meddled"
+    let inner: StubSource
+    let counts: RememberedCounts
+    let moment: Date
+
+    func pictureCount() throws -> Int {
+        var theirs = counts.read()
+        theirs["someone-else"] = .init(pictures: 7, counted: moment)
+        try counts.write(theirs)
+        return try inner.pictureCount()
+    }
+
+    func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        try inner.writePicture(fitting: box, to: destination)
+    }
+}
+
 @Suite("Several sources as one")
 struct SeveralSourcesTests {
     let box = CGSize(width: 40, height: 40)
@@ -37,6 +57,22 @@ struct SeveralSourcesTests {
         let scratch = try ScratchFolder()
 
         #expect(try several([], in: scratch).writePicture(fitting: box, to: written(in: scratch)) == nil)
+    }
+
+    @Test("A count someone else wrote while a picture was being picked is not lost")
+    func othersCountsKept() throws {
+        let scratch = try ScratchFolder()
+        let counts = counts(in: scratch)
+        let source = Meddled(
+            inner: try stub(in: scratch, named: "inner", counting: 3), counts: counts, moment: Self.start)
+        let sources = SeveralSources(
+            [source], remembering: counts, now: { Self.start }, choosing: { $0.lowerBound })
+
+        #expect(try sources.writePicture(fitting: box, to: written(in: scratch)) != nil)
+
+        let after = counts.read()
+        #expect(after["someone-else"]?.pictures == 7)
+        #expect(after["meddled"]?.pictures == 3)
     }
 
     // MARK: Which source

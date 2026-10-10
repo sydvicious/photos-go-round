@@ -23,6 +23,9 @@ after it. The to-dos under each phase are Claude's.
 - **Phase 2** — The widget extension.
   - An iOS widget extension target, compiling the Mac's source files.
   - The widget reads the sources from the App Group container.
+  - Each widget starts as the preview does: the picture it kept on disk from last time, then the
+    first source's first, then the weighted picks. Syd, 2026-10-10: "of course, each widget will
+    be doing this as well".
   - The widget's list of sources takes the selection: `Settings.source(for:)` knows folders and
     collections only.
   - The extension records each size it is handed, and the preview uses them.
@@ -62,11 +65,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   gives, and not by the name "Hidden". Check on a real library, and with the phone in another
   language, that Hidden always arrives with that kind. If it ever has to be found by name, the
   name is localized and every language's has to be searched for. Syd, 2026-10-10.
-- **The first scan after the app comes forward is slow.** Syd, 2026-10-10, on a simulator: "it
-  could just me the memory pressure again. I will have to run this on real hardware at some
-  point." Each time it comes forward the app lists the library, counts every source for its row,
-  and the preview counts every source again for itself before it fetches a picture. The two
-  counts could be one.
+- **Try coming forward on a real device, with a large library.** Syd, 2026-10-10, of the first
+  scan after the app comes forward, on a simulator: "it could just me the memory pressure again.
+  I will have to run this on real hardware at some point."
 - **Redesign with all controls in the nav bar.** Syd, 2026-10-10. To be tried; what he has in
   mind is in *The redesign: controls in the nav bar*.
 
@@ -188,8 +189,10 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **The preview shows the largest size that fits without cropping, or the smallest, and goes on
   doing so as the window changes.** A size the person picks is theirs from then on, cropped if it
   has to be. Syd, 2026-10-10.
-- **Nothing counted before is trusted when the app comes forward.** The sheet's counts and the
-  preview's are both taken afresh, so photographs added in Photos meanwhile show. Syd, 2026-10-10.
+- **When the app comes forward every source is counted again, once, behind the pictures.** The
+  sheet's counts are taken afresh. The rows' count is also what the preview's picks are weighed
+  by, and the preview goes on from what it remembered until the new figures are in. Syd,
+  2026-10-10.
 - **The preview fetches one picture at a time.** Two requests to Photos at once do not come back.
 - **The source list is read again each time the app comes forward.** A collection renamed or
   moved in Photos takes its new name and place; one that has gone is red. Syd, 2026-10-10.
@@ -556,6 +559,46 @@ preview and not under it.
 - What the bar's Photos button does with limited access. Claude's reading: what the heading's
   button does today, the system's picker.
 
+## The first picture, as fast as possible
+
+Syd, 2026-10-10: "I want to fix the scanning when coming back to foreground again. First of all,
+could we show the first photo in the first collection as fast as possible?" Until then the first
+picture waited for every chosen source to be counted, so that the pick could be weighed.
+
+**When the preview has nothing to show, it puts up what costs least, in order.** He chose all
+three steps:
+
+- **Last time's picture**, which is a file in the app's caches: "we can cache the photo to disk
+  so it does not take up ram". No call to Photos. It is kept for each size and each set of
+  sources, so it is always from what is chosen now.
+- **The first photograph of the first source**: one collection looked up and one picture asked
+  for, with nothing counted. The sources are tried in the order they were chosen, and the first
+  that gives a picture is the one. A folder has no first, and gives any of its own.
+- **Then the usual picks**, each source weighed by how many pictures it holds.
+
+If nothing can be had, last time's picture does not stay up: "No Photos found" does. Coming
+forward with a picture already showing starts nothing over; the picture stays until the next
+change.
+
+**One count, kept, and refreshed behind the pictures.** Syd, 2026-10-10: "the entire reason I am
+doing this is to be as performant as possible with my huge photos sources", and of the other
+apps that do these jobs, "Most of the suck." Coming forward used to throw the preview's
+remembered counts away, so its next picture waited while every source was counted, and the rows
+counted every source again for themselves. He chose both changes:
+
+- **The rows' count is the preview's count.** Each figure a row takes is written where the
+  preview's picks read it. `CachedPreviewPictures` is both.
+- **The remembered counts are kept when the app comes forward.** The next picture is picked at
+  once from what was remembered, and the rows' recount brings the figures up to date behind it.
+
+A row's count and a pick write the same file from threads of their own, so each changes only
+its own figures, in one step (`RememberedCounts.update`), and neither loses the other's.
+
+So each source is counted once for each time the app comes forward, and never on the way to a
+picture. For the few seconds until a source's new figure is in, a pick is weighed by its old
+one. A count of none is still never remembered, so a collection that was empty is always asked
+again.
+
 ## The collections
 
 **The Mac has two things, and "the collection picker" could be either.**
@@ -838,9 +881,10 @@ keeping an old answer:
 
 - **The preview's counts.** To weigh its sources the preview remembers how many pictures each
   holds, on disk, for an hour, as a widget does. Favorites had been counted at none, so for an
-  hour it was not asked again, through any number of launches. Now the counts are forgotten each
-  time the app comes forward, and a preview showing "No Photos found" goes back to "Scanning…"
-  and fetches at once.
+  hour it was not asked again, through any number of launches. For a while the counts were forgotten each
+  time the app came forward; since the same day they are kept and counted again behind the
+  pictures, see *The first picture, as fast as possible*. A preview showing "No Photos found"
+  goes back to "Scanning…" and fetches at once.
 - **The sheet's counts.** The catalog the sheet reads the library through keeps each count it
   has taken for as long as it lives, which was the life of the app. Now there is a new one each
   time the app comes forward.

@@ -44,4 +44,26 @@ public struct RememberedCounts: Sendable {
         encoder.outputFormatting = [.sortedKeys]
         try encoder.encode(counts).write(to: file, options: .atomic)
     }
+
+    /// Reads the file, changes what `change` changes, and writes it back, as
+    /// one step that nothing else in this process can come between.
+    ///
+    /// A row being counted and a picture being picked both keep their counts
+    /// here, on threads of their own. Each writing the whole file from what
+    /// it read a while ago would lose the other's figures; each changing only
+    /// its own, here, loses none.
+    public func update(_ change: (inout [String: Count]) -> Void) throws {
+        try Self.updating.withLock {
+            var counts = read()
+            let before = counts
+            change(&counts)
+            if counts != before {
+                try write(counts)
+            }
+        }
+    }
+
+    /// One for every file: an update is a few lines of JSON, and never waits
+    /// long for another.
+    private static let updating = NSLock()
 }

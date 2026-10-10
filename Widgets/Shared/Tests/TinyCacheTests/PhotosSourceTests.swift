@@ -28,6 +28,22 @@ struct PhotosSourceTests {
         #expect(resize.writtenBytes == byteCount(of: written))
     }
 
+    @Test("Asked for its first picture, it writes the collection's first and not one picked at random")
+    func firstPicture() throws {
+        let scratch = try ScratchFolder()
+        let written = scratch.url.appending(path: "written.jpg")
+        var library = FakeLibrary(collections: ["album": (width: 400, height: 300)])
+        library.first = (width: 200, height: 100)
+
+        _ = try #require(
+            try PhotosSource(collection: "album", library: library, pick: .first)
+                .writePicture(fitting: box, to: written))
+
+        let size = try #require(pixelSize(of: written))
+        #expect(size.width == 200)
+        #expect(size.height == 100)
+    }
+
     @Test("A collection with no pictures, or one that is gone, has nothing to write")
     func nothingToWrite() throws {
         let scratch = try ScratchFolder()

@@ -15,7 +15,6 @@
     /// Pictures there are none of, for a preview or a test that draws no photograph.
     struct NoPictures: PreviewPictures {
         func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? { nil }
-        func forget() {}
     }
 
     /// Pictures made of colour, a different one each time, for a preview that
@@ -62,7 +61,6 @@
             return CGImageDestinationFinalize(destination) ? file : nil
         }
 
-        func forget() {}
     }
 
     extension PreviewModel {

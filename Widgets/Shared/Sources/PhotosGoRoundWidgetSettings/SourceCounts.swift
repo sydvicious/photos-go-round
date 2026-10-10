@@ -40,6 +40,16 @@ public struct LibrarySourceCounts: SourceCounts {
 }
 
 extension SourceSpec {
+    /// The source as something that gives its first picture, for a picture
+    /// wanted at once. A folder has no first, and gives any of its own.
+    var firstPicture: (any PictureSource)? {
+        switch kind {
+        case .photosCollection: PhotosSource(collection: locator, pick: .first)
+        case .photosSelection: SelectedPhotosSource(pick: .first)
+        default: counted
+        }
+    }
+
     /// The source as something pictures are counted in and taken from: a
     /// folder, a Photos collection, or the photographs picked with limited
     /// access. Nil for a kind the widgets do not show from.

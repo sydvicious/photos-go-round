@@ -104,17 +104,19 @@ struct SourceRefreshTests {
         #expect(model.collections.map(\.isWrong) == [false])
     }
 
-    @Test("Each time the app comes forward the preview looks at the sources afresh")
+    @Test("Each time the app comes forward, a preview that had found nothing looks again")
     func previewLooksAgain() async {
-        let pictures = ScriptedPictures([])
+        preferences.setSources([.folder("/pictures/Coins")])
         let model = SettingsModel(
             sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized),
-            preview: .sample(pictures))
+            preview: .sample(ScriptedPictures([])))
+        await model.start()
+        await model.preview.advance()
+        #expect(model.preview.content == .noPhotos)
 
         await model.start()
-        await model.start()
 
-        #expect(pictures.timesForgotten == 2)
+        #expect(model.preview.content == .scanning)
     }
 
     @Test("After the app comes forward the sheet counts again, so photographs added in Photos show")

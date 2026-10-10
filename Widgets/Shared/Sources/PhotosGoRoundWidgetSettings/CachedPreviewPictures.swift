@@ -22,24 +22,45 @@ public struct CachedPreviewPictures: PreviewPictures {
     }
 
     public func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
-        // A folder for each size and each set of sources, so a picture made
-        // for one is never shown for another.
-        let sized = directory.appending(
-            path: "\(Int(box.width))x\(Int(box.height))", directoryHint: .isDirectory)
-        let names = sources.map { "\($0.kind.rawValue)|\($0.locator)|\($0.recursive)" }
-        let folder = (try? CacheFolders.folder(in: sized, forSources: names)) ?? sized
         let cache = TinyCache(
-            directory: folder, source: Self.source(for: sources, counts: directory), fitting: box,
-            fillLimit: 1)
+            directory: folder(for: sources, fitting: box),
+            source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
         return try cache.take(upTo: 1, from: .now, every: 1).first?.file
     }
 
-    /// Forgets how many pictures each source held. The counts are remembered
-    /// for an hour so that a pick does not walk every source; without this, a
-    /// collection that was empty when it was counted stays empty to the
-    /// preview for that hour, whatever is added to it.
-    public func forget() {
-        try? FileManager.default.removeItem(at: counts)
+    /// The picture is a file on disk and stays there when the app goes, so
+    /// the next launch has it without asking Photos for anything. Syd,
+    /// 2026-10-10: "we can cache the photo to disk so it does not take up
+    /// ram".
+    public func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? {
+        let cache = TinyCache(
+            directory: folder(for: sources, fitting: box),
+            source: Self.source(for: [], counts: directory), fitting: box, fillLimit: 1)
+        return (try? cache.lastShown()) ?? nil
+    }
+
+    /// Each source is tried in the order it was chosen, and the first that
+    /// gives a picture is the one. A source that cannot be read is passed
+    /// over, as one with nothing in it is.
+    public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        let folder = folder(for: sources, fitting: box)
+        for spec in sources {
+            guard let source = spec.firstPicture else { continue }
+            let cache = TinyCache(directory: folder, source: source, fitting: box, fillLimit: 1)
+            if let file = try? cache.take(upTo: 1, from: .now, every: 1).first?.file {
+                return file
+            }
+        }
+        return nil
+    }
+
+    /// A folder for each size and each set of sources, so a picture made for
+    /// one is never shown for another.
+    private func folder(for sources: [SourceSpec], fitting box: CGSize) -> URL {
+        let sized = directory.appending(
+            path: "\(Int(box.width))x\(Int(box.height))", directoryHint: .isDirectory)
+        let names = sources.map { "\($0.kind.rawValue)|\($0.locator)|\($0.recursive)" }
+        return (try? CacheFolders.folder(in: sized, forSources: names)) ?? sized
     }
 
     private var counts: URL { directory.appending(path: "counts.json") }
@@ -51,6 +72,27 @@ public struct CachedPreviewPictures: PreviewPictures {
         SeveralSources(
             specs.compactMap(\.counted),
             remembering: RememberedCounts(file: directory.appending(path: "counts.json")))
-        // The same file `forget` removes.
+        // The same file a row's count is written to.
+    }
+}
+
+/// **The count on a row is the count the picks are weighed by.** Syd,
+/// 2026-10-10. A source is counted once, for its row, and the figure is put
+/// where `SeveralSources` reads it, so the preview does not count it again on
+/// the way to a picture. On a library of tens of thousands of photographs
+/// that count is the slow part.
+extension CachedPreviewPictures: SourceCounts {
+    public func count(of source: SourceSpec) throws -> Int? {
+        let count = try LibrarySourceCounts().count(of: source)
+        if let count, let counted = source.counted {
+            // Nothing is remembered of an empty source, as in
+            // `SeveralSources`: it is asked again each time. A pick may be
+            // writing its own counts to the same file at this moment, and an
+            // update loses neither.
+            try? RememberedCounts(file: counts).update { known in
+                known[counted.countName] = count > 0 ? .init(pictures: count, counted: .now) : nil
+            }
+        }
+        return count
     }
 }
