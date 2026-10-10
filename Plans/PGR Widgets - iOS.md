@@ -313,6 +313,20 @@ size.
 **The control.** A segmented control under or over the preview, one segment for each size the
 device offers. On the Mac the same control shows the Mac's five.
 
+**The iPhone Duo has no published widget sizes.** Looked for on 2026-10-10, at Syd's asking:
+
+- WidgetKit's declarations in the Xcode 27.1 release candidate's SDK are the same as 27.0's: the
+  same families, and no word of the Duo, a fold or a cover.
+- Apple's table of widget dimensions, as published that day (last changed 2025-12-16), has the
+  ten iPhone rows the preview already uses and no row for the Duo.
+- The simulator's device type gives the Duo two screens of its own: 466 by 678 points and 669
+  by 951, both at three pixels to the point. It needs the iOS 27.1 runtime.
+
+So on the Duo the preview takes the nearest row: the 375 by 667 phone's sizes on the smaller
+screen (large is 321 by 324), and the 430 by 932 phone's on the larger. Both are guesses until a
+real widget's size is measured there, which is what the extension's recorded sizes in Phase 2
+are for.
+
 ## How the preview is drawn
 
 **It draws the widget's own view.** `PhotoWidgetView` is plain SwiftUI and takes an entry; the app
