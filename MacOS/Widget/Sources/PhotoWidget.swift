@@ -22,7 +22,7 @@ struct PhotoWidget: Widget {
         }
         .configurationDisplayName(Settings.displayName)
         .description("Your photographs, one after another.")
-        // "Widgets in every size the platform offers."
+        // "Widgets in every Home Screen size the platform offers."
         .supportedFamilies([
             .systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .systemExtraLargePortrait,
         ])

@@ -1,8 +1,8 @@
 # Summary
 
 Photos-Go-Round Widgets.app: a self-contained App Store app for macOS, iOS, iPadOS and visionOS, with
-watchOS widgets served by the iPhone app. It shows your photographs in widgets of every size the
-platform offers, and it must pass App Store review. Syd, 2026-09-26.
+watchOS widgets served by the iPhone app. It shows your photographs in widgets of every Home Screen
+size the platform offers, and it must pass App Store review. Syd, 2026-09-26.
 
 # Rationale
 
@@ -30,10 +30,13 @@ design that works the same on the Mac and on devices that never had an agent.
     as a setting.
 - *iOS and iPadOS* — the same widgets in an app on the iOS App Store. Before the Mac's menubar
   app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested on his own
-  phone, not in a simulator.
+  phone, not in a simulator. The app itself is planned in `Plans/PGR Widgets - iOS.md`.
   - Investigate how widgets work on iPhone Duo.
   - Find out whether the widget can query Photos while the phone is locked.
   - Read the extension's memory on the phone, where the 30 MB ceiling is expected to be enforced.
+  - Shrink a very large picture without the whole of it in memory. On the Mac one coin scan took
+    the extension to 155 MB. Syd, 2026-10-09: "Let's worry about the peak when we do the iOS app."
+    *Seen with 0.7 (5) installed*, below.
 - *macOS menubar app* — Photos-Go-Round Widgets.app on the Mac App Store.
   - Take the widget out of Photos-Go-Round.app when the menubar app carries it.
   - Have the app write its sources into the App Group container: the Store does not accept the
@@ -108,7 +111,8 @@ design that works the same on the Mac and on devices that never had an agent.
   measured.
 - **The menubar app has a second TinyCache of its own, for previews of the widgets.** A preview
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
-- **Widgets in every size the platform offers.** No families left out.
+- **Widgets in every Home Screen size the platform offers.** The Lock Screen's own sizes on iPhone
+  and iPad, a circle, a rectangle and a line of text, are left out. Syd, 2026-10-09.
 - **A widget waiting for its first photograph shows the app's icon, greyed over, and
   "Scanning…".** Syd, 2026-10-09. When something has gone wrong it says what instead.
 - **One photograph fades into the next.** Syd, 2026-10-08: "I want the fade transition". Later, a
@@ -274,6 +278,59 @@ and was reloaded at 22:53:43. The small widget's was not due until 22:56:42 and 
 it, at 22:53:44: the system reloaded both widgets together. The extension is not filling far
 between wakes; the most waiting was 3 and 4 pictures, so timelines are 4 or 5 entries and a reload
 comes about every five minutes.
+
+### Seen with 0.7 (5) installed, 2026-10-09
+
+Thirty-five minutes of the release build's widgets, five placed, on two folders and two Photos
+collections. 65 pictures fetched: 31 from Photos, 34 from the folders, none with trouble.
+
+- **A very large picture costs far more than any budget so far.** The peak followed the original's
+  size, not the widget's: a 14464×11728 JPEG took it to 47 MB, a 25088×15424 one to 107 MB, and a
+  33280×20395 one, 68 MB on disk, to 151 MB and then 155 MB. All were coin scans from a folder.
+  Afterwards the process was back at 10 to 15 MB each time, and it was not stopped.
+- **One Photos picture came up 18 times out of the 31**, by its size, 4284×4284. The widget picks a
+  collection at random and then a picture in it, so a collection with one picture in it is shown
+  as often as one with thousands. *Claude's reading of the code; which collection it was is not
+  checked.* The same holds between sources: each is as likely as the others, whatever it holds.
+
+The peak waits for the iOS app, where it is listed in *Phases*.
+
+**Every picture is as likely as every other, whichever source or collection it is in.** Syd,
+2026-10-09: "I thought we already had pictures drawn alike from all sources. That's what I want."
+
+- *A source is chosen in proportion to how many pictures it holds*, and the picture inside it at
+  random. Each Photos collection is a source of its own.
+- *The counts are remembered*, in `Caches/TinyCache/counts.json` in the extension's container, one
+  file for widgets of every size. Syd chose that over counting every source on every pick. A
+  source is counted when it has no count, or one an hour old.
+- *A folder is counted by the walk that chooses from it.* Syd chose that over a walk of every
+  folder each hour. A folder that goes on being chosen is walked once a pick and never just to be
+  counted. A Photos collection gives its count without a picture being fetched.
+- *A source that fails, or gives no picture though its count said it had some, is forgotten*, and
+  counted again next time.
+- *A photograph in two chosen albums counts twice.*
+- *A source that grows or shrinks is weighed by its old size for up to an hour*, or, a folder,
+  until it is next chosen.
+- *Each counting is logged*, as `counted <source>, <n> pictures in <t> s`. A count taken by the
+  walk that chooses is not: it cost nothing more.
+
+- *The counts stand in for a database.* The screensaver and the wallpaper ask the agent, which
+  draws uniformly from its catalogue, a row for every photograph. The widget asks no agent and has
+  no catalogue, so it weighs its sources instead. Syd, 2026-10-09, asked whether the widget could
+  draw from the agent's database, and left it: "this is fine for now, I guess". When the widgets
+  have the shared database this plan calls for, a widget draws from that and the counts go.
+  Reading the agent's own database from today's widget would take a read-only sandbox exception
+  for its path, and would work only where there is an agent. *Not checked: whether SQLite can open
+  the agent's live database read-only from inside the sandbox.*
+
+**Measured 2026-10-09, a Debug build of 0.8**, on the widget gallery's first asking. Each source was
+counted once: the two Photos collections at 8452 and 80 pictures, in 0.18 s and 0.15 s, and the
+two folders at 436 and 115, in 0.06 s and 0.01 s. So 9083 pictures, of which 551, about one in
+sixteen, are in the folders, and the first seven fetched were all from Photos.
+
+To do:
+
+- [ ] See a Photos collection counted again after an hour, in the `counted` lines.
 
 ## Spike: CarPlay widgets
 
@@ -852,8 +909,8 @@ and then we can test photos access".
   - *A source now writes its own picture*, at the size that fits, where before it handed TinyCache
     a file to shrink. A folder shrinks an original. Photos is asked for the picture at that size,
     exactly, and what comes back is written as it is.
-  - *Every source has an equal chance*, whatever it holds: an album of ten is asked as often as a
-    library of twenty thousand. Weighing by size would mean counting.
+  - *A source is chosen in proportion to how many pictures it holds*, so that every picture has an
+    equal chance. *Seen with 0.7 (5) installed*, above.
   - *One source's trouble does not stop the others.* A folder that can't be read is passed over.
     The widget says what went wrong only when no source gave it a picture.
   - *Photos is not asked to download.* A photograph that is only in iCloud comes back as whatever
@@ -1438,6 +1495,7 @@ Read from Apple's reference pages for `PHImageManager` and `PHImageRequestOption
 # References
 
 - `Plans/Product Strategy.md` — the four products, and this one's place among them.
+- `Plans/PGR Widgets - iOS.md` — the iOS and iPadOS app, planned separately. Syd, 2026-10-09.
 - `Plans/PLAN.md`, Phase 8 (Mac widget) and Phase 5 (iOS widget).
 - `Plans/PLAN.md`, *Widgets on macOS, and where the store actually lives* — the App Group analysis.
 - `Plans/Logging.md` — the logging rules every binary follows.

@@ -34,6 +34,15 @@ enum WidgetLog {
             """)
     }
 
+    /// What counting one source found and took: `counted folder|/Volumes/
+    /// Coins|true, 1204 pictures in 0.31 s`. Counting a folder is a walk of
+    /// it, and this is where what that costs a wake is read.
+    static func counted(_ counting: SeveralSources.Counting) {
+        note(
+            "counted \(counting.name), \(counting.pictures) pictures in "
+                + String(format: "%.2f s", counting.seconds))
+    }
+
     /// `now 11.2 MB, peak 14.0 MB`, or why it could not be read.
     private static func memory() -> String {
         var usage = rusage_info_v4()

@@ -4,7 +4,7 @@ import Testing
 
 @testable import TinyCache
 
-@Suite("The Photos library as a source of pictures")
+@Suite("A Photos collection as a source of pictures")
 struct PhotosSourceTests {
     let box = CGSize(width: 400, height: 400)
 
@@ -15,7 +15,7 @@ struct PhotosSourceTests {
         let library = FakeLibrary(collections: ["album": (width: 400, height: 300)])
 
         let resize = try #require(
-            try PhotosSource(collections: ["album"], library: library).writePicture(fitting: box, to: written))
+            try PhotosSource(collection: "album", library: library).writePicture(fitting: box, to: written))
 
         let size = try #require(pixelSize(of: written))
         #expect(size.width == 400)
@@ -28,26 +28,14 @@ struct PhotosSourceTests {
         #expect(resize.writtenBytes == byteCount(of: written))
     }
 
-    @Test("A collection with no pictures is passed over for one that has them")
-    func passesOverAnEmptyCollection() throws {
-        let scratch = try ScratchFolder()
-        let library = FakeLibrary(collections: ["empty": nil, "album": (width: 40, height: 30), "gone": nil])
-        let source = PhotosSource(collections: ["empty", "album", "gone"], library: library)
-
-        for attempt in 0..<12 {
-            let written = scratch.url.appending(path: "written-\(attempt).jpg")
-            #expect(try source.writePicture(fitting: box, to: written) != nil)
-        }
-    }
-
-    @Test("With no collections, or none with pictures, there is nothing to write")
+    @Test("A collection with no pictures, or one that is gone, has nothing to write")
     func nothingToWrite() throws {
         let scratch = try ScratchFolder()
         let written = scratch.url.appending(path: "written.jpg")
         let library = FakeLibrary(collections: ["empty": nil])
 
-        #expect(try PhotosSource(collections: [], library: library).writePicture(fitting: box, to: written) == nil)
-        #expect(try PhotosSource(collections: ["empty"], library: library).writePicture(fitting: box, to: written) == nil)
+        #expect(try PhotosSource(collection: "empty", library: library).writePicture(fitting: box, to: written) == nil)
+        #expect(try PhotosSource(collection: "gone", library: library).writePicture(fitting: box, to: written) == nil)
         #expect(pixelSize(of: written) == nil)
     }
 
@@ -57,8 +45,51 @@ struct PhotosSourceTests {
         let library = FakeLibrary(collections: ["album": (width: 40, height: 30)], refusing: true)
 
         #expect(throws: FakeLibrary.Refused.self) {
-            try PhotosSource(collections: ["album"], library: library).writePicture(
+            try PhotosSource(collection: "album", library: library).writePicture(
                 fitting: box, to: scratch.url.appending(path: "written.jpg"))
         }
+    }
+
+    @Test("It holds as many pictures as the library says its collection does")
+    func countsItsPictures() throws {
+        let library = FakeLibrary(
+            collections: ["album": (width: 40, height: 30), "empty": nil], counts: ["album": 250])
+
+        #expect(try PhotosSource(collection: "album", library: library).pictureCount() == 250)
+        #expect(try PhotosSource(collection: "empty", library: library).pictureCount() == 0)
+        #expect(try PhotosSource(collection: "gone", library: library).pictureCount() == 0)
+    }
+
+    @Test("Writing a picture does not say how many it holds: that is the library's to answer")
+    func writingDoesNotCount() throws {
+        let scratch = try ScratchFolder()
+        let library = FakeLibrary(collections: ["album": (width: 40, height: 30)], counts: ["album": 250])
+
+        let picked = try PhotosSource(collection: "album", library: library)
+            .writePictureAndCount(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(picked.resize != nil)
+        #expect(picked.pictures == nil)
+    }
+
+    @Test("A library that refuses cannot be counted, which is not a count of none")
+    func refusalIsNotCounted() throws {
+        let library = FakeLibrary(collections: ["album": (width: 40, height: 30)], refusing: true)
+
+        #expect(throws: FakeLibrary.Refused.self) {
+            try PhotosSource(collection: "album", library: library).pictureCount()
+        }
+    }
+
+    @Test("Its count is remembered under its collection")
+    func countName() throws {
+        let library = FakeLibrary()
+
+        #expect(
+            PhotosSource(collection: "album", library: library).countName
+                == PhotosSource(collection: "album", library: library).countName)
+        #expect(
+            PhotosSource(collection: "album", library: library).countName
+                != PhotosSource(collection: "other", library: library).countName)
     }
 }

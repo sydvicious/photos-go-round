@@ -40,28 +40,38 @@ public protocol PhotoLibraryPictures: Sendable {
     /// that fits `box`, in pixels. Nil when the collection is gone or has no
     /// pictures, and an error when the library will not answer at all.
     func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture?
+
+    /// How many pictures the collection holds, without fetching any of them.
+    /// None when the collection is gone, and an error when the library will
+    /// not answer at all.
+    func count(inCollection identifier: String) throws -> Int
 }
 
-public struct PhotosSource: PictureSource {
-    private let collections: [String]
+/// One Photos collection. Each is a source of its own, so that an album of one
+/// photograph is weighed as one photograph. `SeveralSources`.
+public struct PhotosSource: CountedSource {
+    private let collection: String
     private let library: any PhotoLibraryPictures
 
-    /// - Parameter collections: Photos collections by their local identifiers,
+    /// - Parameter collection: A Photos collection by its local identifier,
     ///   which is what a Photos source's locator is in the app's preferences.
-    public init(collections: [String], library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
-        self.collections = collections
+    public init(collection: String, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
+        self.collection = collection
         self.library = library
     }
 
+    public var countName: String { "photos|\(collection)" }
+
+    public func pictureCount() throws -> Int {
+        try library.count(inCollection: collection)
+    }
+
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
-        for identifier in collections.shuffled() {
-            guard let picture = try library.picture(inCollection: identifier, fitting: box) else { continue }
-            return try PictureResizer().write(
-                picture.image, originalType: "photos",
-                originalWidth: picture.originalWidth, originalHeight: picture.originalHeight,
-                to: destination)
-        }
-        return nil
+        guard let picture = try library.picture(inCollection: collection, fitting: box) else { return nil }
+        return try PictureResizer().write(
+            picture.image, originalType: "photos",
+            originalWidth: picture.originalWidth, originalHeight: picture.originalHeight,
+            to: destination)
     }
 }
 
@@ -77,7 +87,13 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
 
     public init() {}
 
-    public func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
+    public func count(inCollection identifier: String) throws -> Int {
+        try pictures(inCollection: identifier)?.count ?? 0
+    }
+
+    /// The collection's photographs, none of them fetched yet. Nil when the
+    /// collection is gone.
+    private func pictures(inCollection identifier: String) throws -> PHFetchResult<PHAsset>? {
         // Reading the status never prompts. Asking is the app's to do: the
         // privacy system does not show a prompt on a widget's behalf.
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
@@ -91,8 +107,11 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         else { return nil }
         let imagesOnly = PHFetchOptions()
         imagesOnly.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
-        let assets = PHAsset.fetchAssets(in: collection, options: imagesOnly)
-        guard assets.count > 0 else { return nil }
+        return PHAsset.fetchAssets(in: collection, options: imagesOnly)
+    }
+
+    public func picture(inCollection identifier: String, fitting box: CGSize) throws -> LibraryPicture? {
+        guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
         let asset = assets.object(at: Int.random(in: 0..<assets.count))
 
         let options = PHImageRequestOptions()
