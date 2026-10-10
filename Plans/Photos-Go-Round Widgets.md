@@ -328,9 +328,21 @@ counted once: the two Photos collections at 8452 and 80 pictures, in 0.18 s and 
 two folders at 436 and 115, in 0.06 s and 0.01 s. So 9083 pictures, of which 551, about one in
 sixteen, are in the folders, and the first seven fetched were all from Photos.
 
-To do:
+**Overnight, 2026-10-09 22:05 to 2026-10-10 08:30**, the Debug 0.8 widgets beside the Release 0.7
+ones, five sizes of each, on the same four sources.
 
-- [ ] See a Photos collection counted again after an hour, in the `counted` lines.
+- *Debug: 573 fetched, 41 of them from the folders*, 7.2% where the counts give 6.1%, which is
+  within what chance allows at that number. None with trouble.
+- *Release: 563 fetched, 278 from the folders*, 49.4%: each of four sources an equal chance.
+- *The 4284×4284 size came up 134 times in Release and twice in Debug.* Release took 285 pictures
+  from Photos, about half of them from the collection of 80, so nearly every picture from that
+  collection is that size. What looked on 2026-10-09 like one picture repeating was, as far as this
+  shows, that collection being chosen half the time. *Not checked in Photos itself.*
+- *The Photos collections were counted again each hour*, ten times each: the one of 8452 in 0.04 s
+  on average and 0.08 s at most, the one of 80 in 0.14 s and 0.32 s. The coin folder, chosen
+  seldom, was counted five times, 0.02 s at most. Album Covers was counted once in those hours:
+  being chosen kept its count fresh.
+- *The peak was 154 MB*, from a 33280×20395 coin scan at 07:26, as under 0.7.
 
 ## Spike: CarPlay widgets
 
