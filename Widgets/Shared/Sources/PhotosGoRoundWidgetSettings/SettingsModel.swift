@@ -8,6 +8,7 @@
 import Foundation
 import Observation
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 
 @MainActor
 @Observable
@@ -42,11 +43,49 @@ public final class SettingsModel {
     public private(set) var collections: [Row] = []
     public private(set) var filesAndFolders: [Row] = []
 
-    private let sources: ChosenSources
+    /// What the person has said about Photos, once the app has found out.
+    public private(set) var photosAccess: LibraryAuthorization?
+    /// Whether the collections sheet is up.
+    public var showsCollectionPicker = false
 
-    public init(sources: ChosenSources) {
+    /// Refused, or restricted by a parent or a profile. The chosen collections
+    /// stay in the list; Syd, 2026-10-09: "red with button back to system
+    /// settings".
+    public var photosAccessIsOff: Bool {
+        photosAccess == .denied || photosAccess == .restricted
+    }
+
+    private let sources: ChosenSources
+    private let library: any PhotoLibrary
+    private let catalog: PhotosCollectionCatalog
+
+    public init(sources: ChosenSources, library: any PhotoLibrary) {
         self.sources = sources
+        self.library = library
+        catalog = PhotosCollectionCatalog(library: library)
         reload()
+    }
+
+    /// Finds out about Photos access, each time the app is opened or brought
+    /// forward.
+    ///
+    /// Syd, 2026-10-09: "the user will automatically be prompted. The
+    /// collections selector will come up after the user asks for photos
+    /// permission". So the first time, the app asks by itself, and the sheet
+    /// follows a yes. Every time after, it only reads the answer, which the
+    /// person may have changed in the system's settings since.
+    public func start() async {
+        guard var access = try? await library.authorization else { return }
+        if access == .notDetermined {
+            access = await library.requestAuthorization()
+            showsCollectionPicker = access == .authorized
+        }
+        photosAccess = access
+    }
+
+    /// A model for the collections sheet, opening with what is chosen now.
+    public func makePicker() -> CollectionPickerModel {
+        CollectionPickerModel(catalog: catalog, chosen: sources.collections)
     }
 
     /// Reads both lists again from what is stored.
@@ -58,6 +97,7 @@ public final class SettingsModel {
     /// Done in the collections sheet.
     public func chooseCollections(_ ticked: [SourceSpec]) {
         sources.chooseCollections(ticked)
+        showsCollectionPicker = false
         reload()
     }
 

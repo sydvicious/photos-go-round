@@ -3,12 +3,14 @@
 // `Plans/PGR Widgets - iOS.md`.
 
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 import PhotosGoRoundWidgetSettings
 import SwiftUI
 
 @main
 struct WidgetsApp: App {
-    @State private var model = SettingsModel(sources: ChosenSources(preferences: Self.shared))
+    @State private var model = SettingsModel(
+        sources: ChosenSources(preferences: Self.shared), library: SystemPhotoLibrary())
 
     var body: some Scene {
         WindowGroup {

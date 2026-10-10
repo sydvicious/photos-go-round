@@ -1,4 +1,5 @@
 import Foundation
+import PhotosGoRoundAgentAPI
 
 /// One collection in the photo library, as a picker needs it.
 ///
@@ -190,4 +191,11 @@ extension LibrarySectionGroup {
             return LibrarySectionGroup(section: section, collections: members)
         }
     }
+}
+
+/// Laid out as Photos lays it out, by the one builder every picker uses.
+extension LibraryCollection: Foldered {
+    public var treeID: String { identifier }
+    public var treeTitle: String { title }
+    public var treeFolders: [String] { folders }
 }

@@ -18,8 +18,9 @@ The order is Syd's, 2026-10-09: the settings view first, in the app alone, and t
 after it. The to-dos under each phase are Claude's.
 
 - **Phase 1** — The app, with the settings view and no widget.
-  - The app asks for Photos access at first launch, and then brings up the collections sheet.
-  - The collections list, and the sheet that chooses them.
+  - Limited Photos access: the "Selected Photos" row and its button.
+  - The count on each row, and red for a source that is wrong.
+  - The alert, and the picker again, when a source is wrong at opening.
   - The files and folders list, with adding and removing.
   - The sources are written into the App Group container.
   - The preview, at Apple's table of sizes, and the control that changes its size.
@@ -45,7 +46,8 @@ after it. The to-dos under each phase are Claude's.
 - **The app is `com.sydpolk.photosgoround.widgets`, and its extension
   `com.sydpolk.photosgoround.widgets.extension`.** The Mac's menubar app takes the same identifier
   when it comes. Syd, 2026-10-09.
-- **The name under the icon is "Photos-Go-Round".** Syd, 2026-10-09.
+- **The name under the icon is "PhotosGoRound".** It fits whole where "Photos-Go-Round" was cut
+  off. Syd, 2026-10-09.
 - **Debug, Release and Claude builds each have their own identifier, by the Mac's suffixes.** A
   development build never replaces the Store's on the phone. Syd, 2026-10-09.
 - **Tested in a simulator, and on Syd's phone for iCloud Photo Library.** That is the only reason
@@ -78,6 +80,9 @@ after it. The to-dos under each phase are Claude's.
   2026-10-09.
 - **A button opens the whole library as a checkbox tree, in a sheet.** That is where collections
   are chosen, as in the Mac app's picker. Syd, 2026-10-09.
+- *Proposed, and built that way:* **the sheet never offers the whole library or Hidden, and a
+  section heading has no tick box.** A folder has one. It follows from never choosing the whole
+  library; the Mac app's picker offers all three.
 - **What is ticked when Done is pressed is the set of Photos sources.** Cancel changes nothing.
   The Mac picker's rule. Syd, 2026-10-09.
 - **A row shows the source's name and its count, and is red when something is wrong.** Syd,
@@ -504,6 +509,13 @@ that Photos access is off, with a button that opens the system's settings, where
 on. Files and folders still work, since they need no Photos access. The Mac's picker has the same
 kind of face for a library it may not read (`CollectionPickerView.unauthorized`).
 
+**What the sheet leaves out.** Claude's doing, 2026-10-09, to be confirmed. The Mac app's picker
+lists every collection PhotoKit names, which includes the one that is the whole library
+(*Recents*) and *Hidden*, and each section heading has a box that ticks everything in the section.
+Here the whole library and Hidden are not listed, and a section heading has no box; a folder
+keeps its box, since it ticks only the albums a person filed in it. A section with nothing left
+to show has no heading.
+
 **Not said about first launch:**
 
 - Whether the Mac's menubar app does the same at its first launch. It is to show this same view.
@@ -717,12 +729,18 @@ bundle identifier.
   two platforms spell the same group differently, and the code that asks for the container has to
   allow for that.
 
-**The name under the icon is "Photos-Go-Round".** Syd, 2026-10-09, choosing it over "PGR Widgets".
-The product is "Photos-Go-Round Widgets", which is too long for a Home Screen label; the App Store
-listing can carry the full name. From memory, not checked: a label has room for about a dozen
-characters before the system cuts it off, and this is 15, so whether it shows whole on each phone
-is to be seen in the simulator. In Xcode this is the target's display name,
-`CFBundleDisplayName`.
+**The name under the icon is "PhotosGoRound".** The product is "Photos-Go-Round Widgets", which is
+too long for a Home Screen label; the App Store listing can carry the full name. In Xcode this is
+the target's display name, `CFBundleDisplayName`. Syd, 2026-10-09, in two steps:
+
+- First "Photos-Go-Round", over "PGR Widgets". On the iPhone 17 simulator, whose screen is 402
+  points wide, it was cut off, as "Photos-Go-Rou…".
+- Then: "Let's have the app name be "PhotosGoRound" and see if it fits." It does, on that
+  simulator, whole.
+- **While the app is newly installed it is still cut off**, as "PhotosGoR…": the system puts a
+  blue dot beside the name until the app has been opened once, and the dot takes room.
+- **The Photos prompt uses the same name**: "Allow "PhotosGoRound" to access your photo library?"
+- **Not seen:** a narrower phone, or an iPad.
 
 **Each configuration has its own identifier, as on the Mac.** Syd, 2026-10-09, choosing that over
 one identifier for all three. The project already sets `STORAGE_ID_SUFFIX` for each

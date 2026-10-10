@@ -10,10 +10,13 @@
 // it later, so nothing here belongs to one platform unless it says so.
 
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 import SwiftUI
 
 public struct SettingsView: View {
     @State private var model: SettingsModel
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.openURL) private var openURL
 
     public init(model: SettingsModel) {
         _model = State(initialValue: model)
@@ -23,13 +26,18 @@ public struct SettingsView: View {
         NavigationStack {
             List {
                 Section("Photos") {
-                    if model.collections.isEmpty {
+                    if model.photosAccessIsOff {
+                        accessOff
+                    } else if model.collections.isEmpty {
                         nothing("No collections chosen.")
                     }
                     ForEach(model.collections) { row in
-                        SourceRow(row: row)
+                        SourceRow(row: row, isWrong: model.photosAccessIsOff)
                     }
                     .onDelete { offsets in remove(offsets, from: model.collections) }
+                    if model.photosAccess == .authorized {
+                        Button("Choose Collections…") { model.showsCollectionPicker = true }
+                    }
                 }
                 Section("Files and Folders") {
                     if model.filesAndFolders.isEmpty {
@@ -48,6 +56,34 @@ public struct SettingsView: View {
                 .toolbar { EditButton() }
             #endif
         }
+        .sheet(isPresented: $model.showsCollectionPicker) {
+            CollectionPickerView(model: model.makePicker()) { ticked in
+                model.chooseCollections(ticked)
+            }
+        }
+        // Each time the app is opened or brought forward: the first time this
+        // asks for Photos access, and after that it reads what the person has
+        // since said in the system's settings.
+        .task { await model.start() }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            Task { await model.start() }
+        }
+    }
+
+    /// Photos access refused. Syd, 2026-10-09: the list says access is off,
+    /// with a button to the system's settings; files and folders still work.
+    @ViewBuilder
+    private var accessOff: some View {
+        Label("Photos access is off.", systemImage: "exclamationmark.triangle")
+            .foregroundStyle(.red)
+        #if os(iOS)
+            Button("Open Settings") {
+                if let settings = URL(string: UIApplication.openSettingsURLString) {
+                    openURL(settings)
+                }
+            }
+        #endif
     }
 
     private func nothing(_ words: String) -> some View {
@@ -65,9 +101,12 @@ public struct SettingsView: View {
 /// One source: what it is, and what it is called.
 struct SourceRow: View {
     let row: SettingsModel.Row
+    /// Red when something is wrong with the source. Syd, 2026-10-09.
+    var isWrong = false
 
     var body: some View {
         Label(row.title, systemImage: symbol)
+            .foregroundStyle(isWrong ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
     }
 
     private var symbol: String {
@@ -84,13 +123,15 @@ struct SourceRow: View {
         /// A model over a store of its own, for a preview. The store is a
         /// path under the temporary directory, so nothing is left in the
         /// preferences folder.
-        static func preview(_ sources: [SourceSpec]) -> SettingsModel {
+        static func preview(
+            _ sources: [SourceSpec], library: SampleLibrary = SampleLibrary(access: .authorized)
+        ) -> SettingsModel {
             let folder = URL.temporaryDirectory.appending(path: "pgr-preview-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let preferences = Preferences(
                 suiteName: folder.appending(path: "sources").path(percentEncoded: false))
             preferences.setSources(sources)
-            return SettingsModel(sources: ChosenSources(preferences: preferences))
+            return SettingsModel(sources: ChosenSources(preferences: preferences), library: library)
         }
     }
 
@@ -111,5 +152,16 @@ struct SourceRow: View {
 
     #Preview("Nothing chosen") {
         SettingsView(model: .preview([]))
+    }
+
+    #Preview("Photos access off") {
+        SettingsView(
+            model: .preview(
+                [
+                    SourceSpec(
+                        kind: .photosCollection, locator: "A2",
+                        description: SourceDescription(title: "Cats", collectionKind: "album")),
+                    .folder("/pictures/Raw Coin Images"),
+                ], library: SampleLibrary(access: .denied)))
     }
 #endif

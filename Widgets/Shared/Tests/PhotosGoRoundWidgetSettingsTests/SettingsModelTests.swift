@@ -8,7 +8,10 @@ import Testing
 @Suite("What the settings screen's two lists show")
 struct SettingsModelTests {
     let preferences = Preferences(suiteName: scratchSuiteName("settings-model"))
-    var model: SettingsModel { SettingsModel(sources: ChosenSources(preferences: preferences)) }
+    var model: SettingsModel {
+        SettingsModel(
+            sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized))
+    }
 
     func album(_ identifier: String, _ title: String) -> SourceSpec {
         SourceSpec(

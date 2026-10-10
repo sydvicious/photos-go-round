@@ -110,7 +110,7 @@ let package = Package(
         ),
         .target(
             name: "PhotosGoRoundWidgetSettings",
-            dependencies: ["PhotosGoRoundAgentAPI"],
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary"],
             path: "Widgets/Shared/Sources/PhotosGoRoundWidgetSettings",
             swiftSettings: everyTarget
         ),
@@ -196,7 +196,9 @@ let package = Package(
         ),
         .testTarget(
             name: "PhotosGoRoundWidgetSettingsTests",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundWidgetSettings"],
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetSettings",
+            ],
             path: "Widgets/Shared/Tests/PhotosGoRoundWidgetSettingsTests",
             swiftSettings: everyTarget
         ),

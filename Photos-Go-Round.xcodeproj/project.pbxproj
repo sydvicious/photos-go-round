@@ -53,6 +53,7 @@
 		AA0000000000000000000C0F /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C10 /* PhotosGoRoundWidgetSettings */; };
 		AA0000000000000000000C11 /* PhotosGoRound.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PhotosGoRound.icon */; };
 		AA0000000000000000000C12 /* PhotosGoRoundPhotoLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */; };
+		AA0000000000000000000C14 /* PhotosGoRoundPhotoLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C15 /* PhotosGoRoundPhotoLibrary */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -438,6 +439,7 @@
 			isa = PBXFrameworksBuildPhase;
 			files = (
 				AA0000000000000000000C0D /* PhotosGoRoundAgentAPI in Frameworks */,
+				AA0000000000000000000C14 /* PhotosGoRoundPhotoLibrary in Frameworks */,
 				AA0000000000000000000C0F /* PhotosGoRoundWidgetSettings in Frameworks */,
 			);
 		};
@@ -901,6 +903,7 @@
 			name = "Photos-Go-Round Widgets iOS";
 			packageProductDependencies = (
 				AA0000000000000000000C0E /* PhotosGoRoundAgentAPI */,
+				AA0000000000000000000C15 /* PhotosGoRoundPhotoLibrary */,
 				AA0000000000000000000C10 /* PhotosGoRoundWidgetSettings */,
 			);
 			productName = "Photos-Go-Round Widgets iOS";
@@ -2083,8 +2086,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widgets/iOS/App/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -2114,8 +2118,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widgets/iOS/App/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -2145,8 +2150,9 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Widgets/iOS/App/Resources/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Photos-Go-Round";
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -2395,6 +2401,10 @@
 			productName = PhotosGoRoundWidgetSettings;
 		};
 		AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundPhotoLibrary;
+		};
+		AA0000000000000000000C15 /* PhotosGoRoundPhotoLibrary */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PhotosGoRoundPhotoLibrary;
 		};
