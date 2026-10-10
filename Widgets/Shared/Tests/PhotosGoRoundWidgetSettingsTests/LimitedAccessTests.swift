@@ -100,7 +100,7 @@ struct LimitedAccessTests {
         #expect(model.collections.map(\.title) == ["Selected Photos"])
     }
 
-    @Test("What the heading's button chooses goes by the access there is")
+    @Test("What the Photos button brings up goes by the access there is")
     func chooser() async {
         let full = model(SampleLibrary(access: .authorized))
         await full.start()
@@ -112,7 +112,11 @@ struct LimitedAccessTests {
 
         let none = model(SampleLibrary(access: .denied))
         await none.start()
-        #expect(none.chooser == .nothing)
+        #expect(none.chooser == .settings)
+
+        let restricted = model(SampleLibrary(access: .restricted))
+        await restricted.start()
+        #expect(restricted.chooser == .settings)
     }
 
     @Test("Before the app has found out about access, there is nothing to choose with")

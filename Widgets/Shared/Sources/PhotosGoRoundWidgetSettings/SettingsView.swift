@@ -1,13 +1,14 @@
-// The settings screen: the preview, the Photos collections, then the files
-// and folders.
-// `Plans/PGR Widgets - iOS.md`.
+// The settings screen: the controls in the bar, the preview, and under it the
+// Photos collections and the files and folders when there is room.
+// `Plans/PGR Widgets - iOS.md`, *The redesign: controls in the nav bar*.
 //
-// **One list for both kinds of source.** Syd, 2026-10-09: each list is as tall
-// as the rows it holds, "1 for 1, 2 for 2, ..., 10 for 10, ... 100 for 100". A
-// section for each, in one `List`, is that: neither scrolls by itself.
+// **The controls are in the bar.** Syd, 2026-10-10: "This will allow the users
+// a consistent place to have controls". Two groups: which size is previewed,
+// and where photographs come from.
 //
-// **The preview stays at the top and the sources scroll under it.** Syd,
-// 2026-10-10, having tried it both ways: "I want the pinned behavior".
+// **The lists are under the preview, or beside it.** Where there is no room
+// under the preview for a heading and one row, as on an iPhone on its side,
+// the preview is at the left and the lists at its right.
 //
 // **Shared.** The iOS app shows this now and the Mac's menubar app is to show
 // it later, so nothing here belongs to one platform unless it says so.
@@ -18,8 +19,12 @@ import SwiftUI
 
 public struct SettingsView: View {
     @State private var model: SettingsModel
+    @State private var showsNoAccess = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    /// How tall the tallest size's shape is in the bar. It grows with the
+    /// text size the person has set.
+    @ScaledMetric(relativeTo: .body) private var shapeHeight: CGFloat = 24
 
     /// Brings up the system's picker for the photographs the app may see, and
     /// returns when it has gone. The app supplies it: it is UIKit's, and wants
@@ -32,28 +37,60 @@ public struct SettingsView: View {
     }
 
     public var body: some View {
-        // No navigation bar: there is nothing to go in one, and the preview
-        // has its room. Syd, 2026-10-10: "let's ditch the Edit button as well
-        // and claim the toolbar space".
-        GeometryReader { screen in
-            switch SettingsLayout(for: screen.size) {
-            case .previewBeside:
-                // Wider than it is tall: an iPhone on its side, or an iPad's
-                // window dragged that way.
-                HStack(spacing: 0) {
-                    preview(room: screen.size.height - SettingsLayout.controlHeight - 24)
-                        .frame(width: min(screen.size.width / 2, model.preview.widest + 32))
-                        .frame(maxHeight: .infinity)
-                    list(room: 0, showsPreview: false)
+        NavigationStack {
+            GeometryReader { view in
+                let tallest = model.preview.tallest
+                if SettingsLayout.listsFitUnderPreview(
+                    inViewOfHeight: view.size.height, underPreviewOf: tallest)
+                {
+                    // The preview's bounds from the top of the view, as tall
+                    // as the tallest size so that choosing another size moves
+                    // nothing, and the lists under them.
+                    VStack(spacing: 0) {
+                        preview(in: CGSize(width: view.size.width, height: tallest), alignment: .center)
+                            .padding(.bottom, SettingsLayout.previewPadding)
+                        lists
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                } else {
+                    // No room under the preview for a heading and one row, as
+                    // on an iPhone on its side: the preview at the left, and
+                    // the lists beside it.
+                    let column = SettingsLayout.previewColumn(
+                        inViewOfWidth: view.size.width, widest: model.preview.widest)
+                    let boundsFit = SettingsLayout.previewBoundsFit(
+                        inViewOfHeight: view.size.height, tallest: tallest)
+                    HStack(spacing: 0) {
+                        // In the middle of the column when the tallest size
+                        // fits there, and at the top when it does not.
+                        preview(
+                            in: CGSize(width: column, height: view.size.height),
+                            alignment: boundsFit ? .center : .top)
+                        lists
+                    }
                 }
-            case .previewOnTop:
-                list(room: SettingsLayout.room(inWindowOfHeight: screen.size.height), showsPreview: true)
             }
+            .background(Self.backdrop)
+            .toolbar {
+                // Both groups at the trailing edge, the sizes first. Syd,
+                // 2026-10-10: "I want the size controls on the right as well".
+                // Each group is one item, drawn close together: as a button
+                // each, the bar is too wide for an iPad's narrowest window,
+                // and the system folds what does not fit into a "…" menu.
+                ToolbarItem(placement: .primaryAction) { sizes }
+                ToolbarSpacer(.fixed, placement: .primaryAction)
+                ToolbarItem(placement: .primaryAction) { sources }
+            }
+            .toolbarTitleDisplayMode(.inline)
         }
         .sheet(isPresented: $model.showsCollectionPicker) {
             CollectionPickerView(model: model.makePicker()) { ticked in
                 model.chooseCollections(ticked)
             }
+        }
+        .alert("No Photos Access", isPresented: $showsNoAccess) {
+            Button("Settings…") { openSettings() }
+            Button("Cancel", role: .cancel) {}
         }
         // Each time the app is opened or brought forward: the first time this
         // asks for Photos access, and after that it reads what the person has
@@ -65,105 +102,133 @@ public struct SettingsView: View {
         }
     }
 
-    /// The sources as one list, with the preview pinned above it when
-    /// `showsPreview`. `room` is the most height the preview's widget may take
-    /// there.
-    private func list(room: CGFloat, showsPreview: Bool) -> some View {
-            List {
-                Section {
-                    if model.photosAccessIsOff {
-                        accessOff
-                    } else if model.collections.isEmpty {
-                        nothing("No collections chosen.")
-                    }
-                    ForEach(model.collections) { row in
-                        SourceRow(row: row, isWrong: row.isWrong || model.photosAccessIsOff)
-                            .deleteDisabled(!row.isRemovable)
-                    }
-                    .onDelete { offsets in remove(offsets, from: model.collections) }
-                } header: {
-                    // The button is beside the heading so that it is right
-                    // under the preview, and in reach in the smallest window.
-                    // Syd, 2026-10-10: "the same photo library icon as things
-                    // like messages do".
-                    // Always there, and greyed out while there is no access
-                    // to choose with. With limited access it is the system's
-                    // picker that comes up, and this is the only way to it.
-                    // Syd, 2026-10-10.
-                    heading("Photos") {
-                        headingButton(
-                            "photo.on.rectangle.angled",
-                            model.chooser == .selectedPhotos ? "Select photos" : "Choose collections"
-                        ) {
-                            switch model.chooser {
-                            case .collections: model.showsCollectionPicker = true
-                            case .selectedPhotos: changeSelection()
-                            case .nothing: break
-                            }
-                        }
-                        .disabled(model.chooser == .nothing)
-                    }
+    /// The bar's first group: a shape for each size the Home Screen offers,
+    /// in that size's proportions. Syd, 2026-10-10: "proportionately-sized
+    /// round rects for each available size".
+    ///
+    /// Closer together than bar buttons are, so the two smallest are narrower
+    /// to press than a bar button; Syd, 2026-10-10, chose that over a bar
+    /// that does not fit.
+    private var sizes: some View {
+        HStack(spacing: 2) {
+            ForEach(model.preview.families) { family in
+                let isShowing = model.preview.family == family
+                Button {
+                    model.preview.family = family
+                } label: {
+                    SizeShape(
+                        size: model.preview.shape(of: family, height: shapeHeight), isShowing: isShowing
+                    )
+                    .padding(.horizontal, 4)
+                    // As tall to press as the bar is, whatever the shape.
+                    .frame(minHeight: 36)
+                    .contentShape(Rectangle())
                 }
-                Section {
-                    if model.filesAndFolders.isEmpty {
-                        nothing("No files or folders chosen.")
-                    }
-                    ForEach(model.filesAndFolders) { row in
-                        SourceRow(row: row)
-                    }
-                    .onDelete { offsets in remove(offsets, from: model.filesAndFolders) }
-                } header: {
-                    heading("Files and Folders") {
-                        // Adding a file or a folder is not built yet, so the
-                        // button cannot be pressed. Syd, 2026-10-10: it stays
-                        // greyed out until it is.
-                        headingButton("folder", "Add files or folders") {}
-                            .disabled(true)
-                    }
+                .buttonStyle(.plain)
+                .accessibilityLabel(family.title)
+                .accessibilityAddTraits(isShowing ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    /// The bar's second group: where photographs come from.
+    private var sources: some View {
+        HStack(spacing: 2) {
+            // What it brings up goes by the access there is: the collections
+            // sheet, the system's picker for a selection, or the way to the
+            // system's settings. Greyed out only until the app has found out.
+            Button {
+                switch model.chooser {
+                case .collections: model.showsCollectionPicker = true
+                case .selectedPhotos: changeSelection()
+                case .settings: showsNoAccess = true
+                case .nothing: break
+                }
+            } label: {
+                sourceSymbol("photo.on.rectangle.angled")
+            }
+            .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
+            .disabled(model.chooser == .nothing)
+
+            // Adding a file or a folder is not built yet, so the button
+            // cannot be pressed.
+            Button {
+            } label: {
+                sourceSymbol("folder")
+            }
+            .accessibilityLabel("Add files or folders")
+            .disabled(true)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 4)
+    }
+
+    private func sourceSymbol(_ name: String) -> some View {
+        Image(systemName: name)
+            .font(.body.weight(.medium))
+            .frame(minWidth: 36, minHeight: 36)
+            .contentShape(Rectangle())
+    }
+
+    /// The preview in the bounds the screen has for it.
+    ///
+    /// What scrolls is the widget, at its own size. Syd, 2026-10-10: "The
+    /// preview's scroll area should be the size of the widget. When the view
+    /// is big enough, no scrolling is necessary. When it is not, you should
+    /// be able to scroll it either way. This will allow the user to see all
+    /// of the image in landscape on the phone, and when their iPad window is
+    /// small".
+    private func preview(in bounds: CGSize, alignment: Alignment) -> some View {
+        ScrollView([.vertical, .horizontal]) {
+            WidgetPreviewView(model: model.preview, face: model.face, width: bounds.width) {
+                openSettings()
+            }
+            // A widget smaller than the bounds sits in them and has nowhere
+            // to scroll to.
+            .frame(minWidth: bounds.width, minHeight: bounds.height, alignment: alignment)
+        }
+        .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
+        .frame(width: bounds.width, height: bounds.height)
+    }
+
+    /// What is chosen, under the preview or beside it. A collection leaves by being
+    /// unticked in the sheet; Syd, 2026-10-10: "non-editable".
+    private var lists: some View {
+        List {
+            Section("Photos") {
+                if model.photosAccessIsOff {
+                    accessOff
+                } else if model.collections.isEmpty {
+                    nothing("No collections chosen.")
+                }
+                ForEach(model.collections) { row in
+                    SourceRow(row: row, isWrong: row.isWrong || model.photosAccessIsOff)
                 }
             }
-            // A source leaves its list by a swipe on its row, which comes
-            // with `onDelete`, or, a collection, by being unticked in the
-            // sheet. There was an Edit button too, until 2026-10-10.
-            // Above the list and outside it, so it runs edge to edge: inside,
-            // a list's side margins left its space narrower than a large
-            // widget on a 390-point phone, which the Home Screen has room for.
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if showsPreview {
-                    preview(room: room)
-                        .padding(.vertical, 8)
-                        .background(.bar)
+            Section("Files and Folders") {
+                if model.filesAndFolders.isEmpty {
+                    nothing("No files or folders chosen.")
                 }
+                ForEach(model.filesAndFolders) { row in
+                    SourceRow(row: row)
+                }
+                // Nothing adds a file or a folder yet, and how one is to be
+                // taken out in this design was not said; the swipe is what
+                // there is.
+                .onDelete { offsets in remove(offsets, from: model.filesAndFolders) }
             }
-    }
-
-    /// A list's heading with a button at its right.
-    private func heading(_ title: String, @ViewBuilder button: () -> some View) -> some View {
-        HStack {
-            Text(title)
-            Spacer()
-            button()
         }
+        // One backdrop for the preview and the lists.
+        .scrollContentBackground(.hidden)
     }
 
-    /// A button for a heading, drawn as `symbol` and said aloud as `label`.
-    private func headingButton(
-        _ symbol: String, _ label: String, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .font(.body.weight(.semibold))
-                // Room for a finger: a heading's own height is less.
-                .frame(minWidth: 44, minHeight: 32, alignment: .trailing)
-                .contentShape(Rectangle())
-        }
-        .accessibilityLabel(label)
-    }
-
-    /// The preview, as wide as it is given: a widget that fits the Home
-    /// Screen fits here.
-    private func preview(room: CGFloat) -> some View {
-        WidgetPreviewView(model: model.preview, room: room)
+    private static var backdrop: Color {
+        #if os(iOS)
+            Color(uiColor: .systemGroupedBackground)
+        #else
+            Color.clear
+        #endif
     }
 
     /// Photos access refused: one row, with the way to the system's settings
@@ -175,16 +240,21 @@ public struct SettingsView: View {
                 .foregroundStyle(.red)
             Spacer()
             #if os(iOS)
-                Button("Settings…") {
-                    if let settings = URL(string: UIApplication.openSettingsURLString) {
-                        openURL(settings)
-                    }
-                }
-                // A button in a row with other things in it: without this
-                // the whole row is the button.
-                .buttonStyle(.borderless)
+                Button("Settings…") { openSettings() }
+                    // A button in a row with other things in it: without this
+                    // the whole row is the button.
+                    .buttonStyle(.borderless)
             #endif
         }
+    }
+
+    /// The app's own page in the system's settings, where Photos access is.
+    private func openSettings() {
+        #if os(iOS)
+            if let settings = URL(string: UIApplication.openSettingsURLString) {
+                openURL(settings)
+            }
+        #endif
     }
 
     /// Shows the system's picker, and reads the library again once it has
@@ -205,6 +275,22 @@ public struct SettingsView: View {
         for row in offsets.map({ rows[$0] }) {
             model.remove(row)
         }
+    }
+}
+
+/// One size in the bar: a rounded rectangle in the widget's proportions,
+/// filled when it is the size the preview is showing.
+private struct SizeShape: View {
+    let size: CGSize
+    let isShowing: Bool
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: min(size.width, size.height) * 0.28, style: .continuous)
+            .fill(isShowing ? AnyShapeStyle(.tint) : AnyShapeStyle(.clear))
+            // Dark and thick enough to read as a shape at this size. Syd,
+            // 2026-10-10: "darker or thicker".
+            .strokeBorder(isShowing ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary), lineWidth: 2)
+            .frame(width: size.width, height: size.height)
     }
 }
 

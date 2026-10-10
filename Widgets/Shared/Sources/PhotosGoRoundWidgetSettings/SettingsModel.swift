@@ -9,6 +9,7 @@ import Foundation
 import Observation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundPhotoLibrary
+import PhotosGoRoundWidgetFace
 
 @MainActor
 @Observable
@@ -61,16 +62,30 @@ public final class SettingsModel {
     /// Whether the collections sheet is up.
     public var showsCollectionPicker = false
 
-    /// What there is to choose photographs with: the collections sheet with
-    /// full access, the system's own picker with limited access, and nothing
-    /// without access or before the app has found out.
-    public enum Chooser: Sendable { case collections, selectedPhotos, nothing }
+    /// What the Photos button brings up: the collections sheet with full
+    /// access, the system's own picker with limited access, the way to the
+    /// system's settings with access off, and nothing before the app has
+    /// found out.
+    public enum Chooser: Sendable { case collections, selectedPhotos, settings, nothing }
 
     public var chooser: Chooser {
         switch photosAccess {
         case .authorized: .collections
         case .limited: .selectedPhotos
+        case .denied, .restricted: .settings
         default: .nothing
+        }
+    }
+
+    /// What the preview draws. Its own face, except that with Photos access
+    /// off and no picture to show it says so: the lists may be out of sight,
+    /// and this is always in it. Syd, 2026-10-10. A folder's pictures still
+    /// show with Photos access off.
+    public var face: WidgetFace.Content {
+        guard photosAccessIsOff else { return preview.content }
+        switch preview.content {
+        case .nothingChosen, .noPhotos: return .noAccess
+        default: return preview.content
         }
     }
 

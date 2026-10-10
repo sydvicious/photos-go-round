@@ -74,25 +74,14 @@ public final class PreviewModel {
         return WidgetSizes.size(of: family, on: device, screen: screen) ?? .zero
     }
 
-    /// The height of the tallest size this device offers. The preview's space
-    /// does not follow the size that is showing, so choosing another moves
-    /// nothing else on the screen. Syd, 2026-10-10: "Having everything jump
-    /// around is annoying".
+    /// The height of the tallest size this device offers, and nothing until
+    /// the screen is known.
     public var tallest: CGFloat {
         guard let screen else { return 0 }
         return families.compactMap { WidgetSizes.size(of: $0, on: device, screen: screen)?.height }
             .max() ?? 0
     }
 
-    /// How tall the preview's space is, when `room` is the most it may take
-    /// and still leave the collections in sight under it.
-    ///
-    /// Syd, 2026-10-10: "the minimum of the largest picture or the largest
-    /// picture that will still fit and allow us to see the collections
-    /// underneath. If the user selects a picture bigger than that, crop it and
-    /// center it". So it is the tallest size when there is room for that, and
-    /// the room there is when there is not; a widget taller than its space is
-    /// centered in it and loses the same from top and bottom.
     /// The width of the widest size this device offers, which is how wide the
     /// preview's column has to be when it has one of its own.
     public var widest: CGFloat {
@@ -101,29 +90,42 @@ public final class PreviewModel {
             .max() ?? 0
     }
 
-    /// Chooses the size to show for the space there is, until the person
-    /// chooses for themselves.
+    /// Chooses the size to show for a view this wide, until the person
+    /// chooses for themselves: the largest that is not too wide, or the
+    /// smallest.
     ///
-    /// Syd, 2026-10-10: "the initial setting for which preview to show is the
-    /// largest that will fit without cropping, or the smallest". And of a
-    /// window that is resized: "the largest that will completely show rule
-    /// still holds". So it is applied each time the space changes: turning the
-    /// phone, or dragging an iPad's window. `room` is the space the widget is
-    /// drawn in. Nothing happens before the screen is known, since no size is.
+    /// Syd, 2026-10-10: "the decision on which view to show by default should
+    /// be the one whose width will fit". How tall the view is does not come
+    /// into it: the widget is drawn whole from the top of the view, and one
+    /// taller than the view runs off the bottom. It is applied each time the
+    /// width changes: turning the phone, or dragging an iPad's window.
+    /// Nothing happens before the screen is known, since no size is.
     ///
-    /// A size the person picked is left alone, whatever the space: one bigger
-    /// than its space is cropped and centered, as he asked.
-    public func settle(within room: CGSize) {
+    /// A size the person picked is left alone, whatever the width.
+    public func settle(within width: CGFloat) {
         guard !personChose, let screen else { return }
         let fits = families.last { family in
             guard let size = WidgetSizes.size(of: family, on: device, screen: screen) else { return false }
-            return size.width <= room.width && size.height <= room.height
+            return size.width <= width
         }
         showing = fits ?? families.first ?? .small
     }
 
-    public func space(within room: CGFloat) -> CGFloat {
-        max(0, min(tallest, room))
+    /// The shape that stands for a size in the bar: the widget's own
+    /// proportions, scaled so that the tallest size is `height` tall. Syd,
+    /// 2026-10-10: "proportionately-sized round rects for each available
+    /// size".
+    ///
+    /// Before the screen is known the proportions are those of the smallest
+    /// device in the table, so the bar is never empty.
+    public func shape(of family: WidgetFamily, height: CGFloat) -> CGSize {
+        let screen = screen ?? .zero
+        let tallest =
+            families.compactMap { WidgetSizes.size(of: $0, on: device, screen: screen)?.height }.max() ?? 0
+        guard tallest > 0, let size = WidgetSizes.size(of: family, on: device, screen: screen) else {
+            return .zero
+        }
+        return CGSize(width: size.width * height / tallest, height: size.height * height / tallest)
     }
 
     /// The screen the app is on, and how many pixels it has to a point.
