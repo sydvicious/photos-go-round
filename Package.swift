@@ -89,7 +89,7 @@ let package = Package(
         ),
         .target(
             name: "TinyCache",
-            path: "Shared/Sources/TinyCache",
+            path: "Widgets/Shared/Sources/TinyCache",
             swiftSettings: everyTarget
         ),
         // Terminal output, shared by the two executables and by nothing else.
@@ -167,7 +167,7 @@ let package = Package(
         .testTarget(
             name: "TinyCacheTests",
             dependencies: ["TinyCache"],
-            path: "Shared/Tests/TinyCacheTests",
+            path: "Widgets/Shared/Tests/TinyCacheTests",
             swiftSettings: everyTarget
         ),
         .testTarget(

@@ -29,8 +29,9 @@ design that works the same on the Mac and on devices that never had an agent.
   - Later: find out which transitions between pictures a widget can really show, and offer them
     as a setting.
 - *iOS and iPadOS* — the same widgets in an app on the iOS App Store. Before the Mac's menubar
-  app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested on his own
-  phone, not in a simulator. The app itself is planned in `Plans/PGR Widgets - iOS.md`.
+  app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested in a simulator,
+  and on his own phone for iCloud Photo Library. The app itself is planned in
+  `Plans/PGR Widgets - iOS.md`.
   - Investigate how widgets work on iPhone Duo.
   - Find out whether the widget can query Photos while the phone is locked.
   - Read the extension's memory on the phone, where the 30 MB ceiling is expected to be enforced.
@@ -72,6 +73,9 @@ design that works the same on the Mac and on devices that never had an agent.
 - **The Photos library is the expected source; folders are the lesser case.** On an iPhone hardly
   anyone will use a folder, on an iPad slightly more will, and on every platform the Photos library
   is what people are expected to choose. Syd, 2026-10-08.
+- **The whole Photos library is never chosen for anyone.** Only what a person chose is shown, and
+  nothing falls back to everything. Syd, 2026-10-09: "we never choose the whole photo library.
+  people have all kids of shit that's not appropriate". `Plans/PGR Widgets - iOS.md`.
 - **The widgets share the app's sources.** Every widget shows pictures from the sources set in the
   app that carries it. Syd, 2026-10-08.
 - **The only setting a widget has is how often it updates.** Each widget has its own interval and
@@ -79,6 +83,9 @@ design that works the same on the Mac and on devices that never had an agent.
   pictures; and fill against fit is to be an option too, at some point.
 - **All the widgets share one database.**
 - **Widgets may show the same picture as each other.** Nothing is done to prevent it.
+- **The Store app is `com.sydpolk.photosgoround.widgets` on every platform.** The iOS app has it
+  first, and the Mac's menubar app takes the same identifier when it comes. Syd, 2026-10-09.
+  `Plans/PGR Widgets - iOS.md`, *Identity*.
 - **The menubar app and the widgets share through an App Group.** They are separate processes, so
   the settings and the database live in the group's shared container.
 - **"Agent" names the concept, whichever process it runs in.** The term stays.
@@ -734,6 +741,8 @@ timeline before giving up is not known. Not decided.
 Syd, 2026-10-08: "we really should get photos working on mac before we try phone. I don't want to
 have to copy a bunch of photos into a simulator image. I will use my real device to test". So the
 order is Photos on the Mac first, and the iPhone is tested on his own phone, not in a simulator.
+On 2026-10-09 he narrowed that: the phone is for iCloud Photo Library, and everything else can be
+tested in a simulator. `Plans/PGR Widgets - iOS.md`, *Where it is tested*.
 
 
 Syd, 2026-10-08: "the next step, when we get there, is the read the app's preferences for sources,

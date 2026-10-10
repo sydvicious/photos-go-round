@@ -343,6 +343,11 @@
 			path = Sources;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000B16 /* Shared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Shared;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -427,6 +432,7 @@
 				AA0000000000000000000615 /* Plans */,
 				AA0000000000000000000616 /* Scripts */,
 				AA0000000000000000000617 /* Shared */,
+				AA0000000000000000000B15 /* Widgets */,
 				AA0000000000000000000618 /* CLAUDE.md */,
 				AA0000000000000000000619 /* LICENSE */,
 				6221C1AA305F67C900B4B65D /* Package Tests.xctestplan */,
@@ -540,7 +546,6 @@
 				AA0000000000000000000609 /* Tools */,
 				AA0000000000000000000923 /* Uninstaller */,
 				AA0000000000000000000611 /* Wallpaper */,
-				AA0000000000000000000B0C /* Widget */,
 			);
 			path = MacOS;
 			sourceTree = "<group>";
@@ -581,13 +586,22 @@
 			path = Uninstaller;
 			sourceTree = "<group>";
 		};
-		AA0000000000000000000B0C /* Widget */ = {
+		AA0000000000000000000B0C /* macOS */ = {
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000B04 /* Resources */,
 				AA0000000000000000000B05 /* Sources */,
 			);
-			path = Widget;
+			path = macOS;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000B15 /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000B0C /* macOS */,
+				AA0000000000000000000B16 /* Shared */,
+			);
+			path = Widgets;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -1915,10 +1929,10 @@
 		AA0000000000000000000B07 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Widgets/macOS/Resources/Photos-Go-Round Widget.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				INFOPLIST_FILE = Widgets/macOS/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
@@ -1939,10 +1953,10 @@
 		AA0000000000000000000B08 /* Release configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Widgets/macOS/Resources/Photos-Go-Round Widget.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				INFOPLIST_FILE = Widgets/macOS/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
@@ -1963,10 +1977,10 @@
 		AA0000000000000000000B09 /* Claude configuration for PBXNativeTarget "Photos-Go-Round Widget" */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "MacOS/Widget/Resources/Photos-Go-Round Widget.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Widgets/macOS/Resources/Photos-Go-Round Widget.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = MacOS/Widget/Resources/Info.plist;
+				INFOPLIST_FILE = Widgets/macOS/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
