@@ -3,6 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// A Photos photograph's name, recorded when its original is fetched and
 /// carried on every card dealt of it afterwards.

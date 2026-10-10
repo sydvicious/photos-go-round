@@ -38,6 +38,11 @@ let package = Package(
         // handed. See `Apple Photos Plan.md`.
         .library(name: "PhotosGoRoundAgentAPI", targets: ["PhotosGoRoundAgentAPI"]),
         .library(name: "PhotosGoRoundKit", targets: ["PhotosGoRoundKit"]),
+        // Reading a person's Photos library: its collections, what is in them,
+        // and the bytes of a photograph. Carved out of the kit on 2026-10-09 so
+        // the Widgets app can read the library without linking the database,
+        // the cache and the deck. `Plans/PGR Widgets - iOS.md`.
+        .library(name: "PhotosGoRoundPhotoLibrary", targets: ["PhotosGoRoundPhotoLibrary"]),
         // What a surface needs to show a picture: the client that asks for
         // one, and the geometry of drawing it. Separate from the kit because
         // the kit is the library half and knows nothing about being looked
@@ -80,8 +85,14 @@ let package = Package(
             swiftSettings: everyTarget
         ),
         .target(
-            name: "PhotosGoRoundKit",
+            name: "PhotosGoRoundPhotoLibrary",
             dependencies: ["PhotosGoRoundAgentAPI"],
+            path: "Shared/Sources/PhotosGoRoundPhotoLibrary",
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "PhotosGoRoundKit",
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary"],
             path: "MacOS/Shared/Sources/PhotosGoRoundKit",
             swiftSettings: everyTarget
         ),
@@ -114,7 +125,9 @@ let package = Package(
         ),
         .executableTarget(
             name: "PhotosGoRoundServer",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "Console"],
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "PhotosGoRoundPhotoLibrary", "Console",
+            ],
             path: "MacOS/Agent",
             sources: ["Sources", "Dashboard/Sources", "Endpoints/Sources"],
             swiftSettings: everyTarget
@@ -165,7 +178,7 @@ let package = Package(
         ),
         .testTarget(
             name: "PhotosGoRoundKitTests",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit"],
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "PhotosGoRoundPhotoLibrary"],
             path: "MacOS/Shared/Tests/PhotosGoRoundKitTests",
             swiftSettings: everyTarget
         ),

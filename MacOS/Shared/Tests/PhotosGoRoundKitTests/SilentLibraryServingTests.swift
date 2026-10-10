@@ -4,6 +4,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// Serving a photograph we already hold, while Photos will not answer.
 ///

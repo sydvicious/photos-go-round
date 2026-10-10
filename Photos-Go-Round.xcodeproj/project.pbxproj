@@ -52,6 +52,7 @@
 		AA0000000000000000000C0D /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C0E /* PhotosGoRoundAgentAPI */; };
 		AA0000000000000000000C0F /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C10 /* PhotosGoRoundWidgetSettings */; };
 		AA0000000000000000000C11 /* PhotosGoRound.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PhotosGoRound.icon */; };
+		AA0000000000000000000C12 /* PhotosGoRoundPhotoLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -386,6 +387,7 @@
 			files = (
 				AA00000000000000000000C9 /* PhotosGoRoundAgentAPI in Frameworks */,
 				AA00000000000000000000CA /* PhotosGoRoundKit in Frameworks */,
+				AA0000000000000000000C12 /* PhotosGoRoundPhotoLibrary in Frameworks */,
 				AA00000000000000000000CB /* Console in Frameworks */,
 			);
 		};
@@ -745,6 +747,7 @@
 			packageProductDependencies = (
 				AA00000000000000000000CC /* PhotosGoRoundAgentAPI */,
 				AA00000000000000000000CD /* PhotosGoRoundKit */,
+				AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */,
 				AA00000000000000000000CE /* Console */,
 			);
 			productName = "Photos-Go-Round Server";
@@ -2390,6 +2393,10 @@
 		AA0000000000000000000C10 /* PhotosGoRoundWidgetSettings */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PhotosGoRoundWidgetSettings;
+		};
+		AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundPhotoLibrary;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

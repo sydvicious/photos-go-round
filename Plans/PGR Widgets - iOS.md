@@ -18,8 +18,6 @@ The order is Syd's, 2026-10-09: the settings view first, in the app alone, and t
 after it. The to-dos under each phase are Claude's.
 
 - **Phase 1** — The app, with the settings view and no widget.
-  - Carve the Photos reading out of the kit into a shared target, on a branch of its own. The
-    collections sheet waits for it.
   - The app asks for Photos access at first launch, and then brings up the collections sheet.
   - The collections list, and the sheet that chooses them.
   - The files and folders list, with adding and removing.
@@ -106,9 +104,8 @@ after it. The to-dos under each phase are Claude's.
   setting, and it belongs to the widget (`Plans/Photos-Go-Round Widgets.md`, *Design Decisions*).
 - **Everything in `Plans/Photos-Go-Round Widgets.md` holds here.** A normal app, Photos the
   expected source, and a TinyCache of the app's own for the preview.
-- **The Photos reading is carved out of the kit into a shared target of its own,
-  `PhotosGoRoundPhotoLibrary`, on a separate branch.** The Widgets app links that and not the kit.
-  Syd, 2026-10-09.
+- **The Photos reading is a shared target of its own, `PhotosGoRoundPhotoLibrary`, carved out of
+  the kit.** The Widgets app links that and not the kit. Syd, 2026-10-09.
 - **The tree that files collections under their folders is one builder, in
   `PhotosGoRoundAgentAPI`.** The Mac app and the Widgets app both draw from it. Syd, 2026-10-09.
 - **The settings view and its models are a package target, `PhotosGoRoundWidgetSettings`, in
@@ -518,18 +515,22 @@ everything uses over new code beside the old.
 - **The tree builder**, `Foldered` and `FolderNode`, is in `PhotosGoRoundAgentAPI`, which the Mac
   app and the Widgets settings both link. It was in the Mac app's own target. The Mac app keeps
   only which of its types are laid out that way.
-- **The Photos reading is in the kit**, and it is not a small piece: seven files and about 1,900
-  lines in `MacOS/Shared/Sources/PhotosGoRoundKit/Photos`, with collections, assets and image
-  data behind one protocol, `PhotoLibrary`, and one PhotoKit type, `SystemPhotoLibrary`. About 25
-  files of the agent, the kit and their tests use it.
+- **The Photos reading was in the kit**, and it was not a small piece: about 1,900 lines, with
+  collections, assets and image data behind one protocol, `PhotoLibrary`, and one PhotoKit type,
+  `SystemPhotoLibrary`. About 25 files of the agent, the kit and their tests use it.
 - **The kit compiles for iOS as it is.** Checked 2026-10-09, for the simulator. So the Widgets
   settings could have linked the whole kit and moved nothing. Syd chose the other way: the Photos
-  reading is carved out into a shared target of its own, on a separate branch because of its
-  size, and the Widgets app links that. The kit then depends on the new target, as everything
-  that reads Photos does.
+  reading carved out into a shared target of its own, which the Widgets app links.
 - **The new target is `PhotosGoRoundPhotoLibrary`**, after the `PhotoLibrary` protocol at its
-  centre. Syd, 2026-10-09.
-- **Not said:** where its branch starts from.
+  centre, in `Shared/Sources`. Syd, 2026-10-09. It holds the protocol, `SystemPhotoLibrary`,
+  `BoundedPhotoLibrary`, `LibraryCollection`, `PhotosCollectionCatalog` and `RequestBudget`. The
+  kit depends on it and keeps `PhotosCollectionSourceProvider`, which is the kit's own.
+- **It was to be on a separate branch for its size**, and was done on the iOS branch: Syd,
+  2026-10-09, "not doing a new branch; don't need it".
+- **Two small helpers went to `PhotosGoRoundAgentAPI`**, because the kit and the new target both
+  use them: `BlockingWork`, and `Duration.milliseconds`.
+- **Its tests are still in the kit's test target**, so that the move only moved. A test target of
+  its own is a later tidying.
 
 **What else carries over.**
 

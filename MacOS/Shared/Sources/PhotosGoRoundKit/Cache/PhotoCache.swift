@@ -1,5 +1,6 @@
 import Foundation
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 
 /// The bounded window of actual image files.
 ///

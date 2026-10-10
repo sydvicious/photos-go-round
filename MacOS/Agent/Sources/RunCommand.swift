@@ -1,6 +1,7 @@
 import Console
 import Foundation
 import PhotosGoRoundKit
+import PhotosGoRoundPhotoLibrary
 import PhotosGoRoundAgentAPI
 
 /// The agent loop.

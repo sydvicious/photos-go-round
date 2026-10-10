@@ -117,6 +117,13 @@ public struct SystemPhotoLibrary: PhotoLibrary {
     /// ships arrives as `.otherSmartAlbum` or `.userAlbum` and is listed, which
     /// is the failure worth having: a collection somebody can see in Photos and
     /// not here is a bug they cannot diagnose.
+    ///
+    /// **The outer `default` is plain, not `@unknown`, since 2026-10-09.** iOS
+    /// has a collection type the Mac does not, `.moment`, long deprecated and
+    /// never fetched here. `@unknown default` does not cover a case the SDK
+    /// names, so the iOS build warned that the switch was not exhaustive, and
+    /// naming `.moment` would warn that it is deprecated. A plain `default`
+    /// gives it the answer every other unlisted type already gets.
     static func kind(of collection: PHAssetCollection) -> LibraryCollectionKind {
         switch collection.assetCollectionType {
         case .album:
@@ -151,7 +158,7 @@ public struct SystemPhotoLibrary: PhotoLibrary {
                 .mediaType
             default: .otherSmartAlbum
             }
-        @unknown default: .otherSmartAlbum
+        default: .otherSmartAlbum
         }
     }
 

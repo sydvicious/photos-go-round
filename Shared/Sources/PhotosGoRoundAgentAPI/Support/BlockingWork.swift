@@ -28,7 +28,7 @@ import Foundation
 /// suspends properly — a network request, a database write behind an async
 /// transaction — belongs on the cooperative pool where it can yield. This is
 /// for calls that will not yield because they cannot.
-enum BlockingWork {
+public enum BlockingWork {
 
     /// Concurrent, and deliberately unbounded by us: Dispatch's own thread
     /// ceiling is the backstop. A width of our own choosing would be a second
@@ -45,7 +45,7 @@ enum BlockingWork {
     /// The caller's cooperative thread is released across the call, which is
     /// the whole point: whatever `body` does to its own thread, the rest of the
     /// agent keeps running.
-    static func run<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
+    public static func run<T: Sendable>(_ body: @escaping @Sendable () throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in
             queue.async {
                 continuation.resume(with: Result { try body() })
@@ -66,7 +66,7 @@ enum BlockingWork {
     /// **The caller keeps the obligation to finish.** Nothing here reports that
     /// `body` threw, returned, or never came back, so whatever the caller is
     /// suspended on must be resolvable from inside `body` and from its deadline.
-    static func detached(_ body: @escaping @Sendable () -> Void) {
+    public static func detached(_ body: @escaping @Sendable () -> Void) {
         queue.async(execute: body)
     }
 }

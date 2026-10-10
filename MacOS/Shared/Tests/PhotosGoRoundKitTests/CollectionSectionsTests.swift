@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// How the picker groups and orders what the library hands back.
 ///

@@ -483,11 +483,3 @@ public final class Database {
             .filter { $0 != "ok" }
     }
 }
-
-extension Duration {
-    /// Whole milliseconds, rounded down. `sqlite3_busy_timeout` takes an Int32.
-    var milliseconds: Int {
-        let (seconds, attoseconds) = components
-        return Int(seconds) * 1000 + Int(attoseconds / 1_000_000_000_000_000)
-    }
-}
