@@ -13,6 +13,7 @@
 
 import CoreGraphics
 import Foundation
+import OSLog
 import Photos
 
 #if canImport(AppKit)
@@ -224,16 +225,53 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         let found = Found()
         PHImageManager.default().requestImage(
             for: asset, targetSize: box, contentMode: .aspectFit, options: options
-        ) { image, _ in
+        ) { image, info in
             found.image = image.flatMap(Self.cgImage)
+            if found.image == nil {
+                found.why = image == nil ? Self.reason(info) : "it gave a picture that could not be read"
+            }
         }
-        guard let image = found.image else { return nil }
+        guard let image = found.image else {
+            // Photos lists the photograph and will not hand it over. Without
+            // this line all that shows is "No Photos found", as on the iPhone
+            // Duo simulator on 2026-10-10.
+            Self.log.error(
+                """
+                \(Self.logTag, privacy: .public) Photos gave no picture for a \
+                \(asset.pixelWidth)x\(asset.pixelHeight) photograph \
+                asked for at \(Int(box.width))x\(Int(box.height)): \
+                \(found.why ?? "no reason given", privacy: .public)
+                """)
+            return nil
+        }
         return LibraryPicture(image: image, originalWidth: asset.pixelWidth, originalHeight: asset.pixelHeight)
+    }
+
+    private static let log = Logger(subsystem: "com.sydpolk.photosgoround", category: "widget")
+
+    /// At the start of each line logged here, so the lines can be found by
+    /// typing it into a console's filter. Syd, 2026-10-10.
+    public static let logTag = "[PGR-Widgets]"
+
+    /// What Photos says about a request that came back with no picture.
+    private static func reason(_ info: [AnyHashable: Any]?) -> String {
+        var parts: [String] = []
+        if let error = info?[PHImageErrorKey] as? any Error {
+            parts.append(String(describing: error))
+        }
+        if info?[PHImageCancelledKey] as? Bool == true {
+            parts.append("the request was cancelled")
+        }
+        if info?[PHImageResultIsInCloudKey] as? Bool == true {
+            parts.append("the photograph is in iCloud")
+        }
+        return parts.isEmpty ? "no reason given" : parts.joined(separator: "; ")
     }
 
     /// The synchronous request calls back before it returns, on this thread.
     private final class Found: @unchecked Sendable {
         var image: CGImage?
+        var why: String?
     }
 
     #if canImport(AppKit)

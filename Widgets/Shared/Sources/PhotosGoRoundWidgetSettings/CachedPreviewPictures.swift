@@ -9,6 +9,7 @@
 
 import CoreGraphics
 import Foundation
+import OSLog
 import PhotosGoRoundAgentAPI
 import TinyCache
 
@@ -25,8 +26,30 @@ public struct CachedPreviewPictures: PreviewPictures {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
             source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
-        return try cache.take(upTo: 1, from: .now, every: 1).first?.file
+        // Whoever asked shows "No Photos found" for an error and for nothing
+        // alike, so which it was is said here.
+        do {
+            let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file
+            if file == nil {
+                Self.log.error(
+                    """
+                    \(Self.tag, privacy: .public) No picture from any of \(sources.count) sources, \
+                    asked for at \(Int(box.width))x\(Int(box.height)), and no error either.
+                    """)
+            }
+            return file
+        } catch {
+            Self.log.error(
+                """
+                \(Self.tag, privacy: .public) The preview could not get a picture: \
+                \(String(describing: error), privacy: .public)
+                """)
+            throw error
+        }
     }
+
+    private static let log = Logger(subsystem: "com.sydpolk.photosgoround", category: "widget")
+    private static var tag: String { SystemPhotoLibraryPictures.logTag }
 
     /// The picture is a file on disk and stays there when the app goes, so
     /// the next launch has it without asking Photos for anything. Syd,
@@ -47,8 +70,16 @@ public struct CachedPreviewPictures: PreviewPictures {
         for spec in sources {
             guard let source = spec.firstPicture else { continue }
             let cache = TinyCache(directory: folder, source: source, fitting: box, fillLimit: 1)
-            if let file = try? cache.take(upTo: 1, from: .now, every: 1).first?.file {
-                return file
+            do {
+                if let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file {
+                    return file
+                }
+            } catch {
+                Self.log.error(
+                    """
+                    \(Self.tag, privacy: .public) No first picture from a \(spec.kind.rawValue, privacy: .public) \
+                    source: \(String(describing: error), privacy: .public)
+                    """)
             }
         }
         return nil

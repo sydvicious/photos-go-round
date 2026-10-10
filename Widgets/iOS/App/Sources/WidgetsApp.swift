@@ -54,6 +54,13 @@ struct WidgetsApp: App {
 
     /// The system's picker for which photographs the app may see, with limited
     /// access. It comes up over the window the person is in. Syd, 2026-10-09.
+    ///
+    /// **The target links PhotosUI by name** (`OTHER_LDFLAGS`). The picker is
+    /// an Objective-C category in that framework, reached by a message and
+    /// not by a symbol, so the linker saw nothing of PhotosUI in use and left
+    /// it out. It worked where something else had loaded the framework, and
+    /// on the iPhone Duo simulator, 2026-10-10, it was an unrecognized
+    /// selector.
     private static func selectPhotos() async {
         let windows = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

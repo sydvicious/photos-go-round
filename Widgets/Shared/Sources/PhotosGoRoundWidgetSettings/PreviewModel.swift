@@ -54,7 +54,8 @@ public final class PreviewModel {
     public let families: [WidgetFamily]
 
     private let pictures: any PreviewPictures
-    private let device: WidgetDevice
+    /// Which kind of device the widgets are on.
+    public let device: WidgetDevice
     private var screen: CGSize?
     private var scale: CGFloat
     private var sources: [SourceSpec] = []

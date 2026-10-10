@@ -74,12 +74,31 @@ public struct SettingsView: View {
             .toolbar {
                 // Both groups at the trailing edge, the sizes first. Syd,
                 // 2026-10-10: "I want the size controls on the right as well".
-                // Each group is one item, drawn close together: as a button
-                // each, the bar is too wide for an iPad's narrowest window,
-                // and the system folds what does not fit into a "…" menu.
-                ToolbarItem(placement: .primaryAction) { sizes }
-                ToolbarSpacer(.fixed, placement: .primaryAction)
-                ToolbarItem(placement: .primaryAction) { sources }
+                if model.preview.device == .pad {
+                    // On an iPad each group is one item, drawn close
+                    // together: as a button each, the bar is too wide for
+                    // the narrowest window, and the system folds what does
+                    // not fit into a "…" menu.
+                    ToolbarItem(placement: .primaryAction) {
+                        HStack(spacing: 2) { sizes(compact: true) }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 4)
+                    }
+                    ToolbarSpacer(.fixed, placement: .primaryAction)
+                    ToolbarItem(placement: .primaryAction) {
+                        HStack(spacing: 2) { sources(compact: true) }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 4)
+                    }
+                } else {
+                    // On a phone they are ordinary bar buttons, which fit,
+                    // and which the system can lay out its own way: on the
+                    // iPhone Duo it is to move them to the side. Drawn as
+                    // one view of ours they stayed where they were.
+                    ToolbarItemGroup(placement: .primaryAction) { sizes(compact: false) }
+                    ToolbarSpacer(.fixed, placement: .primaryAction)
+                    ToolbarItemGroup(placement: .primaryAction) { sources(compact: false) }
+                }
             }
             .toolbarTitleDisplayMode(.inline)
         }
@@ -106,69 +125,76 @@ public struct SettingsView: View {
     /// in that size's proportions. Syd, 2026-10-10: "proportionately-sized
     /// round rects for each available size".
     ///
-    /// Closer together than bar buttons are, so the two smallest are narrower
-    /// to press than a bar button; Syd, 2026-10-10, chose that over a bar
-    /// that does not fit.
-    private var sizes: some View {
-        HStack(spacing: 2) {
-            ForEach(model.preview.families) { family in
-                let isShowing = model.preview.family == family
-                Button {
-                    model.preview.family = family
-                } label: {
-                    SizeShape(
-                        size: model.preview.shape(of: family, height: shapeHeight), isShowing: isShowing
-                    )
-                    .padding(.horizontal, 4)
-                    // As tall to press as the bar is, whatever the shape.
-                    .frame(minHeight: 36)
-                    .contentShape(Rectangle())
+    /// `compact` is for an iPad's bar, where they are closer together than
+    /// bar buttons are, and the two smallest narrower to press than one; Syd,
+    /// 2026-10-10, chose that over a bar that does not fit.
+    @ViewBuilder private func sizes(compact: Bool) -> some View {
+        ForEach(model.preview.families) { family in
+            let isShowing = model.preview.family == family
+            let shape = model.preview.shape(of: family, height: shapeHeight)
+            Button {
+                model.preview.family = family
+            } label: {
+                if compact {
+                    SizeShape(size: shape, isShowing: isShowing)
+                        .padding(.horizontal, 4)
+                        // As tall to press as the bar is, whatever the shape.
+                        .frame(minHeight: 36)
+                        .contentShape(Rectangle())
+                } else {
+                    // A name and a picture, as the Photos and Files buttons
+                    // are, and not a view of ours: on the iPhone Duo the
+                    // system moved those two to the side and left a drawn
+                    // shape where it was. Syd, 2026-10-10.
+                    Label {
+                        Text(family.title)
+                    } icon: {
+                        SizeShape.image(size: shape, isShowing: isShowing)
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel(family.title)
-                .accessibilityAddTraits(isShowing ? .isSelected : [])
             }
+            .accessibilityLabel(family.title)
+            .accessibilityAddTraits(isShowing ? .isSelected : [])
         }
-        .padding(.horizontal, 4)
     }
 
     /// The bar's second group: where photographs come from.
-    private var sources: some View {
-        HStack(spacing: 2) {
-            // What it brings up goes by the access there is: the collections
-            // sheet, the system's picker for a selection, or the way to the
-            // system's settings. Greyed out only until the app has found out.
-            Button {
-                switch model.chooser {
-                case .collections: model.showsCollectionPicker = true
-                case .selectedPhotos: changeSelection()
-                case .settings: showsNoAccess = true
-                case .nothing: break
-                }
-            } label: {
-                sourceSymbol("photo.on.rectangle.angled")
+    @ViewBuilder private func sources(compact: Bool) -> some View {
+        // What it brings up goes by the access there is: the collections
+        // sheet, the system's picker for a selection, or the way to the
+        // system's settings. Greyed out only until the app has found out.
+        Button {
+            switch model.chooser {
+            case .collections: model.showsCollectionPicker = true
+            case .selectedPhotos: changeSelection()
+            case .settings: showsNoAccess = true
+            case .nothing: break
             }
-            .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
-            .disabled(model.chooser == .nothing)
-
-            // Adding a file or a folder is not built yet, so the button
-            // cannot be pressed.
-            Button {
-            } label: {
-                sourceSymbol("folder")
-            }
-            .accessibilityLabel("Add files or folders")
-            .disabled(true)
+        } label: {
+            sourceSymbol("photo.on.rectangle.angled", compact: compact)
         }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 4)
+        .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
+        .disabled(model.chooser == .nothing)
+
+        // Adding a file or a folder is not built yet, so the button cannot be
+        // pressed.
+        Button {
+        } label: {
+            sourceSymbol("folder", compact: compact)
+        }
+        .accessibilityLabel("Add files or folders")
+        .disabled(true)
     }
 
-    private func sourceSymbol(_ name: String) -> some View {
-        Image(systemName: name)
-            .font(.body.weight(.medium))
-            .frame(minWidth: 36, minHeight: 36)
-            .contentShape(Rectangle())
+    @ViewBuilder private func sourceSymbol(_ name: String, compact: Bool) -> some View {
+        if compact {
+            Image(systemName: name)
+                .font(.body.weight(.medium))
+                .frame(minWidth: 36, minHeight: 36)
+                .contentShape(Rectangle())
+        } else {
+            Image(systemName: name)
+        }
     }
 
     /// The preview in the bounds the screen has for it.
@@ -291,6 +317,25 @@ private struct SizeShape: View {
             // 2026-10-10: "darker or thicker".
             .strokeBorder(isShowing ? AnyShapeStyle(.tint) : AnyShapeStyle(.primary), lineWidth: 2)
             .frame(width: size.width, height: size.height)
+    }
+
+    /// The same shape as a picture, for a bar button that is to be an
+    /// ordinary one. It carries its own colours: a bar draws a picture it is
+    /// left to colour all in one, and the size that is showing would not
+    /// stand out.
+    static func image(size: CGSize, isShowing: Bool) -> Image {
+        Image(size: size) { context in
+            let line: CGFloat = 2
+            let inside = CGRect(origin: .zero, size: size).insetBy(dx: line / 2, dy: line / 2)
+            let shape = Path(
+                roundedRect: inside, cornerRadius: min(size.width, size.height) * 0.28, style: .continuous)
+            let colour = GraphicsContext.Shading.color(isShowing ? .accentColor : .primary)
+            if isShowing {
+                context.fill(shape, with: colour)
+            }
+            context.stroke(shape, with: colour, lineWidth: line)
+        }
+        .renderingMode(.original)
     }
 }
 

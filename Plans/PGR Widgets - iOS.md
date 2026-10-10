@@ -65,9 +65,6 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   gives, and not by the name "Hidden". Check on a real library, and with the phone in another
   language, that Hidden always arrives with that kind. If it ever has to be found by name, the
   name is localized and every language's has to be searched for. Syd, 2026-10-10.
-- **Try coming forward on a real device, with a large library.** Syd, 2026-10-10, of the first
-  scan after the app comes forward, on a simulator: "it could just me the memory pressure again.
-  I will have to run this on real hardware at some point."
 - **Redesign with all controls in the nav bar.** Syd, 2026-10-10. To be tried; what he has in
   mind is in *The redesign: controls in the nav bar*.
 
@@ -105,6 +102,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **At first launch the app asks for Photos access by itself, and the collections sheet comes up
   once the person has answered.** Nobody has to find the button first. Syd, 2026-10-09.
 - **A full first-time launch wizard comes last, as a phase of its own.** Syd, 2026-10-10.
+- **The app is not offered on a Mac as an iPad app.** Syd, 2026-10-10: it "should not be availabe
+  as an iPad app on the Mac, but that may be moot once I make the menubar app". Set on the iOS
+  target (`SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO`).
 - **Files and folders are not the priority, and may not be done at all.** The preview comes
   first. Syd, 2026-10-10.
 - **When Photos access is refused, no sheet comes up.** The collections list has one row: a
@@ -529,6 +529,11 @@ His words:
   want the text below it to jump around. We had that in the old design, and I want to keep that".
   And where the view is too short for those bounds: "if the veritcal bounds won't fit, align the
   preview at the top".
+- **On a phone every control in the bar is a name and a picture, so the system can move it.** On
+  the iPhone Duo with the cover closed the system puts the bar's controls in a column at the
+  side. It moved Photos and Files and left the sizes, which were shapes drawn by a view of ours;
+  a view of ours is something it cannot rearrange. So on a phone each size is a name and a
+  picture of its shape. The compact groups below are for an iPad only.
 - **Both groups fit in the bar of an iPad's narrowest window.** As a bar button each, the six
   controls and the system's window controls were wider than that window, about 373 points, and
   the system folded what did not fit into a "…" menu. Syd chose drawing them closer together,
