@@ -343,3 +343,7 @@ Syd, 2026-10-09: "Add a line in the agent dashboard somewhere that loads by widg
 ## The wallpaper's first registration failed once
 
 2026-10-09, 0.7 (5): on the first launch after an install the app asked for the wallpaper extension to be registered and gave up thirty seconds later, "did not register … in time". `pkd` logged "Failed to find plugin with UUID" at that moment, and nowhere else that day. A relaunch registered it, and an uninstall and fresh install after that registered it on the first launch. Not understood. It came an hour after extension records had been removed by hand and NotificationCenter restarted, which may or may not matter. The app tries once per launch; if this comes back, it should try again before giving up.
+
+## The name is "PhotosGoRound" everywhere
+
+Syd, 2026-10-10: "Name of the application needs to be changed to "PhotosGoRound" everywhere since the hyphenated name does not fit on the iOS springboard, and I want consistency."

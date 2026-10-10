@@ -62,7 +62,13 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   gives, and not by the name "Hidden". Check on a real library, and with the phone in another
   language, that Hidden always arrives with that kind. If it ever has to be found by name, the
   name is localized and every language's has to be searched for. Syd, 2026-10-10.
-- **Redesign with all controls in the nav bar.** Syd, 2026-10-10.
+- **The first scan after the app comes forward is slow.** Syd, 2026-10-10, on a simulator: "it
+  could just me the memory pressure again. I will have to run this on real hardware at some
+  point." Each time it comes forward the app lists the library, counts every source for its row,
+  and the preview counts every source again for itself before it fetches a picture. The two
+  counts could be one.
+- **Redesign with all controls in the nav bar.** Syd, 2026-10-10. To be tried; what he has in
+  mind is in *The redesign: controls in the nav bar*.
 
 # Design Decisions
 
@@ -460,6 +466,95 @@ takes nothing from the widgets, and the app is not held to the extension's memor
 **Not yet said:**
 
 - Whether the preview shows the "Scanning…" face while the first picture is fetched.
+
+## The redesign: controls in the nav bar
+
+Syd, 2026-10-10, after the count on each row: "I think I want to try out the new design I have in
+mind". It is to be tried, and it has not yet replaced what *Design Decisions* says of the screen.
+His words:
+
+- "Liquid Glass all the way".
+- **Nav bar, two groups.** "First group is the size control with proportionately-sized round
+  rects for each available size. Second group is Photos/Files buttons".
+- **Both groups are at the right of the bar.** After seeing the sizes at the left: "I want the
+  size controls on the right as well".
+- **Main view.** "Preview in largest size that will hit the view".
+- **Below it,** "if there is vertical space below the preview", a scrollable view:
+  - "Collections list, non-editable, with photo counts. Same rules about red text, sources not
+    available, etc."
+  - "Files/Folders list, which we have done noting with."
+- **Why.** "This will allow the users a consistent place to have controls. The controls should
+  move to the size on that weird view that the Duo has. Should scale with the larger text sizing.
+  View is always visible. The info on what is selected will be shown when you can scroll it, but
+  is optional."
+
+**Claude's readings**, not confirmed:
+
+- "hit the view" is *fit* the view. Settled later that day as the largest whose width fits; see
+  below.
+- "move to the size" is *to the side*: on the Duo's wide screen the system puts a bar's controls
+  at the side, and these go with them. Syd, 2026-10-10: "you should not have to do any work for
+  the nav bar to move on the iphone duo, so don't worry about it right now".
+- "View is always visible" is the preview: it is what the screen always shows, and the lists are
+  there only when there is room under it.
+- The size control as shapes, which was a to-do for later, is part of this.
+- "non-editable": no swipe on a collection's row. A collection leaves by being unticked in the
+  sheet.
+- A file's or a folder's row keeps its swipe for now, since nothing else takes one out.
+
+**Said after seeing it, 2026-10-10:**
+
+- **The outlines of the shapes are darker and thicker**: "I want the round rect outlines to be
+  darker or thicker".
+- **Where the lists do not fit under the preview, the preview is at the left and the lists
+  beside it.** That is an iPhone on its side. It took three tries the same day: at the left on a
+  phone on its side and never on an iPad; then no layout of its own at all, "now that the
+  controls are always visible, the special view is on longer necessary"; then, seeing a phone on
+  its side with no lists, "no, this is worse. Go back to the preview on the left if the bottom
+  text does not fit". So it goes by whether a heading and one row fit under the preview's bounds,
+  not by the device or the window's shape.
+- **The preview scrolls, either way, when its bounds are smaller than the widget.** "The
+  preview's scroll area should be the size of the widget. When the view is big enough, no
+  scrolling is necessary. When it is not, you should be able to scroll it either way. This will
+  allow the user to see all of the image in landscape on the phone, and when their iPad window
+  is small". On top and at the left alike.
+- **The size it starts on is the largest whose width fits.** "the decision on which view to show
+  by default should be the one whose width will fit". The view's height does not come into it.
+- **The preview is whole, in bounds as tall as the tallest size, from the top of the view.** "Not
+  clipped; the top aligned with the top of the view", and then: "The bounding of the preview
+  should be high enough for the largest view, and the preview should be centered in it. I don't
+  want the text below it to jump around. We had that in the old design, and I want to keep that".
+  And where the view is too short for those bounds: "if the veritcal bounds won't fit, align the
+  preview at the top".
+- **Both groups fit in the bar of an iPad's narrowest window.** As a bar button each, the six
+  controls and the system's window controls were wider than that window, about 373 points, and
+  the system folded what did not fit into a "…" menu. Syd chose drawing them closer together,
+  over a wider smallest window and over the menu. So each group is one bar item, and the two
+  smallest shapes are narrower to press than a bar button. At the largest text sizes the shapes
+  grow and may not fit again; not tried.
+
+**With Photos access off, there are two ways to the system's settings that do not need the
+lists.** Syd, 2026-10-10, chose both:
+
+- The bar's Photos button stays pressable and brings up an alert, "No Photos Access", with
+  "Settings…" and "Cancel".
+- The preview's face says "No Photos Access", and tapping it goes to the system's settings.
+
+The red row with its "Settings…" button still shows when the lists do. Claude's reading: the face
+says so when there is no picture to show, in place of "No Photos found"; a folder's pictures
+still show with Photos access off.
+
+**The smallest window an iPad allows does not change.** Syd, 2026-10-10, asked twice: as it is
+now, sized for the bar, a small widget shown whole, the "Photos" heading and one row. With the
+preview's bounds as tall as the tallest size, the lists at that size of window are beside the
+preview and not under it.
+
+**Not said:**
+
+- How a file or a folder is taken out, with no swipe and no sheet to untick it in. Nothing adds
+  one yet.
+- What the bar's Photos button does with limited access. Claude's reading: what the heading's
+  button does today, the system's picker.
 
 ## The collections
 

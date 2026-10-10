@@ -1,13 +1,13 @@
-// The preview at the top of the settings screen: a widget at its real size,
-// showing the chosen photographs. `Plans/PGR Widgets - iOS.md`, *How the
-// preview is drawn*.
+// The preview on the settings screen: a widget at its real size, showing the
+// chosen photographs. `Plans/PGR Widgets - iOS.md`, *How the preview is drawn*
+// and *The redesign: controls in the nav bar*.
 //
-// **At real size, centered, and cropped where it does not fit.** Syd,
-// 2026-10-09: "the preview should be drawn at scale, centered, and cropped on
-// either side if the view is not big enough". It is never shrunk to fit. Its
-// space is as tall as the largest size, or as tall as leaves the collections
-// in sight when the screen is too short for that; a widget taller than its
-// space is cropped top and bottom the same way.
+// **At real size, and nothing more.** Syd, 2026-10-09: "the preview should be
+// drawn at scale". It is never shrunk to fit. This view is exactly the widget;
+// the screen it is on gives it its bounds, and lets it be scrolled when they
+// are smaller than it is.
+//
+// **Which size is in the bar, not here.** Syd, 2026-10-10.
 //
 // **A small slideshow.** Its picture changes by itself every few seconds, and
 // on a tap. It stops while the app is not in front.
@@ -16,82 +16,77 @@ import PhotosGoRoundWidgetFace
 import SwiftUI
 
 public struct WidgetPreviewView: View {
-    @Bindable private var model: PreviewModel
+    private let model: PreviewModel
     @Environment(\.scenePhase) private var scenePhase
 
-    private let room: CGFloat
-    /// How wide the widget's space is, once it has been laid out.
-    @State private var width: CGFloat?
+    private let face: WidgetFace.Content?
+    private let width: CGFloat
+    private let onNoAccess: () -> Void
 
-    /// - Parameter room: The most height the widget's space may take and still
-    ///   leave the collections in sight under it.
-    public init(model: PreviewModel, room: CGFloat = .infinity) {
+    /// - Parameters:
+    ///   - face: What to draw in place of the preview's own face, when the
+    ///     screen knows better: that Photos access is off.
+    ///   - width: How wide the view is, which decides the size it starts on.
+    ///   - onNoAccess: A tap on the face that says Photos access is off.
+    public init(
+        model: PreviewModel, face: WidgetFace.Content? = nil, width: CGFloat = .infinity,
+        onNoAccess: @escaping () -> Void = {}
+    ) {
         self.model = model
-        self.room = room
+        self.face = face
+        self.width = width
+        self.onNoAccess = onNoAccess
     }
-
 
     public var body: some View {
-        VStack(spacing: 12) {
-            WidgetFace(model.content)
-                .frame(width: model.size.width, height: model.size.height)
-                .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
-                // Bigger than the space it is given, either way: it stays
-                // centered and loses the same from each side. The space does
-                // not follow the size that is showing, so choosing another
-                // moves nothing below.
-                .frame(maxWidth: .infinity)
-                .frame(height: model.space(within: room))
-                .clipped()
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-                .contentShape(Rectangle())
-                .onTapGesture { Task { await model.advance() } }
-                .accessibilityLabel("Widget preview")
-                .accessibilityHint("Shows the next photograph")
-            if model.families.count > 1 {
-                Picker("Size", selection: $model.family) {
-                    ForEach(model.families) { family in
-                        Text(family.title).tag(family)
-                    }
+        let face = face ?? model.content
+        WidgetFace(face)
+            .frame(width: model.size.width, height: model.size.height)
+            .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
+            .contentShape(Rectangle())
+            .onTapGesture {
+                if face == .noAccess {
+                    onNoAccess()
+                } else {
+                    Task { await model.advance() }
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                // The widget's space runs edge to edge; the control does not.
-                .padding(.horizontal)
             }
-        }
-        // Where it starts: the largest size that fits its space uncropped.
-        // Asked whenever the space or the sizes become known; the model acts
-        // on it once.
-        .onChange(of: Fit(width: width, height: model.space(within: room)), initial: true) { _, fit in
-            guard let width = fit.width, fit.height > 0 else { return }
-            model.settle(within: CGSize(width: width, height: fit.height))
-        }
-        // Chosen just now: fetch the first picture at once, without waiting
-        // for the slideshow's next turn.
-        .onChange(of: model.content) { _, content in
-            guard content == .scanning else { return }
-            Task { await model.advance() }
-        }
-        // Started again whenever the app comes forward, the sources change,
-        // or another size is chosen; ended when any of those stops being so.
-        .task(
-            id: Running(
-                active: scenePhase == .active, size: model.size,
-                nothingChosen: model.content == .nothingChosen)
-        ) {
-            guard scenePhase == .active else { return }
-            while !Task.isCancelled {
-                await model.advance()
-                try? await Task.sleep(for: Self.every)
+            .accessibilityLabel("Widget preview")
+            .accessibilityHint(face == .noAccess ? "Opens Settings" : "Shows the next photograph")
+            .accessibilityAddTraits(.isButton)
+            // Where it starts: the largest size that is not too wide. Asked
+            // whenever the width or the sizes become known; the model leaves a
+            // size the person chose alone.
+            .onChange(of: Fit(width: width, tallest: model.tallest), initial: true) { _, fit in
+                guard fit.tallest > 0 else { return }
+                model.settle(within: fit.width)
             }
-        }
+            // Chosen just now: fetch the first picture at once, without
+            // waiting for the slideshow's next turn.
+            .onChange(of: model.content) { _, content in
+                guard content == .scanning else { return }
+                Task { await model.advance() }
+            }
+            // Started again whenever the app comes forward, the sources
+            // change, or another size is chosen; ended when any of those stops
+            // being so.
+            .task(
+                id: Running(
+                    active: scenePhase == .active, size: model.size,
+                    nothingChosen: model.content == .nothingChosen)
+            ) {
+                guard scenePhase == .active else { return }
+                while !Task.isCancelled {
+                    await model.advance()
+                    try? await Task.sleep(for: Self.every)
+                }
+            }
     }
 
-    /// The space the widget is drawn in, as far as it is known.
+    /// How wide the view is, and whether the sizes are known yet.
     private struct Fit: Equatable {
-        let width: CGFloat?
-        let height: CGFloat
+        let width: CGFloat
+        let tallest: CGFloat
     }
 
     /// What the slideshow's task is keyed on.

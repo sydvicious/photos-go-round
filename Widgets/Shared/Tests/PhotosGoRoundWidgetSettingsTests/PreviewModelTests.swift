@@ -173,26 +173,35 @@ struct PreviewModelTests {
         #expect(preview.size == CGSize(width: 158, height: 158))
     }
 
-    @Test("It starts on the largest size that fits its room without cropping")
+    @Test("It starts on the largest size whose width fits, however short the view")
     func startsOnTheLargestThatFits() {
         let roomy = preview(ScriptedPictures([]))
-        roomy.settle(within: CGSize(width: 361, height: 400))
+        roomy.settle(within: 361)
         #expect(roomy.family == .large)
 
-        let short = preview(ScriptedPictures([]))
-        short.settle(within: CGSize(width: 361, height: 300))
-        #expect(short.family == .medium)
-
         let narrow = preview(ScriptedPictures([]))
-        narrow.settle(within: CGSize(width: 300, height: 400))
+        narrow.settle(within: 300)
         #expect(narrow.family == .small)
+    }
+
+    @Test("On an iPad it is the extra large when that is not too wide, and the large when it is")
+    func padSizes() {
+        let wide = PreviewModel(
+            pictures: ScriptedPictures([]), device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2)
+        wide.settle(within: 820)
+        #expect(wide.family == .extraLarge)
+
+        let narrow = PreviewModel(
+            pictures: ScriptedPictures([]), device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2)
+        narrow.settle(within: 373)
+        #expect(narrow.family == .large)
     }
 
     @Test("A size that fits exactly is not cropped, so it fits")
     func fitsExactly() {
         let preview = preview(ScriptedPictures([]))
 
-        preview.settle(within: CGSize(width: 338, height: 354))
+        preview.settle(within: 338)
 
         #expect(preview.family == .large)
     }
@@ -201,31 +210,31 @@ struct PreviewModelTests {
     func nothingFits() {
         let preview = preview(ScriptedPictures([]))
 
-        preview.settle(within: CGSize(width: 100, height: 100))
+        preview.settle(within: 100)
 
         #expect(preview.family == .small)
     }
 
-    @Test("Until the person chooses, it follows the room: the largest that shows whole, each time the room changes")
+    @Test("Until the person chooses, it follows the width: the largest that fits, each time the width changes")
     func followsTheRoom() {
         let preview = preview(ScriptedPictures([]))
-        preview.settle(within: CGSize(width: 361, height: 300))
-        #expect(preview.family == .medium)
+        preview.settle(within: 300)
+        #expect(preview.family == .small)
 
-        preview.settle(within: CGSize(width: 361, height: 400))
+        preview.settle(within: 361)
         #expect(preview.family == .large)
 
-        preview.settle(within: CGSize(width: 200, height: 400))
+        preview.settle(within: 200)
         #expect(preview.family == .small)
     }
 
     @Test("A size the person chose stays when the room changes, even when it no longer shows whole")
     func theirChoiceStaysThroughResizing() {
         let preview = preview(ScriptedPictures([]))
-        preview.settle(within: CGSize(width: 361, height: 400))
+        preview.settle(within: 361)
         preview.family = .large
 
-        preview.settle(within: CGSize(width: 200, height: 200))
+        preview.settle(within: 200)
 
         #expect(preview.family == .large)
     }
@@ -235,7 +244,7 @@ struct PreviewModelTests {
         let preview = preview(ScriptedPictures([]))
         preview.family = .small
 
-        preview.settle(within: CGSize(width: 361, height: 400))
+        preview.settle(within: 361)
 
         #expect(preview.family == .small)
     }
@@ -243,11 +252,11 @@ struct PreviewModelTests {
     @Test("Before the screen is known there is nothing to fit, and it still gets its start later")
     func settledOnlyOnceTheScreenIsKnown() {
         let preview = PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1)
-        preview.settle(within: CGSize(width: 361, height: 400))
+        preview.settle(within: 361)
         #expect(preview.family == .small)
 
         preview.use(screen: phone, scale: 3)
-        preview.settle(within: CGSize(width: 361, height: 400))
+        preview.settle(within: 361)
 
         #expect(preview.family == .large)
     }
@@ -289,8 +298,8 @@ struct PreviewModelTests {
         #expect(preview.content == picture("a.jpg"))
     }
 
-    @Test("The space kept for the preview is as tall as the tallest size, whichever is chosen")
-    func spaceKept() {
+    @Test("The tallest size is the same whichever size is chosen")
+    func tallestWhicheverIsChosen() {
         let preview = preview(ScriptedPictures([]))
         #expect(preview.tallest == 354)
 
@@ -375,32 +384,28 @@ struct PreviewModelTests {
         #expect(PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1).widest == 0)
     }
 
-    @Test("With room to spare, the preview's space is as tall as the tallest size")
-    func roomToSpare() {
-        #expect(preview(ScriptedPictures([])).space(within: 500) == 354)
-    }
-
-    @Test("With less room than the tallest size needs, the space is the room there is")
-    func lessRoom() {
+    @Test("Each size has a shape in its own proportions, the tallest as tall as asked")
+    func shapes() {
         let preview = preview(ScriptedPictures([]))
 
-        #expect(preview.space(within: 300) == 300)
-        #expect(preview.space(within: 354) == 354)
+        let small = preview.shape(of: .small, height: 24)
+        let medium = preview.shape(of: .medium, height: 24)
+        let large = preview.shape(of: .large, height: 24)
+
+        #expect(large.height == 24)
+        #expect(abs(large.width - 338.0 * 24 / 354) < 0.001)
+        #expect(medium.width == large.width)
+        #expect(medium.height == small.height)
+        #expect(small.width == small.height)
+        #expect(abs(small.height - 158.0 * 24 / 354) < 0.001)
     }
 
-    @Test("With no room at all there is no space, and never less than none")
-    func noRoom() {
-        let preview = preview(ScriptedPictures([]))
-
-        #expect(preview.space(within: 0) == 0)
-        #expect(preview.space(within: -40) == 0)
-    }
-
-    @Test("Until the screen is known there is no space, however much room there is")
-    func noSpaceBeforeTheScreen() {
+    @Test("The shapes are there before the screen is known")
+    func shapesBeforeTheScreen() {
         let preview = PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1)
 
-        #expect(preview.space(within: 500) == 0)
+        #expect(preview.shape(of: .large, height: 24).height == 24)
+        #expect(preview.shape(of: .small, height: 24).width > 0)
     }
 
     @Test("Until the screen is known no space is kept")

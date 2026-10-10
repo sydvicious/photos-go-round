@@ -8,6 +8,10 @@
     import PhotosGoRoundPhotoLibrary
     import Synchronization
 
+    #if canImport(UIKit)
+        import UIKit
+    #endif
+
     /// Pictures there are none of, for a preview or a test that draws no photograph.
     struct NoPictures: PreviewPictures {
         func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? { nil }
@@ -62,9 +66,17 @@
     }
 
     extension PreviewModel {
-        /// A preview as an iPhone with a 393-point screen would have it.
+        /// A preview as an iPhone with a 393-point screen would have it; or,
+        /// on an iPad's canvas, as an iPad with an 820-point screen would, so
+        /// that an iPad shows an iPad's four sizes.
         static func sample(_ pictures: any PreviewPictures = NoPictures()) -> PreviewModel {
-            PreviewModel(
+            #if canImport(UIKit)
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    return PreviewModel(
+                        pictures: pictures, device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2)
+                }
+            #endif
+            return PreviewModel(
                 pictures: pictures, device: .phone, screen: CGSize(width: 393, height: 852), scale: 3)
         }
     }

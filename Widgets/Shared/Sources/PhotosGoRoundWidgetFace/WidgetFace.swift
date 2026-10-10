@@ -8,10 +8,11 @@
 // **A photograph is fitted inside, whole, with black around it**, as
 // everywhere else in Photos-Go-Round.
 //
-// **Three faces without a photograph**, on iOS and iPadOS. Syd, 2026-10-09:
+// **Four faces without a photograph**, on iOS and iPadOS. Syd, 2026-10-09:
 // the plain app icon with nothing chosen; the icon greyed over with
 // "Scanning…" while the first photograph is fetched; and the icon greyed over
 // with "No Photos found" when sources are chosen and no picture is to be had.
+// And, 2026-10-10, with "No Photos Access" when Photos access is off.
 
 import SwiftUI
 
@@ -28,6 +29,8 @@ public struct WidgetFace: View {
         case nothingChosen
         case scanning
         case noPhotos
+        /// Photos access is off, and there is no picture from anywhere else.
+        case noAccess
     }
 
     private let content: Content
@@ -51,6 +54,8 @@ public struct WidgetFace: View {
                 iconFace(words: "Scanning…")
             case .noPhotos:
                 iconFace(words: "No Photos found")
+            case .noAccess:
+                iconFace(words: "No Photos Access")
             }
         }
         .animation(.easeInOut(duration: 1), value: content)
