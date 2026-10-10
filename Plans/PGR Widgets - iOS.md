@@ -35,6 +35,16 @@ after it. The to-dos under each phase are Claude's.
   iPadOS* in `Plans/Photos-Go-Round Widgets.md`.
 - **Phase 4** — The App Store: versioning, TestFlight, submission.
 
+# TODO
+
+The iOS app's to-dos are kept here while the work is on its branch. `TODO.md` at the top level is
+the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
+
+- **Hidden, in other languages.** Hidden is left out of the pickers by its kind, which PhotoKit
+  gives, and not by the name "Hidden". Check on a real library, and with the phone in another
+  language, that Hidden always arrives with that kind. If it ever has to be found by name, the
+  name is localized and every language's has to be searched for. Syd, 2026-10-10.
+
 # Design Decisions
 
 - **The app is another target in the existing Xcode project.** Not a project or repository of its
@@ -80,9 +90,13 @@ after it. The to-dos under each phase are Claude's.
   2026-10-09.
 - **A button opens the whole library as a checkbox tree, in a sheet.** That is where collections
   are chosen, as in the Mac app's picker. Syd, 2026-10-09.
-- *Proposed, and built that way:* **the sheet never offers the whole library or Hidden, and a
-  section heading has no tick box.** A folder has one. It follows from never choosing the whole
-  library; the Mac app's picker offers all three.
+- **Hidden is never offered, here or in the Mac app's picker.** Syd, 2026-10-10: "neither one
+  should have `Hidden`".
+- **"Recently Saved" is offered in both.** Syd, 2026-10-10.
+- **Anything with the `wholeLibrary` kind is never offered, here or in the Mac app's picker.**
+  That is the collection PhotoKit titles *Recents*. Syd, 2026-10-10: "anything that has the
+  `wholeLibrary` tag should be excluded".
+- **A folder has a tick box and a section heading does not, as on the Mac.**
 - **What is ticked when Done is pressed is the set of Photos sources.** Cancel changes nothing.
   The Mac picker's rule. Syd, 2026-10-09.
 - **A row shows the source's name and its count, and is red when something is wrong.** Syd,
@@ -509,12 +523,67 @@ that Photos access is off, with a button that opens the system's settings, where
 on. Files and folders still work, since they need no Photos access. The Mac's picker has the same
 kind of face for a library it may not read (`CollectionPickerView.unauthorized`).
 
-**What the sheet leaves out.** Claude's doing, 2026-10-09, to be confirmed. The Mac app's picker
-lists every collection PhotoKit names, which includes the one that is the whole library
-(*Recents*) and *Hidden*, and each section heading has a box that ticks everything in the section.
-Here the whole library and Hidden are not listed, and a section heading has no box; a folder
-keeps its box, since it ticks only the albums a person filed in it. A section with nothing left
-to show has no heading.
+**What the sheet leaves out.** Two things, and a section with nothing left to show has no heading.
+
+- **Hidden**, in every picker. Syd, 2026-10-10: "Mac has "Recently Saved" and "Hidden"", then
+  "neither one should have `Hidden`", and "Both should have "Recently Saved"". So Hidden came out
+  of the Mac's picker as well, in the one place both get their sections,
+  `LibrarySectionGroup.grouped`. It is told by its kind, which is PhotoKit's
+  `smartAlbumAllHidden`, and not by its name; see *TODO* for what that leaves to check.
+  `Plans/Apple Photos Plan.md` had "Nothing is hidden from the picker" and now has Hidden as its
+  one exception. A Hidden source somebody chose on the Mac before this stays in the Settings list
+  until they remove it there; the picker no longer shows it to untick.
+- ***Recents***, here only, and Claude's doing, in question. It is the collection PhotoKit hands
+  over as `smartAlbumUserLibrary`, which this code calls `wholeLibrary`, and "Recents" is
+  PhotoKit's title for it. Claude left it out of the sheet as the whole library, and wrote that an
+  iPhone calls it *Recents* and that it is every photograph. Neither was checked. Syd, 2026-10-10:
+  "there is no "Recents" in the GUI for Photos on iPhone. And it would not be the entire library
+  anyway." `Plans/Apple Photos Plan.md` already says as much: it "is not quite "everything"", since
+  it excludes what is hidden and its relation to shared content varies. On his Mac it holds 96,306
+  photographs, against 38,136 in Recently Saved and 8,452 in Favorites, so it is most of the
+  library and not all of it.
+  Then, the same day: "I take that back. I see it in PGR Mac, and it has 93K items in it." So it
+  is in the Mac's picker, as the agent's list said.
+- **It is left out of both pickers, by its kind.** Syd, 2026-10-10: "anything that has the
+  `wholeLibrary` tag should be excluded". It went the way Hidden did: one rule, in
+  `LibrarySectionGroup.grouped`, and the iOS sheet's own copy of it is gone. A *Recents* source
+  somebody chose on the Mac before this stays in the Settings list until they remove it there.
+- **"Recently Saved" stays in both.** It is one of the smart albums PhotoKit does not name, so it
+  arrives as an unnamed kind and is listed under *Utilities*. On Syd's Mac it held 37,550
+  photographs when it was measured on 2026-08-26 (`SystemPhotoLibrary.kind(of:)`), which is close
+  to everything; it is offered because he asked for it.
+
+**Asked of the running agent, 2026-10-10.** Syd sent the Mac picker's *Utilities* section as it
+was that morning, with Hidden in it: "You are wrong. This is from Photos-Go-Round on the mac right
+now". He was right that it was there. The rule that leaves Hidden out was written at 08:51 and
+was not committed or installed; the agents serving his picker had started at 08:00 and 08:07.
+Claude had reported it as done in both pickers when it was done only in the source.
+
+The Release agent's own list, `GET /v2/photos/albums`, 440 collections:
+
+| Title | Kind |
+|---|---|
+| Hidden | `hidden` |
+| Recents | `wholeLibrary` |
+| Recently Saved | `otherSmartAlbum` |
+| Captured by Me, Dual Capture, Recovered, Reference | `otherSmartAlbum` |
+| Unable to Upload | `unableToUpload` |
+| Favorites | `favorites` |
+
+- **Hidden does arrive with its own kind** on this library, so leaving it out by kind works here
+  once the agent is built from this source. Another language is still to be checked; see *TODO*.
+- **The Mac's picker does list *Recents***, with 96,306 photographs. Its kind files it under
+  *Albums*, among 350 albums sorted by name. What each picker should do with it is asked the same
+  day.
+
+**Tick boxes are where the Mac has them.** A folder has a box, which ticks or clears the albums
+under it; a section heading has none. Claude first wrote that the Mac's section headings had a
+box and that leaving it off was a difference. Syd, 2026-10-10: "there is no section tick on the
+mac". He is right: `CollectionPickerView.twisty` draws the box only when the row is not a
+section.
+
+**One difference that is left.** On the Mac a section heading opens and shuts its section. Here
+only folders open and shut. Not said: whether sections should too.
 
 **Not said about first launch:**
 

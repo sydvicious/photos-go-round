@@ -182,10 +182,23 @@ extension LibrarySectionGroup {
     /// A section nothing falls into is omitted rather than shown empty. A
     /// library with no shared albums should not be told it has a Sharing
     /// section with nothing in it.
+    ///
+    /// **Hidden and the whole library are never offered, since 2026-10-10.**
+    /// Syd, of the Mac's picker and the Widgets app's: "neither one should have
+    /// `Hidden`", and "anything that has the `wholeLibrary` tag should be
+    /// excluded". What a person hid in Photos is not something to put on a
+    /// desktop, a screensaver or a widget, and neither is nearly everything
+    /// they have: "we never choose the whole photo library". Both are told by
+    /// kind, not by title. They are left out here, where every picker gets its
+    /// sections, and not where the library is read: a source that was chosen
+    /// before this is still found by its identifier, and is removed like any
+    /// other.
     public static func grouped(_ collections: [LibraryCollection]) -> [LibrarySectionGroup] {
         LibrarySection.allCases.compactMap { section in
             let members = collections
-                .filter { $0.section == section }
+                .filter {
+                    $0.section == section && $0.kind != .hidden && $0.kind != .wholeLibrary
+                }
                 .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
             guard !members.isEmpty else { return nil }
             return LibrarySectionGroup(section: section, collections: members)

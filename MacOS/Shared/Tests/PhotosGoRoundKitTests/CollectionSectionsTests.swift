@@ -73,11 +73,36 @@ struct CollectionSectionsTests {
     func sectionOrderIsFixed() {
         let groups = LibrarySectionGroup.grouped([
             Self.collection("Screenshots", .mediaType),
-            Self.collection("Hidden", .hidden),
+            Self.collection("Imports", .imported),
             Self.collection("Holiday", .userAlbum),
             Self.collection("Family", .sharedAlbum),
         ])
         #expect(groups.map(\.section) == [.albums, .sharing, .mediaTypes, .utilities])
+    }
+
+    @Test("Hidden is never offered: what a person hid is not put on a screen")
+    func hiddenIsNeverOffered() {
+        let groups = LibrarySectionGroup.grouped([
+            Self.collection("Hidden", .hidden),
+            Self.collection("Recently Saved", .otherSmartAlbum),
+            Self.collection("Holiday", .userAlbum),
+        ])
+        #expect(groups.flatMap(\.collections).map(\.title) == ["Holiday", "Recently Saved"])
+    }
+
+    @Test("The whole library is never offered, whatever Photos calls it")
+    func wholeLibraryIsNeverOffered() {
+        let groups = LibrarySectionGroup.grouped([
+            Self.collection("Recents", .wholeLibrary),
+            Self.collection("Recently Saved", .otherSmartAlbum),
+            Self.collection("Holiday", .userAlbum),
+        ])
+        #expect(groups.flatMap(\.collections).map(\.title) == ["Holiday", "Recently Saved"])
+    }
+
+    @Test("A library with nothing but Hidden in a section has no such section")
+    func onlyHidden() {
+        #expect(LibrarySectionGroup.grouped([Self.collection("Hidden", .hidden)]).isEmpty)
     }
 
     @Test("A section nothing falls into is omitted rather than shown empty")

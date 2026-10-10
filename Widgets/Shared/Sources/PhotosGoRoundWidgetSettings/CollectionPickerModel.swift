@@ -45,7 +45,9 @@ public final class CollectionPickerModel {
     public func refresh() async {
         do {
             let listing = try await catalog.listing()
-            sections = listing.sections.compactMap(Self.offered)
+            // Hidden and the whole library are not among them: the catalog's
+            // sections leave both out, for every picker.
+            sections = listing.sections
             isCounting = listing.counted < listing.total
             failure = nil
             hasRead = true
@@ -149,16 +151,4 @@ public final class CollectionPickerModel {
     }
 
     private var listed: [LibraryCollection] { sections.flatMap(\.collections) }
-
-    /// A section with what may be offered from it, or nil when nothing is left.
-    ///
-    /// **The whole library is never offered, and neither is Hidden.** Syd,
-    /// 2026-10-09: "we never choose the whole photo library. people have all
-    /// kids of shit that's not appropriate". A widget is seen by whoever is
-    /// near the phone, so a person chooses albums, and there is no row that is
-    /// everything and none for what they hid.
-    private static func offered(_ group: LibrarySectionGroup) -> LibrarySectionGroup? {
-        let kept = group.collections.filter { $0.kind != .wholeLibrary && $0.kind != .hidden }
-        return kept.isEmpty ? nil : LibrarySectionGroup(section: group.section, collections: kept)
-    }
 }

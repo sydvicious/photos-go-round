@@ -4,9 +4,8 @@
 // **Done applies; Cancel does not.** Syd, 2026-10-09, chose the Mac picker's
 // rule: what is ticked when Done is pressed is the set of Photos sources.
 //
-// **A folder has a tick box and a section does not.** A folder's box ticks
-// the albums a person filed in it. A section's would tick every album there
-// is in one tap, which is the whole library by another road.
+// **A folder has a tick box and a section does not**, as in the Mac app's
+// picker. A folder's box ticks or clears the albums a person filed in it.
 
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundPhotoLibrary
