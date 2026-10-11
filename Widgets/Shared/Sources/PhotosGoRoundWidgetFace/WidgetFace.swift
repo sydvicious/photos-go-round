@@ -13,6 +13,10 @@
 // "Scanning…" while the first photograph is fetched; and the icon greyed over
 // with "No Photos found" when sources are chosen and no picture is to be had.
 // And, 2026-10-10, with "No Photos Access" when Photos access is off.
+//
+// **A photograph greyed over with "Scanning…"**, when Photos has not answered
+// for the next one. Syd, 2026-10-11: "put the scanning overlay over whatever
+// is showing so the user knows something is wrong".
 
 import ImageIO
 import SwiftUI
@@ -27,6 +31,9 @@ public struct WidgetFace: View {
     public enum Content: Equatable, Sendable {
         /// A photograph, as a file.
         case picture(URL)
+        /// A photograph that has stayed up because Photos did not answer for
+        /// the next, with "Scanning…" over it.
+        case scanningOver(URL)
         case nothingChosen
         case scanning
         case noPhotos
@@ -45,11 +52,17 @@ public struct WidgetFace: View {
         ZStack {
             Color.black
             switch content {
-            case .picture(let file):
+            case .picture(let file), .scanningOver(let file):
                 FittedPicture(file: file)
                     // A new view for each photograph, so one fades into the next.
+                    // The same view with and without "Scanning…" over it, so
+                    // only the words come and go.
                     .id(file)
                     .transition(.opacity)
+                if case .scanningOver = content {
+                    greyed(words: "Scanning…")
+                        .transition(.opacity)
+                }
             case .nothingChosen:
                 iconFace(words: nil)
             case .scanning:
@@ -75,14 +88,19 @@ public struct WidgetFace: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             if let words {
-                Color.gray.opacity(0.65)
-                Text(words)
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.center)
-                    .padding(8)
+                greyed(words: words)
             }
         }
+    }
+
+    /// Grey over whatever is under it, and a word or two.
+    @ViewBuilder private func greyed(words: String) -> some View {
+        Color.gray.opacity(0.65)
+        Text(words)
+            .font(.headline)
+            .foregroundStyle(.white)
+            .multilineTextAlignment(.center)
+            .padding(8)
     }
 }
 
@@ -172,6 +190,14 @@ private struct FittedPicture: View {
     #Preview("Scanning") {
         WidgetFace(.scanning)
             .frame(width: 338, height: 158)
+    }
+
+    #Preview("Scanning, over a photograph") {
+        // The icon's own picture stands in for a photograph.
+        if let file = Bundle.module.url(forResource: "PhotosGoRoundIcon", withExtension: "png") {
+            WidgetFace(.scanningOver(file))
+                .frame(width: 338, height: 158)
+        }
     }
 
     #Preview("No Photos found") {

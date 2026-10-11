@@ -216,6 +216,11 @@ public struct SettingsView: View {
         }
         .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
         .frame(width: bounds.width, height: bounds.height)
+        // Nothing of the widget shows outside its bounds. Without this a
+        // scroll view at the top of the screen draws on under the bar. Syd,
+        // 2026-10-11: "the preview widget scrolling should not bleed into
+        // the navigation bar".
+        .clipped()
     }
 
     /// What is chosen, under the preview or beside it. A collection leaves by being

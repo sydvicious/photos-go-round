@@ -30,8 +30,10 @@ design that works the same on the Mac and on devices that never had an agent.
     number goes up first, and the new DMG is copied to the releases folder as soon as it exists.
   - At the next release, read that the installed app states the shared signing requirement.
   - The interval is hard-coded, at 5 minutes, until there are individual settings panels. Make it
-    each widget's own setting.
-  - Find out how a widget that has been placed keeps its name.
+    each widget's own setting. Built for iOS on 2026-10-11, as *Change Every* in Edit Widget; the
+    Mac's is still to do. `PGR Widgets - iOS.md`.
+  - Find out how a widget that has been placed keeps its name. Found out on iOS, 2026-10-11: it
+    cannot. *Telling widgets apart*.
   - Find out why an occasional Photos fetch costs far more memory than its neighbours.
   - Later: find out which transitions between pictures a widget can really show, and offer them
     as a setting.
@@ -89,7 +91,10 @@ design that works the same on the Mac and on devices that never had an agent.
   app that carries it. Syd, 2026-10-08.
 - **The only setting a widget has is how often it updates.** Each widget has its own interval and
   its own TinyCache, and nothing else of its own. Later it gains a second, the transition between
-  pictures; and fill against fit is to be an option too, at some point.
+  pictures; and fill against fit is to be an option too, at some point. On iOS, since 2026-10-11,
+  the setting is *Change Every* in the system's Edit Widget panel, and the cache is one for each
+  duration at each size: the system tells two widgets apart by nothing but their settings, so two
+  of one size set alike are one widget and show the same picture. *Telling widgets apart*.
 - **All the widgets share one database.**
 - **Widgets may show the same picture as each other.** Nothing is done to prevent it.
 - **The Store app is `com.sydpolk.photosgoround.widgets` on every platform.** The iOS app has it
@@ -110,7 +115,10 @@ design that works the same on the Mac and on devices that never had an agent.
   extension asks the source for a picture, shows it, and keeps one for next time, so there is one
   picture in the cache at a time. Syd, 2026-10-09, choosing this over a cap on fetches: go back to
   the original rule exactly. It replaces filling toward 20 while the extension stayed running,
-  which made a wake's memory follow how much the wake did. See *A longer run*.
+  which made a wake's memory follow how much the wake did. See *A longer run*. Since 2026-10-11
+  the picture on show is cleared away only once the next is in hand, on both platforms: it used
+  to be deleted first, so a fetch that failed left nothing to show. The iOS widgets keep it up,
+  with "Scanning…" over it, while Photos is not answering.
 - **So every change of picture is a reload.** How often a widget changes is how often the system
   will reload it, whatever interval is asked for.
 - **The interval is five minutes for now.** Syd, 2026-10-09: "set the value for widget refresh to
@@ -139,7 +147,9 @@ design that works the same on the Mac and on devices that never had an agent.
   one built now. Syd, 2026-10-08.
 - **The intervals offered are 1, 5, 10 and 30 minutes, and 1, 2, 4, 8 and 24 hours.** Ten seconds
   isn't feasible: Apple's guidance is entries about 5 minutes apart. One minute is dropped if the
-  system won't honour it. Syd, 2026-10-08.
+  system won't honour it. Syd, 2026-10-08. On iOS it is dropped, 2026-10-11: a 1-minute widget
+  was reloaded after five. The Mac's list stands as it is here; Syd, the same day: "The Mac and
+  iOS can have different settings".
 - **The widget extension has one picture in memory at a time, two at most.** It runs under about
   30 MB of RAM, which is a limit on memory and not on storage. See *Spike: a 1-minute refresh, and
   the extension's memory*.
@@ -523,7 +533,19 @@ against the 27 documentation:
   picks one. With all widgets sharing one set of settings that isn't needed for settings, but the
   same mechanism could carry the name.
 
-Finding this out is a to-do under the macOS phase.
+Looked up 2026-10-11, for the iOS widgets: nobody was found who has given a placed widget a value
+of its own without the person choosing it, and the nearest way is reported not to work.
+`PGR Widgets - iOS.md`, *Whether anyone has made a setting that is hidden and different for each
+widget*.
+
+**Tried the same day, on iOS 27, and a placed widget cannot be given a name.** A value made up in
+code as a setting's default is asked for once, when the app is installed, and every widget placed
+afterwards gets that one value. Two widgets of one size set alike are fed from one timeline: the
+extension is asked once for each different setting at each size, not once for each widget. A
+delay made up for each line of the settings menu did tell apart widgets whose duration had been
+picked, and left the menu with nothing ticked; Syd dropped it for a fixed list that the system
+ticks. So on iOS there is no name, and one cache for each duration at each size.
+`PGR Widgets - iOS.md`, *The trial, and what was built*. Not tried on the Mac.
 
 ## The proof of concept, in the existing app
 
@@ -637,7 +659,9 @@ blur-replace, and a widget may not honour all of them.
   no name yet. Looked up 2026-10-10: the system gives a placed widget none, and tells two widgets
   apart only by their settings; `Plans/PGR Widgets - iOS.md`, *Telling one widget from another*. Syd
   chose two settings for that: the interval, and a second whose only job is to make a widget
-  different.
+  different. The second came to nothing on 2026-10-11, when it was tried on iOS: *Telling widgets
+  apart*. The iOS widgets have one cache for each duration at each size; the Mac's still has one
+  for each size.
 - **Walking the folder once.** Each picture fetched walks the whole folder again to choose one at
   random, holding only the one path. Fine for a folder of thousands; not looked at beyond that.
 - **The release script.** `Scripts/release-build.sh` checks the nested bundles it knows by name,
@@ -938,7 +962,12 @@ and then we can test photos access".
   - *A source is chosen in proportion to how many pictures it holds*, so that every picture has an
     equal chance. *Seen with 0.7 (5) installed*, above.
   - *One source's trouble does not stop the others.* A folder that can't be read is passed over.
-    The widget says what went wrong only when no source gave it a picture.
+    The widget says what went wrong only when no source gave it a picture. Since 2026-10-11 there
+    is one exception, in the code both platforms share: a source Photos did not answer for stops
+    the pick, since asking another would wait as long again. A request to Photos for a picture is
+    given up on after 15 seconds; the Mac's widget then shows "Can't get a picture" with the
+    reason, and asks again at its own time. The waits that double are the iOS widgets' alone.
+    `PGR Widgets - iOS.md`, *When Photos does not answer*.
   - *Photos is not asked to download.* A photograph that is only in iCloud comes back as whatever
     smaller copy is on the Mac, or not at all. That was the agent's choice, for fear of a download
     of unknown length inside a widget's wake. Syd, 2026-10-08: "After this run, I do want the pics
@@ -1138,7 +1167,9 @@ and then we can test photos access".
   per placed widget. The system's Edit Widget panel is made for exactly that: a widget declares a
   choice, the system keeps each placed widget's answer and hands it to the extension on every wake.
   Against that, Design Decisions says all of the settings are reached through the menubar app,
-  which would need the app to tell placed widgets apart. Not decided.
+  which would need the app to tell placed widgets apart. Not decided. On iOS it was decided by
+  building it, 2026-10-11: the Edit Widget panel, with the one choice named "Change Every". An
+  app cannot tell placed widgets of one size and one setting apart at all.
 - **No controls go on the widget's face.** Syd, 2026-10-08: "I don't want to have to cram the
   controls into the small of an extra-small widgets available space". The Edit Widget panel is not
   drawn in the widget's space, and not by us: the widget declares one choice, "Update every", and

@@ -70,6 +70,9 @@ public struct SeveralSources: PictureSource {
     /// when no source gave a picture, so that a widget with nothing to show
     /// can say why instead of saying there are no pictures.
     ///
+    /// **A source Photos did not answer for stops the pick.** No other source
+    /// is asked, and its count is kept. `TimeLimit`.
+    ///
     /// **A source that did not give a picture is forgotten**, whether it
     /// failed or held less than its count said, so that it is counted again
     /// next time. One that said how many it holds on the way is remembered by
@@ -120,6 +123,11 @@ public struct SeveralSources: PictureSource {
                     known[source.countName] = nil
                 }
                 if let resize = picked.resize { return resize }
+            } catch let late as TimedOut {
+                // Photos is not answering, and asking it for another source's
+                // picture would wait as long again. What the source holds is
+                // still what it held.
+                throw late
             } catch {
                 known[source.countName] = nil
                 trouble = trouble ?? error

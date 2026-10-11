@@ -35,32 +35,35 @@ public struct LibrarySourceCounts: SourceCounts {
             }
             return 1
         }
-        return try source.counted?.pictureCount()
+        return try source.counted()?.pictureCount()
     }
 }
 
 extension SourceSpec {
     /// The source as something that gives its first picture, for a picture
     /// wanted at once. A folder has no first, and gives any of its own.
-    var firstPicture: (any PictureSource)? {
+    ///
+    /// The library is a parameter, here and below, so that a test can hand
+    /// over one that does not answer.
+    func firstPicture(in library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) -> (any PictureSource)? {
         switch kind {
-        case .photosCollection: PhotosSource(collection: locator, pick: .first)
-        case .photosSelection: SelectedPhotosSource(pick: .first)
-        default: counted
+        case .photosCollection: PhotosSource(collection: locator, library: library, pick: .first)
+        case .photosSelection: SelectedPhotosSource(library: library, pick: .first)
+        default: counted(in: library)
         }
     }
 
     /// The source as something pictures are counted in and taken from: a
     /// folder, a Photos collection, or the photographs picked with limited
     /// access. Nil for a kind the widgets do not show from.
-    var counted: (any CountedSource)? {
+    func counted(in library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) -> (any CountedSource)? {
         switch kind {
         case .folder:
             FolderSource(folder: URL(filePath: locator, directoryHint: .isDirectory), recursive: recursive)
         case .photosCollection:
-            PhotosSource(collection: locator)
+            PhotosSource(collection: locator, library: library)
         case .photosSelection:
-            SelectedPhotosSource()
+            SelectedPhotosSource(library: library)
         default:
             nil
         }

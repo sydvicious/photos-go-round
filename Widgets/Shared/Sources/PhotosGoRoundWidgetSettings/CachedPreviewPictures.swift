@@ -15,17 +15,22 @@ import TinyCache
 
 public struct CachedPreviewPictures: PreviewPictures {
     private let directory: URL
+    private let library: any PhotoLibraryPictures
 
-    /// - Parameter directory: Somewhere of the app's own to keep the pictures
-    ///   and the counts, such as a folder in its caches.
-    public init(directory: URL) {
+    /// - Parameters:
+    ///   - directory: Somewhere of the app's own to keep the pictures and the
+    ///     counts, such as a folder in its caches.
+    ///   - library: Where Photos sources get their pictures. A test hands
+    ///     over one of its own.
+    public init(directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
         self.directory = directory
+        self.library = library
     }
 
     public func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
-            source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
+            source: source(for: sources), fitting: box, fillLimit: 1)
         // Whoever asked shows "No Photos found" for an error and for nothing
         // alike, so which it was is said here. Nothing found is an empty
         // album as often as a fault, and is asked again every few seconds, so
@@ -57,32 +62,43 @@ public struct CachedPreviewPictures: PreviewPictures {
     public func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
-            source: Self.source(for: [], counts: directory), fitting: box, fillLimit: 1)
+            source: source(for: []), fitting: box, fillLimit: 1)
         return (try? cache.lastShown()) ?? nil
     }
 
     /// Fetches one picture ahead of time and keeps it waiting, so that the
     /// next `next` has it without asking any source. A widget does this
     /// after it has handed over what it is showing.
-    public func makeReady(from sources: [SourceSpec], fitting box: CGSize) {
+    ///
+    /// Nothing fetched is no matter, since the next `next` fetches for
+    /// itself. Photos not answering is thrown, so that whoever asked waits
+    /// before asking again.
+    public func makeReady(from sources: [SourceSpec], fitting box: CGSize) throws {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
-            source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
-        _ = try? cache.fill(to: 1)
+            source: source(for: sources), fitting: box, fillLimit: 1)
+        do {
+            try cache.fill(to: 1)
+        } catch let late as TimedOut {
+            throw late
+        } catch {}
     }
 
     /// Each source is tried in the order it was chosen, and the first that
     /// gives a picture is the one. A source that cannot be read is passed
-    /// over, as one with nothing in it is.
+    /// over, as one with nothing in it is. One Photos did not answer for is
+    /// not: the next would wait as long again, so that is thrown.
     public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
         let folder = folder(for: sources, fitting: box)
         for spec in sources {
-            guard let source = spec.firstPicture else { continue }
+            guard let source = spec.firstPicture(in: library) else { continue }
             let cache = TinyCache(directory: folder, source: source, fitting: box, fillLimit: 1)
             do {
                 if let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file {
                     return file
                 }
+            } catch let late as TimedOut {
+                throw late
             } catch {
                 Log.widget.error(
                     """
@@ -113,9 +129,9 @@ public struct CachedPreviewPictures: PreviewPictures {
     /// One source made of every chosen one the preview can read: folders,
     /// Photos collections, and the photographs picked with limited access. Every picture has an equal chance, whichever of
     /// them it is in, as in a widget.
-    private static func source(for specs: [SourceSpec], counts directory: URL) -> any PictureSource {
+    private func source(for specs: [SourceSpec]) -> any PictureSource {
         SeveralSources(
-            specs.compactMap(\.counted),
+            specs.compactMap { $0.counted(in: library) },
             remembering: RememberedCounts(file: directory.appending(path: "counts.json")))
         // The same file a row's count is written to.
     }
@@ -129,7 +145,7 @@ public struct CachedPreviewPictures: PreviewPictures {
 extension CachedPreviewPictures: SourceCounts {
     public func count(of source: SourceSpec) throws -> Int? {
         let count = try LibrarySourceCounts().count(of: source)
-        if let count, let counted = source.counted {
+        if let count, let counted = source.counted(in: library) {
             // Nothing is remembered of an empty source, as in
             // `SeveralSources`: it is asked again each time. A pick may be
             // writing its own counts to the same file at this moment, and an

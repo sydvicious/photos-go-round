@@ -39,6 +39,36 @@ struct TinyCacheTests {
         #expect(source.timesAsked == 1)
     }
 
+    @Test("When the source gives no next picture, the one shown last is still kept")
+    func lastShownKeptWhenTheSourceFails() throws {
+        let scratch = try ScratchFolder()
+        let (cache, source) = try cache(in: scratch)
+        let shown = try cache.take(upTo: 1, from: noon, every: 60)
+        source.fail()
+
+        #expect(throws: StubSource.Failed.self) { try cache.take(upTo: 1, from: noon + 60, every: 60) }
+
+        #expect(try cache.lastShown()?.lastPathComponent == shown.first?.file.lastPathComponent)
+        #expect(try cache.lastShown() != nil)
+    }
+
+    @Test("A source with no picture to give leaves the one shown last where it is")
+    func lastShownKeptWhenTheSourceHasNone() throws {
+        let scratch = try ScratchFolder()
+        let (cache, _) = try cache(in: scratch)
+        let shown = try cache.take(upTo: 1, from: noon, every: 60)
+        // Another source, with nothing in it, asked through the same folder:
+        // as when the first of two chosen sources is empty.
+        let empty = TinyCache(
+            directory: scratch.url.appending(path: "cache", directoryHint: .isDirectory),
+            source: StubSource([]), fitting: box, fillLimit: 20)
+
+        #expect(try empty.take(upTo: 1, from: noon + 60, every: 60).isEmpty)
+
+        #expect(try cache.lastShown()?.lastPathComponent == shown.first?.file.lastPathComponent)
+        #expect(try cache.lastShown() != nil)
+    }
+
     @Test("A cache that has shown nothing has no last picture, and fetches none to have one")
     func noLastShown() throws {
         let scratch = try ScratchFolder()

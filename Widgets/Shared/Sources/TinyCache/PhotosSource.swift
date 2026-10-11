@@ -143,7 +143,12 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         public var errorDescription: String? { "Photos access is \(status)." }
     }
 
-    public init() {}
+    /// How long Photos has to hand over one picture.
+    private let limit: Duration
+
+    public init(limit: Duration = TimeLimit.forAPicture) {
+        self.limit = limit
+    }
 
     public func count(inCollection identifier: String) throws -> Int {
         try pictures(inCollection: identifier)?.count ?? 0
@@ -155,7 +160,7 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
 
     public func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? {
         guard let assets = try selected(), assets.count > 0 else { return nil }
-        return Self.picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
+        return try picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
     }
 
     private static func index(_ pick: PicturePick, among count: Int) -> Int {
@@ -209,12 +214,29 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         inCollection identifier: String, fitting box: CGSize, pick: PicturePick
     ) throws -> LibraryPicture? {
         guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
-        return Self.picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
+        return try picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
     }
 
-    private static func picture(of asset: PHAsset, fitting box: CGSize) -> LibraryPicture? {
+    /// The request, with a time limit on it: Photos can leave one unanswered
+    /// for good. `TimeLimit`.
+    private func picture(of asset: PHAsset, fitting box: CGSize) throws -> LibraryPicture? {
+        do {
+            return try TimeLimit.run(within: limit) { Self.request(asset, fitting: box) }
+        } catch let late as TimedOut {
+            Log.widget.error(
+                """
+                \(Log.widgetsTag, privacy: .public) Photos did not answer in time for a \
+                \(asset.pixelWidth)x\(asset.pixelHeight) photograph \
+                asked for at \(Int(box.width))x\(Int(box.height)): \
+                \(late.localizedDescription, privacy: .public)
+                """)
+            throw late
+        }
+    }
+
+    private static func request(_ asset: PHAsset, fitting box: CGSize) -> LibraryPicture? {
         let options = PHImageRequestOptions()
-        // The caller is a widget building a timeline, on a thread it may block.
+        // On a thread that may block: `TimeLimit` runs this on one.
         options.isSynchronous = true
         options.deliveryMode = .highQualityFormat
         options.resizeMode = .exact

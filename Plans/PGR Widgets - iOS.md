@@ -22,14 +22,7 @@ The app and the extension are built and run on the simulators; what is under eac
 left of it. The to-dos are Claude's unless they say otherwise.
 
 - **Phase 1** — The app. Complete; Syd, 2026-10-11.
-- **Phase 2** — The widget extension. What is left of it is each widget's own settings, and the
-  cache for each widget that they make possible. Syd, 2026-10-11.
-  - Settings for each widget: how often it changes, which is five minutes for all today, and an
-    invisible seed whose only job is to make a widget different. Whether a setting can be both
-    hidden and different for each placed widget is the spike to run first. *Telling one widget
-    from another*.
-  - A cache for each widget. There is one for each size today, so two widgets of one size share
-    it; the system gives a widget nothing to be told apart by but its settings.
+- **Phase 2** — The widget extension. Complete; Syd, 2026-10-11.
 - **Phase 3** — When a source is wrong. A phase of its own, since it kept being moved out of
   Phase 1: Syd, 2026-10-11. *When a source goes wrong*.
   - The alert, and the picker again, when a source is wrong at opening; and the removal if it is
@@ -69,10 +62,6 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   the agent's `PhotosEndpointTests` ("Key 'authorization' not found"), then one in
   `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
   that fail when the Mac is busy are still worth a look.
-- **A request to Photos for a picture has no time limit.** The preview no longer makes two at
-  once, which is what never came back; see *One fetch at a time*. A single request that Photos
-  does not answer would still be waited on for ever, by the preview and by a widget. Decide what
-  each does then.
 - **A phone always offers the tall fourth size.** Syd, 2026-10-11, after a run that showed only
   three. The preview offers it only once a widget has been handed it, and Apple's table has no
   figure for it, so the table needs one of our own: a large and a medium with the gap between
@@ -145,6 +134,13 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **The preview's bounds are as tall as the large size, from the top of the view, with the widget
   centered in them.** Choosing another size moves nothing else. Syd, 2026-10-10. When the view is
   too short for the bounds, the widget is at the top.
+- **Nothing of the widget shows outside the preview's bounds, on any side.** A taller size
+  scrolled up was drawn on under the bar, to the top of the screen. Syd, 2026-10-11: "the
+  preview widget scrolling should not bleed into the navigation bar. Should be bounded by the
+  size of the large widget on all four sides". The bounds are as wide as the view, with the
+  widget in the middle of them, so on a phone that is the large size's own box. On an iPad the
+  width stays the view's, so the extra large shows whole when there is room: Syd, the same day,
+  over holding the width to the large size's there too.
 - **The lists go under the preview when a heading and one row fit there, and otherwise the
   preview is at the left and the lists beside it.** That is an iPhone on its side, and a short
   iPad window. Syd, 2026-10-10: "Go back to the preview on the left if the bottom text does not
@@ -157,7 +153,7 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   Syd, 2026-10-10. *Taking a source out of a list*.
 - **No About page, and no button on this screen for the "How to add a widget" page.** The page is
   the wizard's. Syd, 2026-10-10.
-- **Nothing in this view sets how often a widget changes.** That is to be each widget's own
+- **Nothing in this view sets how often a widget changes.** That is each widget's own
   setting, and it belongs to the widget (`Plans/Photos-Go-Round Widgets.md`, *Design Decisions*).
 
 *The preview*
@@ -202,6 +198,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   the preview the last opens the system's settings when tapped. Syd, 2026-10-09 and 2026-10-10.
 - **The app carries a full-resolution picture of its icon, and the faces draw it from a copy no
   bigger than it is shown.** Syd, 2026-10-10.
+- **A photograph greyed over with "Scanning…", when Photos has not answered for the next one.**
+  In the preview and on a widget. Syd, 2026-10-11: "put the scanning overlay over whatever is
+  showing so the user knows something is wrong". *When Photos does not answer*.
 
 *The collections*
 
@@ -261,12 +260,37 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **The app writes its sources into the App Group container, and the widgets read them there.**
   iOS has no other way, and the menubar app takes what is built. *The App Group comes first on
   iOS*.
-- **A widget changes every five minutes, until there are settings for it.** As on the Mac. Syd,
-  2026-10-09.
-- **Each widget is to have its own cache, told from the others by two settings: its interval,
-  and a second whose only job is to make a widget different.** Syd hopes the second is an
-  invisible random seed. Today there is one cache for each size. Syd, 2026-10-10. *Telling one
-  widget from another*.
+- **A widget's one setting is how often it changes: *Change Every*, in the system's Edit Widget
+  panel.** Syd, 2026-10-11: "We need to add a settings panel and the item is a menu with
+  durations". The durations are those of `Plans/Photos-Go-Round Widgets.md` without one minute,
+  and a widget nobody has set changes every five minutes.
+- **One minute is not offered.** The system reloaded a 1-minute widget after five, and every
+  change of picture is a reload. Syd, 2026-10-11, on the simulator's evidence; his rule of
+  2026-10-08 was that it "is dropped if the system won't honour it". Not tried on a phone.
+- **The Mac's widgets and these need not offer the same durations.** Syd, 2026-10-11: "The Mac
+  and iOS can have different settings". So `Plans/Photos-Go-Round Widgets.md` keeps its list, one
+  minute included.
+- **The durations are a fixed list, so the menu ticks the one a widget is set to.** Syd,
+  2026-10-11: "The tick is more important than the hair-brained scheme to try to have two
+  same-size widgets with the same duration showing different pictures". So two widgets of one
+  size set to one duration are one widget, and show the same picture at the same moment. The
+  scheme was a delay of 1 to 500 milliseconds made up for each line of the menu, his of earlier
+  that day; it worked for a widget whose duration had been picked, and it left the menu with
+  nothing ticked. *The trial, and what was built*.
+- **There is a cache for each setting at each size.** That is as near as the system allows to one
+  for each widget. One that no placed widget has any more is cleared away at the next wake: a
+  widget set to something else, or taken off the Home Screen, leaves its folder behind. Syd,
+  2026-10-11.
+- **A request to Photos for a picture is given up on after a time limit, and a new one is made
+  after a wait that doubles each time in a row.** Syd, 2026-10-11: "When it times out start a
+  new request. Do exponential delays before asking again up to 30 minutes", and "don't stop.
+  After exponential delays reaches thirty minutes keep trying every 30 minutes". The limit is 15
+  seconds and the first wait 5; both figures are Claude's. *When Photos does not answer*.
+- **The app's preview waits a minute at most.** Syd, 2026-10-11: "Previews in the app wait for
+  1 minute max".
+- **Meanwhile what is showing stays, with "Scanning…" over it.** Syd, 2026-10-11: "If there is
+  already a photo loaded just keep displaying it. If not use the scanning… overlay on the app
+  icon". The picture kept is the file already in the cache, on disk, and so is a widget's wait.
 - **A widget starts as the preview does: the first source's first picture, then the weighed
   picks.** Syd, 2026-10-10: "of course, each widget will be doing this as well".
 - **In the gallery, a size with no picture of its own shows another size's; with no picture
@@ -886,9 +910,60 @@ fetch follows.
 Claude had first put the stall down to the simulator's Photos daemon, because restarting the
 simulator cleared it. It cleared because that launch happened to make one request.
 
-The iOS widget's timeline holds a lock across its wake, as the Mac's does, which keeps its own
-requests apart the same way. Whether two processes asking at once, the app and a widget, can do
+The iOS widget's wakes do their work one at a time, through `SerialWork`, which keeps its own
+requests apart the same way. That was an `NSLock` until 2026-10-11; Syd, 2026-09-17, wants none.
+The Mac's widget still holds one across its wake. Whether two processes asking at once, the app and a widget, can do
 the same thing was not tried.
+
+## When Photos does not answer
+
+Built 2026-10-11. A request to Photos for a picture had no time limit, so one that Photos never
+answered was waited on for ever, by the preview and by a widget.
+
+- **The limit is on the request itself**, in `SystemPhotoLibraryPictures`: 15 seconds, then
+  `TimedOut` is thrown. `TimeLimit` runs the request on a thread that may block and waits for it
+  only so long. Counting a source has no limit; on a large library that is slow and not stuck.
+- **The request given up on is not stopped.** PhotoKit's synchronous request cannot be
+  cancelled. Its thread stays blocked until Photos answers or the process ends, and the new
+  request is made beside it. Two at once is what never came back on 2026-10-10, *One fetch at a
+  time*, so whether the new one is answered is not known. Syd, 2026-10-11, is not worried by
+  that: it is what the doubling waits are for.
+- **The wait is `RequestBackoff`**: 5 seconds, doubling, to 30 minutes for a widget and one
+  minute for the app's preview, and then that long each time for as long as Photos does not
+  answer. An answer ends it, with a picture or with none.
+- **A widget keeps its wait in `asking.json`**, beside its pictures, since each wake may be a
+  new process. A wake inside the wait asks Photos nothing. The timeline it hands over is due
+  again when the wait is over, whatever the widget is set to; the system reloads a widget no
+  sooner than five minutes on, so the short waits come to five minutes there.
+- **The preview keeps its wait in memory**, and other sources chosen end it. During it a
+  picture kept from last time is still looked for, so another size chosen shows its own.
+- **No other source is asked when one goes unanswered.** Passing over a source in trouble is
+  right for a folder that cannot be read, and here it would wait 15 seconds more for each. Its
+  count is kept, too: a count is forgotten when a source fails, and counting again is the slow
+  part.
+- **The cache used to delete the picture on show before fetching the next**, which left nothing
+  to keep up when the fetch failed. `TinyCache.take` now clears what was shown only once there
+  is something to show in its place. That holds for a source with nothing in it as well: with
+  two sources chosen and the first empty, the first's turn was deleting the picture before the
+  second was asked.
+- **The agent had solved this already, in its own way**, and it was not looked at first: Syd,
+  2026-10-11, "didn't we solve this in the PGR service?". `BoundedPhotoLibrary` runs each call to
+  Photos against `Deadline`, and `SourceBench` rests a source that only times out, doubling to
+  an hour. Neither fits as it is: the widgets ask for a picture at the widget's size through a
+  binding of their own, synchronously, and a widget's wait has to last from one wake to the
+  next. Bringing the two together is in `TODO.md`.
+- **The app lists Photos collections through `BoundedPhotoLibrary`**, since 2026-10-11. It was
+  the plain `SystemPhotoLibrary`, with no limit, though the bounded one is in a target the app
+  already links. Not tried against the collections sheet: *Claude iPhone* has limited access,
+  where the Photos button opens the system's own picker.
+- **The Mac's widget gets the limit and not the waits.** It shares the request. It shows "Can't
+  get a picture" with the reason, and asks again at its own time, as for any other failure.
+
+**How it was tried.** On *Claude iPhone*, with a build whose limit was a billionth of a second,
+so that every request was given up on. Both widgets kept their own pictures with "Scanning…"
+over them, their waits went 5, 10 and 20 seconds, and the preview asked again 5 and then 10
+seconds on. With the real limit back, the next wake got a picture and `asking.json` was gone.
+A request that Photos really leaves unanswered has not been seen since the limit went in.
 
 ## The files and folders
 
@@ -922,7 +997,7 @@ Mac a bookmark the app leaves is what the widget opens today (`Widgets/macOS/Sou
 From memory, not checked: iOS bookmarks are made without the Mac's security-scope option, and
 whether an extension can open one its app made is not something I know. If it can't, a folder's
 pictures would have to be copied into the App Group container, or folders would work only in the
-preview. The spike is Phase 2's, after the list can be added to. If the answer is no, the list
+preview. The spike is Phase 4's, after the list can be added to. If the answer is no, the list
 stands and what changes is what adding a folder does underneath.
 
 **Folders in iCloud Drive** may not be downloaded. From memory: reading one can mean waiting for
@@ -1086,10 +1161,8 @@ Looked up 2026-10-10, before building a cache for each widget.
   developer forum, not from Apple's documentation: there is no way to tell them apart "by
   design", and the system appears to feed both from one timeline. So they would show the same
   picture at the same moment whatever the extension kept for each.
-- **So a cache for each widget can only be a cache for each set of settings.** Today the widget
-  has no settings, and one cache for each size, in the extension's own caches under the family's
-  name. When it has its own interval, widgets set differently are different widgets, and ones set
-  alike are not.
+- **So a cache for each widget can only be a cache for each set of settings.** Widgets set
+  differently are different widgets, and ones set alike are not.
 
 **Two settings, then.** Syd, 2026-10-10, chose that widgets of one size differ by the interval
 and by "a second setting whose only job is to make a widget different", so that two with the
@@ -1102,11 +1175,103 @@ that's ok".
 have some kind of invisible random seed as a setting". So nothing for a person to see or set:
 each widget gets a seed of its own when it is placed, and keeps it. Whether the system allows a
 setting that is both hidden and different for each placed widget is not known; what was found
-above says it gives a widget no identity of its own. To be tried before anything is built on it.
+above says it gives a widget no identity of its own. Tried 2026-10-11, and it does not: *The trial, and what was built*.
 
 Sources: Apple, [AppIntentTimelineProvider](https://developer.apple.com/documentation/widgetkit/appintenttimelineprovider);
 Apple Developer Forums, [Is it possible to uniquely identify a widget during timeline
 creation?](https://developer.apple.com/forums/thread/738251).
+
+### Whether anyone has made a setting that is hidden and different for each widget
+
+Looked up 2026-10-11. Nobody was found who has. Every answer found, from 2020 to 2024, says a
+placed widget has no identity besides its settings, and each way of slipping one in has a report
+against it. None of it is from Apple's documentation, and none was tried here.
+
+- **`WidgetInfo.id` is not one.** Apple's page calls it "the stable identity of the widget", but
+  its type is `WidgetInfo`: the value is its own identity, which is the kind, the size and the
+  settings again. It is also what the app gets from `WidgetCenter`, not something a timeline
+  provider is handed.
+- **A default made fresh for each widget is the nearest thing, and is reported not to work.** A
+  setting's default can come from code: `defaultResult()` on an entity's query, which is how
+  Apple's Notes widget arrives already set to a note. A seed made there would be invisible until
+  someone opened Edit Widget. But a developer reported in October 2024 that `defaultResult()` is
+  called when the first widget is placed and not for the ones placed after it, which get the
+  first one's value. An Apple engineer asked for a bug report, FB15592256; the thread ends there
+  with no fix. If that still holds, every widget would get the same seed. Not tried on 26 or 27.
+- **A value set in the provider is not kept.** Reported in 2020, of the older kind of settings: a
+  provider that fills in a missing setting draws correctly, but the widget's stored settings do
+  not change.
+- **Nothing was found that lets the app write a placed widget's settings.** It can read them.
+- **Whether a setting can be kept out of Edit Widget is not known.** A settings type can say which
+  of its settings the panel lists, and show some only when another has a given value. No source
+  found says a setting left off the list is hidden.
+- **What apps do instead is a choice the person makes in Edit Widget.** Widgetsmith is the usual
+  example: the app holds named designs, and the placed widget is set to one of them. That is the
+  named settings of `Photos-Go-Round Widgets.md`, *Telling widgets apart*.
+- **Reloading goes by the settings too.** Reported on Apple's forum: a reload reaches the other
+  widgets only where their settings are exactly equal.
+
+Three Stack Overflow questions ask the same thing. The site would not let them be read; the one
+excerpt seen says "you don't get any id for the widget so you cannot distinguish two widgets with
+the same configuration".
+
+**What this does to the invisible seed.** It is not ruled out, because the one report against it
+is from 2024 and of unknown system version. It is unlikely enough that the trial comes first: a
+setting whose default is a fresh value each time it is asked for, two widgets placed, and the log
+read for whether they got different values.
+
+### The trial, and what was built
+
+Tried 2026-10-11 on *Claude iPhone*, iOS 27: two small widgets side by side, each with its
+settings drawn across its face, and the log read.
+
+- **A setting left out of the panel's summary is hidden.** Edit Widget listed the two settings
+  the summary named and not the two it left out.
+- **A default made in code is asked for once, and every widget gets it.** `defaultResult()` ran
+  when the app was installed, and not when a widget was placed. The second widget got the first
+  one's value. So the report of 2024 holds on iOS 27, and there is no invisible seed.
+- **A value made up when the settings are created is not kept.** It was a new one each time the
+  extension was asked.
+- **Widgets set alike are fed from one timeline.** The second widget was never asked about. It
+  showed the first one's entry, down to a number made up two minutes before. The extension is
+  asked once for each different setting at each size: not once for each widget, and not once for
+  each size.
+- **What a person picks from a menu is stored as it was listed.** The menu is listed afresh each
+  time it opens. So a value made up for each line of it is a different one at each pick, and
+  that is what the delays rode on.
+- **A widget placed before there were settings takes the default** and goes on working, which is
+  what the widgets on Syd's phone will do.
+- **A widget whose settings type is gone stops reloading**: "Returned view collection was either
+  nil or empty". So `PhotoWidgetSettings` and its `changes` keep their names once widgets are
+  out.
+- **One minute was reloaded after five.** The 1-minute widget was asked at 11:02:29 and next at
+  11:07:32; the system had scheduled it so.
+- **Not found out:** whether a widget left at the default keeps the value it was placed with when
+  the default later changes.
+- **The menu cannot tick a duration that carries a delay.** The system ticks the line whose
+  value is the one stored, and every line was made up afresh. Listing the stored value needs the
+  widget's own settings where the menu is made; a query that asks for the settings it belongs
+  to, `@IntentParameterDependency` on its own parameter, never answered, and the menu stayed on
+  "Loading…" through two installs. So it was the tick or the delays.
+- **A fixed list is ticked by the system**, and its row in the panel is drawn just as the
+  made-up list's was: the duration in blue, with nothing to say a menu is behind it. Syd,
+  2026-10-11, had wanted that "a control that brings up a menu should look like a menu, not a
+  button"; the panel is the system's and nothing found changes the row, and of looking further
+  he said it "is not important".
+- **A widget whose stored setting is of a kind that is gone takes the default.** The two widgets
+  set under the delays went on working when the setting became a fixed list under another name.
+
+**What was built on it.** First, Syd's delays: a menu of durations, each with a delay of 1 to
+500 milliseconds, "and for now, we add that delay to the default". Then, the same day, the fixed
+list in its place, for the tick.
+
+- `PhotoWidgetSettings.swift`, in the extension: the one setting, *Change Every*, and
+  `ChangeEvery`, the durations it offers, each by its length in seconds.
+- The cache's folder is named for the size and the duration, as in `systemSmall-300`.
+- **The extension target extracts App Intents metadata**, which the project otherwise switches
+  off; without it the system cannot find the settings. `Plans/Build Plan.md`. On a simulator the
+  first install after the settings change may still not find them, Apple's own widgets failing
+  alike in the same log, and a second install does.
 
 ## Reading the logs
 
@@ -1132,8 +1297,9 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
 
 **What is logged:**
 
-- `timeline asked, systemLarge, 350x365 points, 2 sources` — the extension, once for each reload
-  of a widget, with the size the system handed it.
+- `timeline asked, systemLarge, 350x365 points, 2 sources, every 300 seconds` — the extension,
+  once for each reload of a widget, with the size the system handed it and what the widget is
+  set to.
 - `snapshot, systemLarge, 350x365 points, picture …` — the extension, each time the gallery asks
   for a preview, with the face it was given: a picture and whether its file was still there, or
   the plain icon, or scanning. *Info.*
@@ -1146,6 +1312,12 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   the error.
 - `Photos gave no picture for a … photograph asked for at …: …` — Photos listed a photograph and
   would not hand it over, with its reason.
+- `Photos did not answer in time for a … photograph asked for at …: …` — the request was given
+  up on at its time limit. *When Photos does not answer*.
+- `Photos did not answer, asking again in N seconds` — the extension, on a wake that got no
+  answer or came inside the wait.
+- `cleared away N caches no widget has: …` — the extension, when a wake found caches for
+  settings no placed widget has, with their folders' names. *Info.*
 
 ## Identity
 
@@ -1218,7 +1390,7 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
   release, and none of that is disturbed.
 - **What a wake does.** Each wake shows one picture and keeps one more, as on the Mac. It records
   the size it was handed, takes the face for these sources at this size, hands over a timeline of
-  one entry with the next reload five minutes on, and then fetches one more so the next wake has
+  one entry with the next reload the widget's own duration on, and then fetches one more so the next wake has
   it. With nothing to show it asks again in a quarter of an hour; the app also reloads the
   widgets when a person leaves it. It declares all five families; the system offers what the
   device has.

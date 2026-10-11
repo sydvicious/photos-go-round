@@ -8,6 +8,10 @@
 // **Three faces without a photograph**, on iOS and iPadOS: the plain icon with
 // nothing chosen, "Scanning…" while the first picture is fetched, and "No
 // Photos found" when sources are chosen and no picture is to be had.
+//
+// **When Photos does not answer, what is showing stays, with "Scanning…" over
+// it**, and Photos is asked again after a wait that doubles up to a minute.
+// Syd, 2026-10-11. `RequestBackoff`.
 
 import CoreGraphics
 import Foundation
@@ -15,6 +19,7 @@ import OSLog
 import Observation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
+import TinyCache
 
 /// Where the preview's pictures come from.
 public protocol PreviewPictures: Sendable {
@@ -71,6 +76,9 @@ public final class PreviewModel {
     private var askedMeanwhile = false
     /// Whether these sources have had their quick first picture.
     private var started = false
+    /// The wait before Photos is asked again, when it has not answered.
+    private var backoff = RequestBackoff(longest: RequestBackoff.longestForThePreview)
+    private let now: @Sendable () -> Date
     private var showing: WidgetFamily
     /// Whether the person has picked a size for themselves.
     private var personChose = false
@@ -87,8 +95,10 @@ public final class PreviewModel {
 
     public init(
         pictures: any PreviewPictures, device: WidgetDevice, screen: CGSize?, scale: CGFloat,
-        recorded: RecordedWidgetSizes? = nil
+        recorded: RecordedWidgetSizes? = nil,
+        now: @escaping @Sendable () -> Date = { .now }
     ) {
+        self.now = now
         self.pictures = pictures
         self.device = device
         self.screen = screen
@@ -191,6 +201,8 @@ public final class PreviewModel {
         guard sources != self.sources else { return }
         self.sources = sources
         started = false
+        // Other sources have not gone unanswered.
+        backoff.answered()
         content = sources.isEmpty ? .nothingChosen : .scanning
     }
 
@@ -274,21 +286,54 @@ public final class PreviewModel {
             let last = try? await BlockingWork.run { pictures.last(for: asked, fitting: box) }
             guard asked == sources else { return }
             if let last {
-                content = .picture(last)
+                // With "Scanning…" over it while Photos is not answering:
+                // it is from last time, and nothing newer is to be had yet.
+                content = backoff.failures > 0 ? .scanningOver(last) : .picture(last)
             }
-            let first = try? await BlockingWork.run { try pictures.first(from: asked, fitting: box) }
-            guard asked == sources else { return }
-            started = true
-            if let first {
-                content = .picture(first)
+            // Photos did not answer last time, and it is not yet time to ask.
+            guard backoff.wait(at: now()) == nil else { return }
+            do {
+                let first = try await BlockingWork.run { try pictures.first(from: asked, fitting: box) }
+                guard asked == sources else { return }
+                started = true
+                if let first {
+                    backoff.answered()
+                    content = .picture(first)
+                    return
+                }
+            } catch is TimedOut {
+                guard asked == sources else { return }
+                heldUp()
                 return
+            } catch {
+                guard asked == sources else { return }
+                started = true
             }
         }
+        guard backoff.wait(at: now()) == nil else { return }
         // Off the main actor, and off the cooperative pool: fetching reads
         // PhotoKit or walks a folder, and both block.
-        let picture = try? await BlockingWork.run { try pictures.next(from: asked, fitting: box) }
-        // Chosen again while this one was being fetched: it is not theirs.
-        guard asked == sources else { return }
-        content = picture.map { .picture($0) } ?? .noPhotos
+        do {
+            let picture = try await BlockingWork.run { try pictures.next(from: asked, fitting: box) }
+            // Chosen again while this one was being fetched: it is not theirs.
+            guard asked == sources else { return }
+            backoff.answered()
+            content = picture.map { .picture($0) } ?? .noPhotos
+        } catch is TimedOut {
+            guard asked == sources else { return }
+            heldUp()
+        } catch {
+            guard asked == sources else { return }
+            content = .noPhotos
+        }
+    }
+
+    /// Photos did not answer. What is showing stays, with "Scanning…" over a
+    /// photograph, and the wait before asking again starts.
+    private func heldUp() {
+        backoff.timedOut(at: now())
+        if case .picture(let file) = content {
+            content = .scanningOver(file)
+        }
     }
 }

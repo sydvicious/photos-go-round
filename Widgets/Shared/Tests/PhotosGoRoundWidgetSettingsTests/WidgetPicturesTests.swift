@@ -2,14 +2,174 @@ import CoreGraphics
 import Foundation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
+import Synchronization
 import Testing
 
 @testable import PhotosGoRoundWidgetSettings
 @testable import TinyCache
 
+/// A Photos library that answers from a script, and counts the pictures asked
+/// of it. With the script used up it gives a picture.
+final class ScriptedLibrary: PhotoLibraryPictures {
+    enum Answer { case picture, timeout }
+
+    private let script: Mutex<[Answer]>
+    private let asked = Mutex(0)
+
+    var timesAsked: Int { asked.withLock { $0 } }
+
+    init(_ script: [Answer]) {
+        self.script = Mutex(script)
+    }
+
+    func picture(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick
+    ) throws -> LibraryPicture? {
+        asked.withLock { $0 += 1 }
+        switch script.withLock({ $0.isEmpty ? Answer.picture : $0.removeFirst() }) {
+        case .picture:
+            return LibraryPicture(
+                image: try makeImage(width: 40, height: 30), originalWidth: 4032, originalHeight: 3024)
+        case .timeout:
+            throw TimedOut(after: .seconds(15))
+        }
+    }
+
+    func count(inCollection identifier: String) throws -> Int { 3 }
+
+    func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? { nil }
+
+    func selectedCount() throws -> Int { 0 }
+}
+
 @Suite("What a widget shows each time the system wakes it")
 struct WidgetPicturesTests {
     let box = CGSize(width: 200, height: 200)
+    let album = SourceSpec(kind: .photosCollection, locator: "A1")
+    let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+
+    // MARK: Caches no widget has any more
+
+    func folders(in root: ScratchFolder) throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: root.url.path(percentEncoded: false)).sorted()
+    }
+
+    @Test("A cache whose setting no widget has is cleared away, and the others are left")
+    func clearsAway() throws {
+        let root = try ScratchFolder()
+        for name in ["systemSmall", "systemSmall-300", "systemSmall-1800", "systemLarge-300"] {
+            try root.picture("\(name)/492x492/sources-1/shown/0000000001-AAAA.jpg")
+        }
+
+        let cleared = WidgetPictures.clearAway(in: root.url, keeping: ["systemSmall-1800", "systemLarge-300"])
+
+        #expect(cleared.sorted() == ["systemSmall", "systemSmall-300"])
+        #expect(try folders(in: root) == ["systemLarge-300", "systemSmall-1800"])
+    }
+
+    @Test("With no widget known of, nothing is cleared away: the list could not be had")
+    func clearsNothingWithoutAList() throws {
+        let root = try ScratchFolder()
+        try root.picture("systemSmall-300/492x492/sources-1/shown/0000000001-AAAA.jpg")
+
+        #expect(WidgetPictures.clearAway(in: root.url, keeping: []).isEmpty)
+        #expect(try folders(in: root) == ["systemSmall-300"])
+    }
+
+    @Test("A file beside the caches is left alone, and so is a folder that is not there")
+    func clearsOnlyFolders() throws {
+        let root = try ScratchFolder()
+        try root.picture("systemSmall-300/492x492/sources-1/shown/0000000001-AAAA.jpg")
+        _ = try root.text("notes.txt")
+
+        #expect(WidgetPictures.clearAway(in: root.url, keeping: ["systemLarge-300"]) == ["systemSmall-300"])
+        #expect(try folders(in: root) == ["notes.txt"])
+        #expect(WidgetPictures.clearAway(in: root.url.appending(path: "none"), keeping: ["x"]).isEmpty)
+    }
+
+    // MARK: When Photos does not answer
+
+    @Test("When Photos does not answer and nothing has been shown, it says it is scanning, and asks once")
+    func timedOutWithNothing() throws {
+        let cache = try ScratchFolder()
+        let library = ScriptedLibrary([.timeout])
+        let widget = WidgetPictures(directory: cache.url, library: library)
+
+        #expect(widget.turn(from: [album], fitting: box, at: start) == .scanning)
+
+        #expect(library.timesAsked == 1)
+        #expect(widget.wait(at: start) == 5)
+    }
+
+    @Test("When Photos does not answer, the picture already showing stays, with Scanning… over it")
+    func timedOutWithAPicture() throws {
+        let cache = try ScratchFolder()
+        let widget = WidgetPictures(directory: cache.url, library: ScriptedLibrary([.picture, .timeout]))
+
+        let shown = widget.turn(from: [album], fitting: box, at: start)
+        let held = widget.turn(from: [album], fitting: box, at: start + 300)
+
+        #expect(isPicture(shown))
+        #expect(scanningOver(held) == file(shown))
+        #expect(widget.wait(at: start + 300) == 5)
+    }
+
+    @Test("Scanning… stays over the picture through the wait, and goes when Photos answers")
+    func scanningOverUntilAnswered() throws {
+        let cache = try ScratchFolder()
+        let widget = WidgetPictures(directory: cache.url, library: ScriptedLibrary([.picture, .timeout]))
+        let shown = widget.turn(from: [album], fitting: box, at: start)
+        _ = widget.turn(from: [album], fitting: box, at: start + 300)
+
+        #expect(scanningOver(widget.turn(from: [album], fitting: box, at: start + 302)) == file(shown))
+        #expect(isPicture(widget.turn(from: [album], fitting: box, at: start + 305)))
+    }
+
+    @Test("It asks nothing more until the wait is over, and then makes a new request")
+    func waitsBeforeAskingAgain() throws {
+        let cache = try ScratchFolder()
+        let library = ScriptedLibrary([.timeout, .picture])
+        let widget = WidgetPictures(directory: cache.url, library: library)
+
+        #expect(widget.turn(from: [album], fitting: box, at: start) == .scanning)
+        #expect(widget.turn(from: [album], fitting: box, at: start + 2) == .scanning)
+        #expect(library.timesAsked == 1)
+
+        #expect(isPicture(widget.turn(from: [album], fitting: box, at: start + 5)))
+        #expect(library.timesAsked == 2)
+        #expect(widget.wait(at: start + 5) == nil)
+    }
+
+    @Test("Each time in a row that Photos does not answer, the wait doubles")
+    func waitDoubles() throws {
+        let cache = try ScratchFolder()
+        let widget = WidgetPictures(
+            directory: cache.url, library: ScriptedLibrary([.timeout, .timeout, .timeout]))
+
+        _ = widget.turn(from: [album], fitting: box, at: start)
+        _ = widget.turn(from: [album], fitting: box, at: start + 5)
+        #expect(widget.wait(at: start + 5) == 10)
+
+        _ = widget.turn(from: [album], fitting: box, at: start + 15)
+        #expect(widget.wait(at: start + 15) == 20)
+    }
+
+    @Test("Fetching one ahead starts the wait when Photos does not answer, and asks nothing during it")
+    func makeReadyWaits() throws {
+        let cache = try ScratchFolder()
+        let library = ScriptedLibrary([.picture, .timeout])
+        let widget = WidgetPictures(directory: cache.url, library: library)
+        #expect(isPicture(widget.turn(from: [album], fitting: box, at: start)))
+
+        widget.makeReady(from: [album], fitting: box, at: start)
+        #expect(library.timesAsked == 2)
+        #expect(widget.wait(at: start) == 5)
+
+        widget.makeReady(from: [album], fitting: box, at: start + 1)
+        #expect(library.timesAsked == 2)
+    }
+
+    // MARK: -
 
     func folder(_ scratch: ScratchFolder) -> SourceSpec {
         .folder(scratch.url.path(percentEncoded: false))
@@ -23,6 +183,12 @@ struct WidgetPicturesTests {
     func isPicture(_ face: WidgetFace.Content) -> Bool {
         if case .picture = face { return true }
         return false
+    }
+
+    /// The file of a picture that has "Scanning…" over it, by name.
+    func scanningOver(_ face: WidgetFace.Content) -> String? {
+        if case .scanningOver(let file) = face { return file.lastPathComponent }
+        return nil
     }
 
     /// The picture's file by name: the same file can be spelled two ways as a

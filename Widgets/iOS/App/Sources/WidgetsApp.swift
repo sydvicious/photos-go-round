@@ -12,7 +12,11 @@ import WidgetKit
 @main
 struct WidgetsApp: App {
     @State private var model = SettingsModel(
-        sources: ChosenSources(preferences: Self.shared), library: SystemPhotoLibrary(),
+        sources: ChosenSources(preferences: Self.shared),
+        // Bounded, as the agent's is: a library that has stopped answering
+        // is given up on and said to be so, where the plain one is waited on
+        // for ever. `BoundedPhotoLibrary`.
+        library: BoundedPhotoLibrary(SystemPhotoLibrary()),
         preview: PreviewModel(
             pictures: Self.pictures,
             device: Self.device,

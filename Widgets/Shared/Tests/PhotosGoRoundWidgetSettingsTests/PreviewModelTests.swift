@@ -4,12 +4,23 @@ import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
 import Synchronization
 import Testing
+import TinyCache
 
 @testable import PhotosGoRoundWidgetSettings
 
+/// A clock a test moves by hand.
+final class TestClock: Sendable {
+    private let moment = Mutex(Date(timeIntervalSinceReferenceDate: 800_000_000))
+
+    var now: Date { moment.withLock { $0 } }
+
+    func pass(_ seconds: TimeInterval) { moment.withLock { $0 += seconds } }
+}
+
 /// Pictures handed out from a script, with a note of what was asked for.
 final class ScriptedPictures: PreviewPictures {
-    enum Answer { case picture(String), none, failure }
+    /// `timeout` is Photos not answering in time.
+    enum Answer { case picture(String), none, failure, timeout }
 
     private let script: Mutex<[Answer]>
     private let firsts: Mutex<[Answer]>
@@ -42,6 +53,7 @@ final class ScriptedPictures: PreviewPictures {
         case .picture(let name): return URL(filePath: "/pictures/\(name)")
         case .none: return nil
         case .failure: throw CocoaError(.fileReadUnknown)
+        case .timeout: throw TimedOut(after: .seconds(15))
         }
     }
 
@@ -55,6 +67,7 @@ final class ScriptedPictures: PreviewPictures {
         case .picture(let name): return URL(filePath: "/pictures/\(name)")
         case .none: return nil
         case .failure: throw CocoaError(.fileReadUnknown)
+        case .timeout: throw TimedOut(after: .seconds(15))
         }
     }
 }
@@ -124,6 +137,136 @@ struct PreviewModelTests {
     }
 
     func picture(_ name: String) -> WidgetFace.Content { .picture(URL(filePath: "/pictures/\(name)")) }
+
+    // MARK: When Photos does not answer
+
+    @Test("When Photos does not answer, the picture already showing stays, with Scanning… over it")
+    func timedOutKeepsThePicture() async {
+        let preview = preview(ScriptedPictures([.picture("a.jpg"), .timeout]))
+        preview.show([cats])
+
+        await preview.advance()
+        await preview.advance()
+
+        #expect(preview.content == .scanningOver(URL(filePath: "/pictures/a.jpg")))
+    }
+
+    @Test("Scanning… comes off the picture when Photos answers")
+    func answeredAgain() async {
+        let clock = TestClock()
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([.picture("a.jpg"), .timeout, .picture("b.jpg")]), device: .phone,
+            screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        await preview.advance()
+        await preview.advance()
+
+        clock.pass(5)
+        await preview.advance()
+
+        #expect(preview.content == picture("b.jpg"))
+    }
+
+    @Test("However long Photos has not answered, the preview asks again after a minute")
+    func aMinuteAtMost() async {
+        let clock = TestClock()
+        let preview = PreviewModel(
+            pictures: ScriptedPictures(Array(repeating: .timeout, count: 8) + [.picture("c.jpg")]),
+            device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        // Eight in a row: a widget would wait more than ten minutes now.
+        for _ in 0..<7 {
+            await preview.advance()
+            clock.pass(30 * 60)
+        }
+        await preview.advance()
+
+        clock.pass(59)
+        await preview.advance()
+        #expect(preview.content == .scanning)
+
+        clock.pass(1)
+        await preview.advance()
+        #expect(preview.content == picture("c.jpg"))
+    }
+
+    @Test("When Photos does not answer and nothing is showing, it goes on saying it is scanning")
+    func timedOutStillScanning() async {
+        let preview = preview(ScriptedPictures([.timeout]))
+        preview.show([cats])
+
+        await preview.advance()
+
+        #expect(preview.content == .scanning)
+    }
+
+    @Test("When Photos does not answer for the first picture, it does not go on to ask for another")
+    func timedOutOnTheFirst() async {
+        let pictures = ScriptedPictures([.picture("a.jpg")], first: [.timeout])
+        let preview = preview(pictures)
+        preview.show([cats])
+
+        await preview.advance()
+
+        #expect(preview.content == .scanning)
+        #expect(pictures.calls == ["last", "first"])
+    }
+
+    @Test("It asks nothing more until the wait is over, and then makes a new request")
+    func waitsBeforeAskingAgain() async {
+        let clock = TestClock()
+        let pictures = ScriptedPictures([.timeout, .picture("b.jpg")])
+        let preview = PreviewModel(
+            pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        await preview.advance()
+        let asked = pictures.calls
+
+        clock.pass(2)
+        await preview.advance()
+        #expect(pictures.calls == asked)
+
+        clock.pass(3)
+        await preview.advance()
+        #expect(preview.content == picture("b.jpg"))
+    }
+
+    @Test("During the wait, a picture kept from last time shows with Scanning… over it, and Photos is not asked")
+    func keptPictureDuringTheWait() async {
+        let clock = TestClock()
+        let pictures = ScriptedPictures([], last: "kept.jpg", first: [.timeout])
+        let preview = PreviewModel(
+            pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        await preview.advance()
+        #expect(preview.content == .scanningOver(URL(filePath: "/pictures/kept.jpg")))
+
+        // Another size is chosen: its own kept picture is looked for, and
+        // nothing is asked of Photos.
+        preview.family = .small
+        clock.pass(1)
+        await preview.advance()
+
+        #expect(preview.content == .scanningOver(URL(filePath: "/pictures/kept.jpg")))
+        #expect(pictures.calls == ["last", "first", "last"])
+    }
+
+    @Test("Other sources are asked for at once, whatever the wait")
+    func otherSourcesAtOnce() async {
+        let clock = TestClock()
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([.timeout, .picture("b.jpg")]), device: .phone, screen: phone,
+            scale: 3, now: { clock.now })
+        preview.show([cats])
+        await preview.advance()
+
+        preview.show([iceland])
+        await preview.advance()
+
+        #expect(preview.content == picture("b.jpg"))
+    }
+
+    // MARK: -
 
     @Test("With nothing chosen it shows the plain icon, and asks for no picture")
     func nothingChosen() async {

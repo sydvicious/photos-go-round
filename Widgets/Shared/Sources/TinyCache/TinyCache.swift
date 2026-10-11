@@ -76,11 +76,19 @@ public struct TinyCache: Sendable {
     /// A new timeline replaces the last one, so what the last one was handed is
     /// settled first: a picture whose turn has come is deleted, and one whose
     /// turn had not come waits again instead of being wasted.
+    ///
+    /// **What was shown is cleared away only once there is something to show
+    /// in its place.** A fetch that throws, or gives nothing, leaves the
+    /// picture shown last where it is, so whoever asked can go on showing
+    /// it. Photos not answering is such a throw, and the first of two chosen
+    /// sources being empty is such a nothing. 2026-10-11.
     public func take(upTo count: Int, from start: Date, every interval: TimeInterval) throws -> [Showing] {
-        try settleShown(asOf: start)
+        try waitAgain(asOf: start)
         if try waiting().isEmpty {
             _ = try fetchOne()
         }
+        guard try !waiting().isEmpty else { return [] }
+        try clearShown(asOf: start)
         let manager = FileManager.default
         try manager.createDirectory(at: shownFolder, withIntermediateDirectories: true)
         var showings: [Showing] = []
@@ -135,17 +143,26 @@ public struct TinyCache: Sendable {
         return true
     }
 
-    private func settleShown(asOf now: Date) throws {
+    /// When a shown picture's turn was, or is to be.
+    private func turn(of file: URL) throws -> Date {
+        try file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+            ?? .distantPast
+    }
+
+    /// A picture handed to the last timeline whose turn had not come waits
+    /// again.
+    private func waitAgain(asOf now: Date) throws {
         let manager = FileManager.default
-        for file in try pictures(in: shownFolder) {
-            let turn = try file.resourceValues(forKeys: [.contentModificationDateKey])
-                .contentModificationDate ?? .distantPast
-            if turn > now {
-                try manager.createDirectory(at: waitingFolder, withIntermediateDirectories: true)
-                try manager.moveItem(at: file, to: waitingFolder.appending(path: file.lastPathComponent))
-            } else {
-                try manager.removeItem(at: file)
-            }
+        for file in try pictures(in: shownFolder) where try turn(of: file) > now {
+            try manager.createDirectory(at: waitingFolder, withIntermediateDirectories: true)
+            try manager.moveItem(at: file, to: waitingFolder.appending(path: file.lastPathComponent))
+        }
+    }
+
+    /// A picture whose turn has come is deleted.
+    private func clearShown(asOf now: Date) throws {
+        for file in try pictures(in: shownFolder) where try turn(of: file) <= now {
+            try FileManager.default.removeItem(at: file)
         }
     }
 

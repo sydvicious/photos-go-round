@@ -113,6 +113,24 @@ struct SeveralSourcesTests {
         #expect(full.timesAsked == 1)
     }
 
+    @Test("A source Photos did not answer for stops the pick: no other is asked, and its count is kept")
+    func timedOut() throws {
+        let scratch = try ScratchFolder()
+        let counts = counts(in: scratch)
+        let slow = TimingOutSource(countName: "slow", holding: 5)
+        let other = try stub(in: scratch, named: "other", counting: 1)
+        // The first draw is the slow source's.
+        let sources = SeveralSources(
+            [slow, other], remembering: counts, now: { Self.start }, choosing: { $0.lowerBound })
+
+        #expect(throws: TimedOut.self) {
+            try sources.writePicture(fitting: box, to: written(in: scratch))
+        }
+
+        #expect(other.timesAsked == 0)
+        #expect(counts.read()["slow"]?.pictures == 5)
+    }
+
     // MARK: Remembering
 
     @Test("A count is remembered, and not taken again within the hour")
@@ -330,5 +348,18 @@ struct SeveralSourcesTests {
         #expect(throws: StubSource.Failed.self) {
             try several([StubSource([]), broken], in: scratch).writePicture(fitting: box, to: written(in: scratch))
         }
+    }
+}
+
+/// A source that says how many pictures it holds, and is never answered when
+/// asked for one.
+struct TimingOutSource: CountedSource {
+    let countName: String
+    let holding: Int
+
+    func pictureCount() throws -> Int { holding }
+
+    func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        throw TimedOut(after: .seconds(15))
     }
 }

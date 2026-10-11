@@ -8,12 +8,17 @@
 //
 // **What a wake does is `WidgetPictures`**, in the shared package, where it
 // is tested. This file is the WidgetKit side of it.
+//
+// **How often is the widget's own setting**, and so is its cache: the system
+// asks once for each different setting at each size, and not once for each
+// widget. `PhotoWidgetSettings`.
 
 import Foundation
 import OSLog
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
 import PhotosGoRoundWidgetSettings
+import TinyCache
 import WidgetKit
 
 struct PhotoEntry: TimelineEntry {
@@ -21,14 +26,12 @@ struct PhotoEntry: TimelineEntry {
     let face: WidgetFace.Content
 }
 
-struct PhotoTimeline: TimelineProvider {
+struct PhotoTimeline: AppIntentTimelineProvider {
     /// The cache is not safe to call from two places at once, and a timeline
-    /// can be asked for while the last wake is still fetching.
-    private static let lock = NSLock()
-
-    /// How long each photograph stays up. Syd, 2026-10-09: "initially widgets
-    /// are set to change every five minutes until we do settings".
-    private static let interval: TimeInterval = 5 * 60
+    /// can be asked for while the last wake is still fetching. So each wake's
+    /// work is done in its turn, on a thread that may block: reading Photos
+    /// does.
+    private static let wakes = SerialWork(label: "com.sydpolk.photosgoround.widgets.wakes")
 
     /// How long to wait before asking again when there was nothing to show.
     /// The app also reloads the widgets when a person leaves it, so a change
@@ -39,8 +42,8 @@ struct PhotoTimeline: TimelineProvider {
         PhotoEntry(date: .now, face: .scanning)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping @Sendable (PhotoEntry) -> Void) {
-        let wake = Wake(context)
+    func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {
+        let wake = Wake(context, settings.every)
         let face = wake.pictures.last(
             from: wake.sources, fitting: wake.box, inGallery: context.isPreview)
         // What the gallery was given for each size, and whether the picture
@@ -52,7 +55,7 @@ struct PhotoTimeline: TimelineProvider {
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
             \(Self.describe(face), privacy: .public)
             """)
-        completion(PhotoEntry(date: .now, face: face))
+        return PhotoEntry(date: .now, face: face)
     }
 
     /// A face in a few words, for the log.
@@ -61,6 +64,7 @@ struct PhotoTimeline: TimelineProvider {
         case .picture(let file):
             let there = FileManager.default.fileExists(atPath: file.path(percentEncoded: false))
             return "picture \(file.lastPathComponent)\(there ? "" : ", which is gone")"
+        case .scanningOver(let file): return "scanning, over picture \(file.lastPathComponent)"
         case .nothingChosen: return "nothing chosen"
         case .scanning: return "scanning"
         case .noPhotos: return "no photos"
@@ -68,41 +72,84 @@ struct PhotoTimeline: TimelineProvider {
         }
     }
 
-    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<PhotoEntry>) -> Void) {
-        let wake = Wake(context)
+    func timeline(for settings: PhotoWidgetSettings, in context: Context) async -> Timeline<PhotoEntry> {
+        let wake = Wake(context, settings.every)
         let now = Date.now
-        // Once for each reload, with the size the system handed the widget.
+        // Once for each reload, with the size the system handed the widget
+        // and what the widget is set to.
         Log.widget.notice(
             """
             \(Log.widgetsTag, privacy: .public) timeline asked, \
             \(String(describing: context.family), privacy: .public), \
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
-            \(wake.sources.count) sources
+            \(wake.sources.count) sources, every \(wake.every.rawValue) seconds
             """)
 
-        let face = Self.lock.withLock { wake.pictures.turn(from: wake.sources, fitting: wake.box) }
+        let turned = try? await Self.wakes.run {
+            wake.pictures.turn(from: wake.sources, fitting: wake.box)
+        }
+        let face = turned ?? .noPhotos
         let showsPicture = if case .picture = face { true } else { false }
-        completion(
-            Timeline(
-                entries: [PhotoEntry(date: now, face: face)],
-                policy: .after(now + (showsPicture ? Self.interval : Self.retry))))
 
-        // One more for next time, after this one has been handed over. If the
+        // One more for next time, without this one waiting for it. If the
         // system stops the wake first, the next one fetches for itself.
         if showsPicture {
-            Self.lock.withLock { wake.pictures.makeReady(from: wake.sources, fitting: wake.box) }
+            Self.wakes.detached { wake.pictures.makeReady(from: wake.sources, fitting: wake.box) }
+        }
+        // And nobody waits for the tidying.
+        Task.detached { await Self.clearAway() }
+        // Photos did not answer: due again when the wait is over, and not at
+        // the widget's own time.
+        let wait = wake.pictures.wait()
+        if let wait {
+            Log.widget.notice(
+                """
+                \(Log.widgetsTag, privacy: .public) Photos did not answer, asking again in \
+                \(Int(wait.rounded(.up))) seconds
+                """)
+        }
+        let due = wait.map { Date.now + $0 } ?? now + (showsPicture ? wake.every.seconds : Self.retry)
+        return Timeline(entries: [PhotoEntry(date: now, face: face)], policy: .after(due))
+    }
+}
+
+extension PhotoTimeline {
+    /// Clears away the caches of settings no placed widget has: a widget set
+    /// to something else, or taken off the Home Screen, leaves its folder
+    /// behind.
+    fileprivate static func clearAway() async {
+        guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return }
+        var keeping: Set<String> = []
+        for widget in placed where widget.kind == PhotoWidget.kind {
+            // One whose settings cannot be read could be set to anything, so
+            // nothing is cleared.
+            guard let settings = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return }
+            keeping.insert(Wake.folder(for: widget.family, every: settings.every))
+        }
+        let kept = keeping
+        wakes.detached {
+            let cleared = WidgetPictures.clearAway(in: Wake.caches, keeping: kept)
+            guard !cleared.isEmpty else { return }
+            Log.widget.info(
+                """
+                \(Log.widgetsTag, privacy: .public) cleared away \(cleared.count) caches no widget has: \
+                \(cleared.sorted().joined(separator: ", "), privacy: .public)
+                """)
         }
     }
 }
 
-/// What one wake works with: what is chosen, the widget's size in pixels, and
-/// the widget's own cache.
-private struct Wake {
+/// What one wake works with: what is chosen, the widget's size in pixels, how
+/// often it changes, and the widget's own cache.
+private struct Wake: Sendable {
     let sources: [SourceSpec]
     let box: CGSize
+    let every: ChangeEvery
     let pictures: WidgetPictures
 
-    init(_ context: TimelineProviderContext) {
+    init(_ context: TimelineProviderContext, _ every: ChangeEvery) {
+        self.every = every
+
         // The App Group's preferences, which the app writes. The group's name
         // is in `Info.plist` because it differs by configuration.
         let group = Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String
@@ -118,14 +165,23 @@ private struct Wake {
         box = CGSize(
             width: context.displaySize.width * scale, height: context.displaySize.height * scale)
 
-        // One cache for each size, for now, as on the Mac: two widgets of one
-        // size share it. It is the extension's own, apart from the app's
-        // preview.
-        let every = URL.cachesDirectory.appending(path: "Widgets", directoryHint: .isDirectory)
         pictures = WidgetPictures(
-            directory: every.appending(path: String(describing: context.family), directoryHint: .isDirectory),
+            directory: Self.caches.appending(
+                path: Self.folder(for: context.family, every: every), directoryHint: .isDirectory),
             // So the gallery can show a size that has no picture yet one of
             // another size's.
-            among: every)
+            among: Self.caches)
+    }
+
+    /// Where every widget's cache is: the extension's own, apart from the
+    /// app's preview.
+    static var caches: URL {
+        URL.cachesDirectory.appending(path: "Widgets", directoryHint: .isDirectory)
+    }
+
+    /// One cache for each setting at each size, which is as near as there is
+    /// to one for each widget: `systemSmall-300`.
+    static func folder(for family: WidgetKit.WidgetFamily, every: ChangeEvery) -> String {
+        "\(family)-\(every.rawValue)"
     }
 }

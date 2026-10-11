@@ -2299,6 +2299,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
 				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
@@ -2327,6 +2328,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
 				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
@@ -2355,6 +2357,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				OTHER_CODE_SIGN_FLAGS = "";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
 				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
