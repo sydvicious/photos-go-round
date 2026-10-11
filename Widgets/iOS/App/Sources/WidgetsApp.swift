@@ -17,7 +17,10 @@ struct WidgetsApp: App {
             pictures: Self.pictures,
             device: Self.device,
             // Not known until there is a window; `ScreenReader` supplies it.
-            screen: nil, scale: 1),
+            screen: nil, scale: 1,
+            // What the widgets have been handed, which the table gives way to.
+            recorded: RecordedWidgetSizes(
+                suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)),
         // The same thing counts for the rows and picks for the preview, so
         // a source is counted once.
         counts: Self.pictures)

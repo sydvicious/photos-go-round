@@ -20,21 +20,23 @@ public struct WidgetPreviewView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     private let face: WidgetFace.Content?
-    private let width: CGFloat
+    private let viewport: CGSize
     private let onNoAccess: () -> Void
 
     /// - Parameters:
     ///   - face: What to draw in place of the preview's own face, when the
     ///     screen knows better: that Photos access is off.
-    ///   - width: How wide the view is, which decides the size it starts on.
+    ///   - viewport: The bounds the screen has for the preview, which decide
+    ///     the size it starts on.
     ///   - onNoAccess: A tap on the face that says Photos access is off.
     public init(
-        model: PreviewModel, face: WidgetFace.Content? = nil, width: CGFloat = .infinity,
+        model: PreviewModel, face: WidgetFace.Content? = nil,
+        viewport: CGSize = CGSize(width: CGFloat.infinity, height: .infinity),
         onNoAccess: @escaping () -> Void = {}
     ) {
         self.model = model
         self.face = face
-        self.width = width
+        self.viewport = viewport
         self.onNoAccess = onNoAccess
     }
 
@@ -54,12 +56,12 @@ public struct WidgetPreviewView: View {
             .accessibilityLabel("Widget preview")
             .accessibilityHint(face == .noAccess ? "Opens Settings" : "Shows the next photograph")
             .accessibilityAddTraits(.isButton)
-            // Where it starts: the largest size that is not too wide. Asked
-            // whenever the width or the sizes become known; the model leaves a
-            // size the person chose alone.
-            .onChange(of: Fit(width: width, tallest: model.tallest), initial: true) { _, fit in
-                guard fit.tallest > 0 else { return }
-                model.settle(within: fit.width)
+            // Where it starts: the largest size that fits its bounds with no
+            // scrolling. Asked whenever the bounds or the sizes become known;
+            // the model leaves a size the person chose alone.
+            .onChange(of: Fit(viewport: viewport, known: model.boundsHeight), initial: true) { _, fit in
+                guard fit.known > 0 else { return }
+                model.settle(within: fit.viewport)
             }
             // Chosen just now: fetch the first picture at once, without
             // waiting for the slideshow's next turn.
@@ -83,10 +85,10 @@ public struct WidgetPreviewView: View {
             }
     }
 
-    /// How wide the view is, and whether the sizes are known yet.
+    /// The preview's bounds, and whether the sizes are known yet.
     private struct Fit: Equatable {
-        let width: CGFloat
-        let tallest: CGFloat
+        let viewport: CGSize
+        let known: CGFloat
     }
 
     /// What the slideshow's task is keyed on.

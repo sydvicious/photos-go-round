@@ -13,7 +13,7 @@
 import CoreGraphics
 
 public enum WidgetFamily: String, CaseIterable, Identifiable, Sendable {
-    case small, medium, large, extraLarge
+    case small, medium, large, extraLarge, extraLargePortrait
 
     public var id: String { rawValue }
 
@@ -23,7 +23,25 @@ public enum WidgetFamily: String, CaseIterable, Identifiable, Sendable {
         case .medium: "Medium"
         case .large: "Large"
         case .extraLarge: "Extra Large"
+        case .extraLargePortrait: "Extra Large Portrait"
         }
+    }
+
+    /// The system's own name for the family, which is how a widget is told
+    /// which it is.
+    public var kitName: String {
+        switch self {
+        case .small: "systemSmall"
+        case .medium: "systemMedium"
+        case .large: "systemLarge"
+        case .extraLarge: "systemExtraLarge"
+        case .extraLargePortrait: "systemExtraLargePortrait"
+        }
+    }
+
+    public init?(kitName: String) {
+        guard let family = Self.allCases.first(where: { $0.kitName == kitName }) else { return nil }
+        self = family
     }
 }
 
@@ -57,6 +75,9 @@ public enum WidgetSizes {
         case .medium: return CGSize(width: row.wide, height: row.mediumHeight)
         case .large: return CGSize(width: row.wide, height: row.largeHeight)
         case .extraLarge: return row.extraWide.map { CGSize(width: $0, height: row.largeHeight) }
+        // Apple's table has no figure for it; it is known only from what a
+        // widget of that size was handed. `RecordedWidgetSizes`.
+        case .extraLargePortrait: return nil
         }
     }
 

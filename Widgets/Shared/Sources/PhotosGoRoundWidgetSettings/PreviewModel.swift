@@ -50,8 +50,13 @@ public final class PreviewModel {
             personChose = true
         }
     }
-    /// The sizes this device's Home Screen offers.
-    public let families: [WidgetFamily]
+    /// The sizes this device's Home Screen offers: the ones Apple's table
+    /// lists for it, and any other a widget here has been handed, which is how
+    /// the tall fourth size comes to be known.
+    public var families: [WidgetFamily] {
+        let listed = WidgetSizes.families(on: device)
+        return WidgetFamily.allCases.filter { listed.contains($0) || recordedSizes[$0] != nil }
+    }
 
     private let pictures: any PreviewPictures
     /// Which kind of device the widgets are on.
@@ -68,78 +73,99 @@ public final class PreviewModel {
     private var showing: WidgetFamily
     /// Whether the person has picked a size for themselves.
     private var personChose = false
+    private let recorded: RecordedWidgetSizes?
+    /// The sizes the widgets have been handed, as last read.
+    private var recordedSizes: [WidgetFamily: CGSize]
 
-    public init(pictures: any PreviewPictures, device: WidgetDevice, screen: CGSize?, scale: CGFloat) {
+    public init(
+        pictures: any PreviewPictures, device: WidgetDevice, screen: CGSize?, scale: CGFloat,
+        recorded: RecordedWidgetSizes? = nil
+    ) {
         self.pictures = pictures
         self.device = device
         self.screen = screen
         self.scale = scale
-        families = WidgetSizes.families(on: device)
+        self.recorded = recorded
+        recordedSizes = recorded?.all ?? [:]
         // The smallest, until `settle` knows what there is room for.
-        showing = families.first ?? .small
+        showing = WidgetSizes.families(on: device).first ?? .small
+    }
+
+    /// A size's real size on this device, in points: what a widget of that
+    /// size was handed, when one has been, and Apple's table for this screen
+    /// when not. The table is wrong by a few points on screens it has no row
+    /// for.
+    private func size(of family: WidgetFamily) -> CGSize? {
+        if let handed = recordedSizes[family] { return handed }
+        guard let screen else { return nil }
+        return WidgetSizes.size(of: family, on: device, screen: screen)
     }
 
     /// The widget's real size on this device, in points.
     ///
-    /// Nothing until the screen is known. An app finds its screen from the
-    /// window it is shown in, which it does not have when it starts.
+    /// Nothing until it is known: from a widget that has been handed it, or
+    /// from the table once the screen is known. An app finds its screen from
+    /// the window it is shown in, which it does not have when it starts.
     public var size: CGSize {
-        guard let screen else { return .zero }
-        return WidgetSizes.size(of: family, on: device, screen: screen) ?? .zero
+        size(of: family) ?? .zero
     }
 
-    /// The height of the tallest size this device offers, and nothing until
-    /// the screen is known.
-    public var tallest: CGFloat {
-        guard let screen else { return 0 }
-        return families.compactMap { WidgetSizes.size(of: $0, on: device, screen: screen)?.height }
-            .max() ?? 0
+    /// How tall the preview's bounds are: as tall as the large size. Syd,
+    /// 2026-10-10: "the preview's bounding box should be set to the Large
+    /// widget, because the fourth is very tall". A taller size is scrolled in
+    /// them. They do not follow the size that is showing, so choosing another
+    /// moves nothing else on the screen.
+    public var boundsHeight: CGFloat {
+        size(of: .large)?.height ?? families.compactMap { size(of: $0)?.height }.max() ?? 0
     }
 
     /// The width of the widest size this device offers, which is how wide the
     /// preview's column has to be when it has one of its own.
     public var widest: CGFloat {
-        guard let screen else { return 0 }
-        return families.compactMap { WidgetSizes.size(of: $0, on: device, screen: screen)?.width }
-            .max() ?? 0
+        families.compactMap { size(of: $0)?.width }.max() ?? 0
     }
 
-    /// Chooses the size to show for a view this wide, until the person
-    /// chooses for themselves: the largest that is not too wide, or the
-    /// smallest.
+    /// Chooses the size to show for the bounds the preview has, until the
+    /// person chooses for themselves.
     ///
-    /// Syd, 2026-10-10: "the decision on which view to show by default should
-    /// be the one whose width will fit". How tall the view is does not come
-    /// into it: the widget is drawn whole from the top of the view, and one
-    /// taller than the view runs off the bottom. It is applied each time the
-    /// width changes: turning the phone, or dragging an iPad's window.
-    /// Nothing happens before the screen is known, since no size is.
+    /// Syd, 2026-10-10, seeing the iPhone Duo's outer screen on its side start
+    /// on a size that had to be scrolled: "the initial one should be the
+    /// largest that fits without scrolling if possible, or the small one if
+    /// none of them fit without scrolling". It is the rule everywhere. The
+    /// bounds are no taller than the large size, so the tall fourth size is
+    /// never where it starts.
     ///
-    /// A size the person picked is left alone, whatever the width.
-    public func settle(within width: CGFloat) {
-        guard !personChose, let screen else { return }
+    /// It is applied each time the bounds change: turning the phone, or
+    /// dragging an iPad's window. Nothing happens before any size is known.
+    /// A size the person picked is left alone, whatever the bounds.
+    public func settle(within viewport: CGSize) {
+        guard !personChose, boundsHeight > 0 else { return }
         let fits = families.last { family in
-            guard let size = WidgetSizes.size(of: family, on: device, screen: screen) else { return false }
-            return size.width <= width
+            guard let size = size(of: family) else { return false }
+            return size.width <= viewport.width && size.height <= viewport.height
         }
         showing = fits ?? families.first ?? .small
     }
 
     /// The shape that stands for a size in the bar: the widget's own
-    /// proportions, scaled so that the tallest size is `height` tall. Syd,
+    /// proportions, scaled so that the large size is `height` tall. Syd,
     /// 2026-10-10: "proportionately-sized round rects for each available
     /// size".
+    ///
+    /// A size taller than the large is drawn a little taller than it and no
+    /// more: in proportion it would be twice the height of the bar.
     ///
     /// Before the screen is known the proportions are those of the smallest
     /// device in the table, so the bar is never empty.
     public func shape(of family: WidgetFamily, height: CGFloat) -> CGSize {
-        let screen = screen ?? .zero
-        let tallest =
-            families.compactMap { WidgetSizes.size(of: $0, on: device, screen: screen)?.height }.max() ?? 0
-        guard tallest > 0, let size = WidgetSizes.size(of: family, on: device, screen: screen) else {
-            return .zero
+        func known(_ family: WidgetFamily) -> CGSize? {
+            recordedSizes[family] ?? WidgetSizes.size(of: family, on: device, screen: screen ?? .zero)
         }
-        return CGSize(width: size.width * height / tallest, height: size.height * height / tallest)
+        let large = known(.large)?.height ?? families.compactMap { known($0)?.height }.max() ?? 0
+        guard large > 0, let size = known(family) else { return .zero }
+        return CGSize(
+            width: size.width * height / large,
+            height: min(size.height * height / large, height * 1.3))
     }
 
     /// The screen the app is on, and how many pixels it has to a point.
@@ -168,6 +194,10 @@ public final class PreviewModel {
     /// weighed by; Syd, 2026-10-10, chose that over counting everything again
     /// before the next picture.
     public func lookAgain() {
+        // A widget may have been placed, or handed another size, meanwhile.
+        if let handed = recorded?.all, handed != recordedSizes {
+            recordedSizes = handed
+        }
         if content == .noPhotos {
             content = .scanning
         }

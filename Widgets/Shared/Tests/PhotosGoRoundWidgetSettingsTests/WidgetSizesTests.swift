@@ -59,6 +59,6 @@ struct WidgetSizesTests {
 
     @Test("Each size has a name a person would call it")
     func names() {
-        #expect(WidgetFamily.allCases.map(\.title) == ["Small", "Medium", "Large", "Extra Large"])
+        #expect(WidgetFamily.allCases.map(\.title) == ["Small", "Medium", "Large", "Extra Large", "Extra Large Portrait"])
     }
 }

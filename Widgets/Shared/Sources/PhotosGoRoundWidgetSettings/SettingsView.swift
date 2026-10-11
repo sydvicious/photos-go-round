@@ -39,15 +39,15 @@ public struct SettingsView: View {
     public var body: some View {
         NavigationStack {
             GeometryReader { view in
-                let tallest = model.preview.tallest
+                let bounds = model.preview.boundsHeight
                 if SettingsLayout.listsFitUnderPreview(
-                    inViewOfHeight: view.size.height, underPreviewOf: tallest)
+                    inViewOfHeight: view.size.height, underPreviewOf: bounds)
                 {
                     // The preview's bounds from the top of the view, as tall
                     // as the tallest size so that choosing another size moves
                     // nothing, and the lists under them.
                     VStack(spacing: 0) {
-                        preview(in: CGSize(width: view.size.width, height: tallest), alignment: .center)
+                        preview(in: CGSize(width: view.size.width, height: bounds), alignment: .center)
                             .padding(.bottom, SettingsLayout.previewPadding)
                         lists
                     }
@@ -59,7 +59,7 @@ public struct SettingsView: View {
                     let column = SettingsLayout.previewColumn(
                         inViewOfWidth: view.size.width, widest: model.preview.widest)
                     let boundsFit = SettingsLayout.previewBoundsFit(
-                        inViewOfHeight: view.size.height, tallest: tallest)
+                        inViewOfHeight: view.size.height, bounds: bounds)
                     HStack(spacing: 0) {
                         // In the middle of the column when the tallest size
                         // fits there, and at the top when it does not.
@@ -207,7 +207,7 @@ public struct SettingsView: View {
     /// small".
     private func preview(in bounds: CGSize, alignment: Alignment) -> some View {
         ScrollView([.vertical, .horizontal]) {
-            WidgetPreviewView(model: model.preview, face: model.face, width: bounds.width) {
+            WidgetPreviewView(model: model.preview, face: model.face, viewport: bounds) {
                 openSettings()
             }
             // A widget smaller than the bounds sits in them and has nowhere

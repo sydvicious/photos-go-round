@@ -27,8 +27,8 @@ public enum SettingsLayout: Sendable {
     /// tall as the tallest size with the widget centered in them. When it is
     /// not, the widget is at the top of the view instead. Syd, 2026-10-10:
     /// "if the veritcal bounds won't fit, align the preview at the top".
-    public static func previewBoundsFit(inViewOfHeight height: CGFloat, tallest: CGFloat) -> Bool {
-        tallest <= height
+    public static func previewBoundsFit(inViewOfHeight height: CGFloat, bounds: CGFloat) -> Bool {
+        bounds <= height
     }
 
     /// Whether the lists go under the preview: whether, in a view this tall

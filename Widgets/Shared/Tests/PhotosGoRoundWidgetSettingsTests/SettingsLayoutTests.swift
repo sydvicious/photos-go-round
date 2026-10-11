@@ -5,15 +5,15 @@ import Testing
 
 @Suite("How the settings screen is laid out: the lists under the preview, or beside it when they do not fit")
 struct SettingsLayoutTests {
-    @Test("The preview's bounds are as tall as the tallest size when the view is tall enough for them")
+    @Test("The preview's bounds fit when the view is at least as tall as they are")
     func boundsFit() {
-        #expect(SettingsLayout.previewBoundsFit(inViewOfHeight: 700, tallest: 354))
-        #expect(SettingsLayout.previewBoundsFit(inViewOfHeight: 354, tallest: 354))
+        #expect(SettingsLayout.previewBoundsFit(inViewOfHeight: 700, bounds: 354))
+        #expect(SettingsLayout.previewBoundsFit(inViewOfHeight: 354, bounds: 354))
     }
 
     @Test("In a view too short for them the preview is at the top instead")
     func boundsDoNotFit() {
-        #expect(!SettingsLayout.previewBoundsFit(inViewOfHeight: 330, tallest: 354))
+        #expect(!SettingsLayout.previewBoundsFit(inViewOfHeight: 330, bounds: 354))
     }
 
     @Test("The lists are under the preview when a heading and one row fit there")

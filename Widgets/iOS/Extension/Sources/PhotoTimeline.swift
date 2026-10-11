@@ -50,8 +50,6 @@ struct PhotoTimeline: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<PhotoEntry>) -> Void) {
         let wake = Wake(context)
         let now = Date.now
-        // The size the system hands a widget is the only place its real size
-        // on this device can be learned.
         Self.log.notice(
             """
             \(SystemPhotoLibraryPictures.logTag, privacy: .public) timeline asked, \
@@ -87,6 +85,12 @@ private struct Wake {
         // is in `Info.plist` because it differs by configuration.
         let group = Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String
         sources = Preferences(suiteName: group).sources.filter(\.enabled)
+
+        // The size the system hands a widget is the only place its real size
+        // on this device can be learned, so it is written where the app's
+        // preview reads it. The gallery asks for every size it offers.
+        RecordedWidgetSizes(suiteName: group)
+            .record(context.displaySize, forFamily: String(describing: context.family))
 
         let scale = context.environmentVariants.displayScale?.max() ?? 3
         box = CGSize(

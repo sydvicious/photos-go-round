@@ -222,14 +222,14 @@ struct PreviewModelTests {
         #expect(preview.size == CGSize(width: 158, height: 158))
     }
 
-    @Test("It starts on the largest size whose width fits, however short the view")
+    @Test("It starts on the largest size that fits its bounds")
     func startsOnTheLargestThatFits() {
         let roomy = preview(ScriptedPictures([]))
-        roomy.settle(within: 361)
+        roomy.settle(within: CGSize(width: 361, height: 400))
         #expect(roomy.family == .large)
 
         let narrow = preview(ScriptedPictures([]))
-        narrow.settle(within: 300)
+        narrow.settle(within: CGSize(width: 300, height: 400))
         #expect(narrow.family == .small)
     }
 
@@ -237,20 +237,35 @@ struct PreviewModelTests {
     func padSizes() {
         let wide = PreviewModel(
             pictures: ScriptedPictures([]), device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2)
-        wide.settle(within: 820)
+        wide.settle(within: CGSize(width: 820, height: 400))
         #expect(wide.family == .extraLarge)
 
         let narrow = PreviewModel(
             pictures: ScriptedPictures([]), device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2)
-        narrow.settle(within: 373)
+        narrow.settle(within: CGSize(width: 373, height: 400))
         #expect(narrow.family == .large)
+    }
+
+    @Test("A size too tall for its bounds is passed over: it starts on the largest that needs no scrolling")
+    func tooTall() {
+        let short = preview(ScriptedPictures([]))
+        short.settle(within: CGSize(width: 361, height: 300))
+        #expect(short.family == .medium)
+
+        let shortAndNarrow = preview(ScriptedPictures([]))
+        shortAndNarrow.settle(within: CGSize(width: 300, height: 300))
+        #expect(shortAndNarrow.family == .small)
+
+        let nothingFits = preview(ScriptedPictures([]))
+        nothingFits.settle(within: CGSize(width: 361, height: 100))
+        #expect(nothingFits.family == .small)
     }
 
     @Test("A size that fits exactly is not cropped, so it fits")
     func fitsExactly() {
         let preview = preview(ScriptedPictures([]))
 
-        preview.settle(within: 338)
+        preview.settle(within: CGSize(width: 338, height: 400))
 
         #expect(preview.family == .large)
     }
@@ -259,31 +274,31 @@ struct PreviewModelTests {
     func nothingFits() {
         let preview = preview(ScriptedPictures([]))
 
-        preview.settle(within: 100)
+        preview.settle(within: CGSize(width: 100, height: 400))
 
         #expect(preview.family == .small)
     }
 
-    @Test("Until the person chooses, it follows the width: the largest that fits, each time the width changes")
+    @Test("Until the person chooses, it follows its bounds: the largest that fits, each time they change")
     func followsTheRoom() {
         let preview = preview(ScriptedPictures([]))
-        preview.settle(within: 300)
+        preview.settle(within: CGSize(width: 300, height: 400))
         #expect(preview.family == .small)
 
-        preview.settle(within: 361)
+        preview.settle(within: CGSize(width: 361, height: 400))
         #expect(preview.family == .large)
 
-        preview.settle(within: 200)
+        preview.settle(within: CGSize(width: 200, height: 400))
         #expect(preview.family == .small)
     }
 
     @Test("A size the person chose stays when the room changes, even when it no longer shows whole")
     func theirChoiceStaysThroughResizing() {
         let preview = preview(ScriptedPictures([]))
-        preview.settle(within: 361)
+        preview.settle(within: CGSize(width: 361, height: 400))
         preview.family = .large
 
-        preview.settle(within: 200)
+        preview.settle(within: CGSize(width: 200, height: 400))
 
         #expect(preview.family == .large)
     }
@@ -293,7 +308,7 @@ struct PreviewModelTests {
         let preview = preview(ScriptedPictures([]))
         preview.family = .small
 
-        preview.settle(within: 361)
+        preview.settle(within: CGSize(width: 361, height: 400))
 
         #expect(preview.family == .small)
     }
@@ -301,11 +316,11 @@ struct PreviewModelTests {
     @Test("Before the screen is known there is nothing to fit, and it still gets its start later")
     func settledOnlyOnceTheScreenIsKnown() {
         let preview = PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1)
-        preview.settle(within: 361)
+        preview.settle(within: CGSize(width: 361, height: 400))
         #expect(preview.family == .small)
 
         preview.use(screen: phone, scale: 3)
-        preview.settle(within: 361)
+        preview.settle(within: CGSize(width: 361, height: 400))
 
         #expect(preview.family == .large)
     }
@@ -347,15 +362,15 @@ struct PreviewModelTests {
         #expect(preview.content == picture("a.jpg"))
     }
 
-    @Test("The tallest size is the same whichever size is chosen")
+    @Test("The bounds are as tall as the large size, whichever size is chosen")
     func tallestWhicheverIsChosen() {
         let preview = preview(ScriptedPictures([]))
-        #expect(preview.tallest == 354)
+        #expect(preview.boundsHeight == 354)
 
         preview.family = .small
 
         #expect(preview.size == CGSize(width: 158, height: 158))
-        #expect(preview.tallest == 354)
+        #expect(preview.boundsHeight == 354)
     }
 
     @Test("Two changes asked for at once fetch one after the other, never together")
@@ -431,7 +446,7 @@ struct PreviewModelTests {
         #expect(PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1).widest == 0)
     }
 
-    @Test("Each size has a shape in its own proportions, the tallest as tall as asked")
+    @Test("Each size has a shape in its own proportions, the large as tall as asked")
     func shapes() {
         let preview = preview(ScriptedPictures([]))
 
@@ -459,7 +474,7 @@ struct PreviewModelTests {
     func noSpaceYet() {
         let preview = PreviewModel(pictures: ScriptedPictures([]), device: .phone, screen: nil, scale: 1)
 
-        #expect(preview.tallest == 0)
+        #expect(preview.boundsHeight == 0)
     }
 
     @Test("With nothing to show yet, last time's picture is up while the first is fetched")
@@ -548,6 +563,73 @@ struct PreviewModelTests {
 
         #expect(preview.content == picture("weighted.jpg"))
         #expect(pictures.calls == ["last", "first", "next"])
+    }
+
+    func recorded(_ sizes: [String: CGSize]) -> RecordedWidgetSizes {
+        let recorded = RecordedWidgetSizes(suiteName: scratchSuiteName("preview-sizes"))
+        for (family, size) in sizes { recorded.record(size, forFamily: family) }
+        return recorded
+    }
+
+    func preview(recorded: RecordedWidgetSizes) -> PreviewModel {
+        PreviewModel(
+            pictures: ScriptedPictures([]), device: .phone, screen: phone, scale: 3, recorded: recorded)
+    }
+
+    @Test("A size a widget was handed is used in place of the table's")
+    func recordedSize() {
+        let preview = preview(recorded: recorded(["systemSmall": CGSize(width: 164, height: 164)]))
+
+        preview.family = .small
+        #expect(preview.size == CGSize(width: 164, height: 164))
+
+        preview.family = .medium
+        #expect(preview.size == CGSize(width: 338, height: 158))
+    }
+
+    @Test("A size the table does not have is offered once a widget has been handed it")
+    func fourthSize() {
+        let sizes = recorded([:])
+        let preview = preview(recorded: sizes)
+        #expect(preview.families == [.small, .medium, .large])
+
+        sizes.record(CGSize(width: 338, height: 740), forFamily: "systemExtraLargePortrait")
+        preview.lookAgain()
+
+        #expect(preview.families == [.small, .medium, .large, .extraLargePortrait])
+        preview.family = .extraLargePortrait
+        #expect(preview.size == CGSize(width: 338, height: 740))
+    }
+
+    @Test("The bounds are as tall as the large size, however tall the fourth is")
+    func boundsAreTheLarge() {
+        let preview = preview(
+            recorded: recorded(["systemExtraLargePortrait": CGSize(width: 338, height: 740)]))
+
+        #expect(preview.boundsHeight == 354)
+    }
+
+    @Test("It does not start on a size taller than its bounds")
+    func doesNotStartOnTheTallOne() {
+        let preview = preview(
+            recorded: recorded(["systemExtraLargePortrait": CGSize(width: 338, height: 740)]))
+
+        preview.settle(within: CGSize(width: 400, height: 400))
+
+        #expect(preview.family == .large)
+    }
+
+    @Test("A size taller than the large has a shape a little taller than the large's, and no more")
+    func tallShape() {
+        let preview = preview(
+            recorded: recorded(["systemExtraLargePortrait": CGSize(width: 338, height: 740)]))
+
+        let large = preview.shape(of: .large, height: 24)
+        let tall = preview.shape(of: .extraLargePortrait, height: 24)
+
+        #expect(large.height == 24)
+        #expect(tall.width == large.width)
+        #expect(abs(tall.height - 24 * 1.3) < 0.001)
     }
 
     @Test("A picture is asked for at the widget's size in pixels")

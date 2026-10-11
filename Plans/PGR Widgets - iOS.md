@@ -21,10 +21,11 @@ after it. The to-dos under each phase are Claude's.
   - The alert, and the picker again, when a source is wrong at opening.
   - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
-  - The extension records each size it is handed, and the preview uses them. It logs them now
-    (`[PGR-Widgets] timeline asked`); on the iPhone 17 simulator a small widget was handed 164
-    by 164 points, where the table's nearest row says 158.
-  - A cache for each widget. There is one for each size, so two widgets of one size share it.
+  - The recorded sizes are one for each family. A device with two screens, the iPhone Duo, or
+    two orientations, an iPad, is handed more than one; the last one handed is what the preview
+    shows.
+  - A cache for each widget. There is one for each size today, so two widgets of one size share
+    it.
   - How often a widget changes, as each widget's own setting. It is five minutes for all.
   - Look at a widget's memory and its first wake on a real device with a large library.
   - Spike: can the extension open a folder the app chose?
@@ -325,6 +326,24 @@ screen (large is 321 by 324), and the 430 by 932 phone's on the larger. Both are
 real widget's size is measured there, which is what the extension's recorded sizes in Phase 2
 are for.
 
+**The preview uses the sizes the widgets are handed.** Syd, 2026-10-10. Each time the system
+asks the extension for a timeline or a snapshot it says how big the widget is, and the extension
+writes that down in the App Group's preferences (`RecordedWidgetSizes`). The preview uses a
+recorded size in place of the table's, and reads them again each time the app comes forward. The
+widget gallery asks for every size it offers, so opening our widget's page there records them
+all, with no widget placed.
+
+- **On the iPhone 17 simulator**, whose 402 by 874 screen the table has no row for: small 164.3
+  square, medium 349.7 by 164.3, large 349.7 by 365, and the tall fourth 349.7 by 565.7. The
+  table's nearest row had given 158, 338 by 158 and 338 by 354.
+- **There is a fourth size on a phone**, the system's "extra large portrait". The table has no
+  figure for it, so the preview offers it only once it has been recorded.
+- **The preview's bounds are as tall as the large size.** Syd: "I think the the preview's
+  bounding box should be set to the Large widget, because the fourth is very tall. The preview
+  itself should be the correct size and scrollable." It starts on the largest size that fits
+  those bounds, so never on the tall one, and in the bar a taller size's shape is a little taller than the large's and no
+  more.
+
 ## How the preview is drawn
 
 **It draws the widget's own view.** `PhotoWidgetView` is plain SwiftUI and takes an entry; the app
@@ -533,8 +552,12 @@ His words:
   scrolling is necessary. When it is not, you should be able to scroll it either way. This will
   allow the user to see all of the image in landscape on the phone, and when their iPad window
   is small". On top and at the left alike.
-- **The size it starts on is the largest whose width fits.** "the decision on which view to show
-  by default should be the one whose width will fit". The view's height does not come into it.
+- **The size it starts on is the largest that fits its bounds without scrolling, or the small
+  one when none does.** First it was the largest whose width fits: "the decision on which view
+  to show by default should be the one whose width will fit". Then, seeing the iPhone Duo's
+  outer screen on its side start on a size that had to be scrolled: "the initial one should be
+  the largest that fits without scrolling if possible, or the small one if none of them fit
+  without scrolling", and "We should do that for everything".
 - **The preview is whole, in bounds as tall as the tallest size, from the top of the view.** "Not
   clipped; the top aligned with the top of the view", and then: "The bounding of the preview
   should be high enough for the largest view, and the preview should be centered in it. I don't
@@ -1276,6 +1299,9 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
   iOS Extension`, and the app's scheme builds it and puts it in the app. The Mac's has an identifier for each build
   configuration, Mac sandbox entitlements, and a place in Photos-Go-Round.app's release, and none
   of that is disturbed.
+- **Each widget has its own cache, as in the widgets plan.** Two widgets showing the same picture
+  by chance is fine. Syd, 2026-10-10: "Each widget does have its own cache. But if each widget
+  ends up with the same picture by happenstance, that's ok".
 - **The app tells the widgets to look again when a person leaves it**, so a change of sources
   shows without waiting for a widget's next turn.
 - Debug, Release and Claude builds carry different identifiers, as on the Mac. See *Identity*.
