@@ -90,6 +90,15 @@ struct PhotoTimeline: AppIntentTimelineProvider {
         }
         let face = turned ?? .noPhotos
         let showsPicture = if case .picture = face { true } else { false }
+        // What the wake came to, and how long it took: a wake that never gets
+        // here was stopped by the system or is still waiting on a source.
+        Log.widget.notice(
+            """
+            \(Log.widgetsTag, privacy: .public) timeline answered, \
+            \(String(describing: context.family), privacy: .public), \
+            \(Self.describe(face), privacy: .public), after \
+            \(Int(Date.now.timeIntervalSince(now).rounded())) seconds
+            """)
 
         // One more for next time, without this one waiting for it. If the
         // system stops the wake first, the next one fetches for itself.

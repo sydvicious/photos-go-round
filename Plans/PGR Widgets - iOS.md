@@ -35,6 +35,12 @@ left of it. The to-dos are Claude's unless they say otherwise.
   - Another look at how a file or folder is taken out. The swipe is what there is. *Taking a
     source out of a list*.
   - What the person is told when something chosen cannot be added. It may belong to Phase 3.
+  - On Syd's phone, and his to run: an iCloud Drive folder after a restart.
+  - Decide how soon a widget looks again when an iCloud Drive folder has nothing on the phone.
+    It is a quarter of an hour. And the system may not ask even then: the phone's log for 15:01
+    to 15:23 on 2026-10-11, with the app killed, holds no wake of any widget.
+  - Decide whether a Photos collection goes through its photographs too when one gives no
+    picture, as a folder now does.
 - **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
   to-dos under *iOS and iPadOS* in `Plans/Photos-Go-Round Widgets.md`, which is closed; the rest
   of that plan's are in `TODO.md`. The widgets have run
@@ -44,7 +50,11 @@ left of it. The to-dos are Claude's unless they say otherwise.
   - A reading of the extension's memory on the phone, where the 30 MB ceiling is expected to
     be enforced. Nothing has been killed; no figure has been read.
   - Whether a widget can query Photos while the phone is locked, which is what CarPlay and
-    StandBy need.
+    StandBy need. And whether a widget is woken at all then: Syd's theory, 2026-10-11, after a
+    log of 21 minutes with no wake in it, is that "widgets don't update when the screen is
+    locked", and that "watch, car play, etc., will fire even if the phone is locked. It probably
+    depends on the surface the widget is actually on". With auto-lock off, the next log had a
+    burst of wakes every two and a half minutes, which fits.
   - Shrinking a very large picture without the whole of it in memory.
 - **Phase 6** — The first-time launch wizard. Syd, 2026-10-10: "we need a full-blown first-time
   launch wizard". Moved before the Store on 2026-10-11.
@@ -265,8 +275,18 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   Claude's, 2026-10-11, and Syd's to overrule. *The files and folders*, *Choosing*.
 - **A file or folder is opened through a bookmark, by the app as well as by its widgets, and
   never by its path.** The bookmarks are in the App Group container. Claude's, 2026-10-11.
-- **A folder in iCloud Drive does not show in a widget, and that waits for an iOS update.** The
-  app's preview shows it. Syd, 2026-10-11. In `TODO.md`.
+- **A widget always tries to show something, and says "No Photos found" only when every source
+  has been gone through and has none to give.** Syd, 2026-10-11: "I always want to try to show
+  something". The order is his: "a random file is determined from a random source like we have
+  been doing. If the file is not available, cycle the Sources until we find one. If we don't,
+  then go sequentailly through the orignal source", which is "go through the files in that source
+  sequentially until you find one, or until we determine that there are zero in that source, and
+  only then, show "No Photos Found"". After the first source the others are gone through too,
+  in the order they were drawn: Claude's reading of "always". Built for folders; a Photos
+  collection is drawn and passed over like any source, and cannot be gone through yet.
+- **Finding a picture may take a long time.** Syd, 2026-10-11: "widgets don't change files that
+  often, so taking a long time to find one is not a big deal", "we have at least five minutes".
+  From memory, not checked: the system gives one wake of a widget less than that, and stops it.
 - **What a bookmark cannot be left for is not added.** Only the log says so. Claude's,
   2026-10-11; what the person is told is not decided.
 
@@ -1077,21 +1097,86 @@ The name now goes by the path's spelling alone (`FolderBookmarks.fileName`). A f
 added before that has to be taken out and added again. With that done on the phone: Syd,
 2026-10-11, "Hey! The widgets are working now!", and then "I removed the icloud folder and the
 on-device files started showing up". While the iCloud Drive folder was chosen the
-widgets said "No Photos found", and the phone's own files did not show either. So the extension
-finds that bookmark now and still gets no picture; which step fails has not been read from its
-log.
+widgets said "No Photos found", and the phone's own files did not show either. The phone's log
+for those minutes: the extension, `opened Public through its bookmark, and it can be read: 90
+things in it`, and no error after it. So iOS lets the extension into an iCloud Drive folder
+through the app's bookmark. What a wake then did with the files is not in the log: the folder
+was chosen, with its bookmark under the new name, for 75 seconds before it was taken out, and
+"No Photos found" may have been left from the minutes before, when neither folder's bookmark
+could be found. The extension now logs what each wake came to.
 
-**iCloud Drive in a widget waits for an iOS update.** Syd, 2026-10-11: "Add that to the global
-TODO.md. They won't change it until there is a software update, and I run the beta updates, so I
-will see it". It is in `TODO.md`, and nothing more is built for it here: no copies, and no cache
-for them.
+**Then the widgets showed iCloud Drive's pictures.** Syd, 2026-10-11, with the downloads taken
+off the folder first, and the phone's own folder taken out of the list: "previews are woking",
+and of the widgets, "and I am seeing pictures from iCloud". So "No Photos found" was left over,
+and a widget reads an iCloud Drive folder through the app's bookmark. Not tried: that folder
+after a restart of the phone. The log collected then, 14:21 to 14:31, holds no line from the
+extension, so no wake fell inside it.
+
+**And a widget added after that said "No Photos found".** Syd, the same day: "I just added
+another widget and is says "No Photos found"", with the iCloud Drive folder the only source and
+the others still showing its pictures. The phone's log, 14:56 to 14:57, says why: the
+extension cannot read a file that is not on the phone. Each wake picks three files; 34 picks
+logged `download status NSURLUbiquitousItemDownloadingStatusNotDownloaded; reading it, The file
+couldn’t be opened. (NSCocoaErrorDomain 256)`, at once and with no wait. Five wakes of seven
+ended in "No Photos found"; two landed on a file that was on the phone and showed it. The app
+reads the same files, and reading one fetches it. Syd had it before the log was read: "I think
+that it is failing to download pictures, and showing No Photos found", and "when I went to reset
+the settings, I started getting No Photos Found". 
+**So a folder's pictures are picked from the files that are on the phone, and some of the rest
+are asked for.** Syd, 2026-10-11, choosing that over leaving it as a known limit. `DeviceFiles`,
+in `TinyCache`:
+
+- A pick is made among the files iCloud Drive has on the phone. A file that is not in iCloud
+  Drive always is.
+- As many of the others as the pick wanted are asked of iCloud Drive, with nobody waiting for
+  them, so that more are there next time. Nothing is copied: what comes is iCloud Drive's own
+  and the system's to take away.
+- With none on the phone they are tried all the same. The app's reading fetches one; a widget's
+  does not, and it says "No Photos found" until one has come.
+- A pick tries three files and gives up, and the next source is drawn. When no source has given
+  a picture, each folder is gone through file by file until one does, the ones on the phone
+  first, then the rest: Syd's rule, in *Design Decisions*, and `SeveralSources` is where the
+  order is kept. Every file is tried, the ones not on the phone as well, though a widget's reading
+  of one fails at once: Syd, 2026-10-11, "I prefer for the widget to try until the system kills
+  it or it runs out of files". One of them may have come since it was asked for.
+- The app's preview picks the same way, so it shows what a widget would.
+- A row's count, and the weight a folder has among the sources, is of all its pictures,
+  wherever they are.
+
+**With the screen kept unlocked and the app left running, every wake showed a picture.** The
+phone's log, 2026-10-11, 15:56 to 16:06: thirteen wakes, in bursts about two and a half minutes
+apart, each answered with a picture inside a second, and no file passed over. Syd: "This is
+working much better". Neither the app nor the extension asked iCloud Drive for anything in those
+ten minutes, so by then the whole folder was on the phone; the app, running for twenty minutes
+before, is what will have fetched it, three files a pick, and its asking is before the log
+begins.
+
+**The extension's asking is honoured, and the files come.** The phone's log, 2026-10-11, 16:05
+to 16:25, with the app killed and the downloads taken off the folder: eighteen times the
+extension logged `asked iCloud for 3 of 3 files that are not on the device`, with no refusal.
+The first wake to find nothing on the phone asked for three, failed to read the three it had
+picked, went through the folder, and had a picture inside a second: one had come already. All
+twenty wakes in the log showed a picture, and no line is the app's. So a widget shows an
+iCloud Drive folder by itself, without the app, and nothing more is needed from the app or from
+iOS.
+
+What a widget shows while a folder has nothing on the phone is "No Photos found", by Syd's rule:
+it has been gone through and has none to give. Not decided: how soon it looks again, which is a
+quarter of an hour as things are.
 
 **If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
 have to download files at new sizes, it sounds like we have to reproduce the caching that we do
 in the PGR Service", "so we don't fill up the phone". Nothing is copied as things are: a widget
 keeps the picture it is showing and one more, at its own size, for each setting at each size.
-A widget cannot read iCloud Drive through the bookmark, and Syd's answer to that is to wait for
-iOS and not to copy, below.
+A widget reads iCloud Drive through the bookmark and asks for what is not on the phone, above,
+so nothing has to be copied.
+
+**What iOS downloads from iCloud Drive to be read is not ours to bound.** The app's preview
+shows files that are not downloaded, so reading one fetches it. Syd, 2026-10-11: "the phone will
+undowload things 1. if it runs out of space; 2. opporunistically. I am not worried about iCloud
+downloads filling up the phone too terribly much", and "Much more concerned with copying files
+to app's filesystem". Copies of ours are the ones nothing evicts, which is the case against the
+copying route.
 
 **Folders in iCloud Drive** may not be downloaded. From memory: reading one can mean waiting for
 it, which a widget extension has little time for.
@@ -1426,6 +1511,18 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
 - `timeline asked, systemLarge, 350x365 points, 2 sources, every 300 seconds` — the extension,
   once for each reload of a widget, with the size the system handed it and what the widget is
   set to.
+- `timeline answered, systemLarge, picture …, after 2 seconds` — the extension, when a wake has
+  its face, with how long it took. A `timeline asked` with none after it is a wake the system
+  stopped, or one still waiting on a source.
+- `asked iCloud for 3 of 3 files that are not on the device` — the app or the extension, on a
+  pick from a folder that has files iCloud Drive has not fetched. `; the first refusal: …`
+  after it when asking was refused.
+- `went through a folder for a picture: N files gave none, and then one did` — the app or the
+  extension, when no source gave a picture to a pick and a folder was gone through. `…, and none
+  did` when it has nothing to give.
+- `a file gave no picture: download status …; reading it, …` — the app or the extension, for a
+  file with a picture's name that would not decode: whether iCloud has it on the device, and
+  what reading its first bytes gave. The file is not named.
 - `snapshot, systemLarge, 350x365 points, picture …` — the extension, each time the gallery asks
   for a preview, with the face it was given: a picture and whether its file was still there, or
   the plain icon, or scanning. *Info.*

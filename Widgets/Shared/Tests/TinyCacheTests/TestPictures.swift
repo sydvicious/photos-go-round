@@ -104,6 +104,9 @@ final class StubSource: CountedSource, @unchecked Sendable {
     private var counted = 0
     private var failing = false
     private var failingToWrite = false
+    private var goneThrough = 0
+    private var foundGoingThrough: URL?
+    private var failingGoingThrough = false
 
     /// - Parameters:
     ///   - declared: What it says it holds, when that is not how many
@@ -131,6 +134,25 @@ final class StubSource: CountedSource, @unchecked Sendable {
 
     /// Says how many it holds, and fails when asked for one of them.
     func failToWrite() { lock.withLock { failingToWrite = true } }
+
+    /// How many times it has been gone through for a picture.
+    var timesGoneThrough: Int { lock.withLock { goneThrough } }
+
+    /// Gone through, it comes to this picture. Without it, to none.
+    func find(goingThrough file: URL) { lock.withLock { foundGoingThrough = file } }
+
+    /// Fails when it is gone through.
+    func failGoingThrough() { lock.withLock { failingGoingThrough = true } }
+
+    func writePictureGoingThrough(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        let file: URL? = try lock.withLock {
+            goneThrough += 1
+            if failing || failingGoingThrough { throw Failed() }
+            return foundGoingThrough
+        }
+        guard let file else { return nil }
+        return try PictureResizer().write(file, fitting: box, to: destination)
+    }
 
     func pictureCount() throws -> Int {
         try lock.withLock {

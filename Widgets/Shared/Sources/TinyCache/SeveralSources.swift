@@ -73,6 +73,14 @@ public struct SeveralSources: PictureSource {
     /// **A source Photos did not answer for stops the pick.** No other source
     /// is asked, and its count is kept. `TimeLimit`.
     ///
+    /// **When no source gives a picture to a pick, each is gone through**, the
+    /// one drawn first before the others. Syd, 2026-10-11: "a random file is
+    /// determined from a random source like we have been doing. If the file
+    /// is not available, cycle the Sources until we find one. If we don't,
+    /// then go sequentailly through the orignal source", and "I always want
+    /// to try to show something". So there is nothing to show only when
+    /// every source has been gone through and has none to give.
+    ///
     /// **A source that did not give a picture is forgotten**, whether it
     /// failed or held less than its count said, so that it is counted again
     /// next time. One that said how many it holds on the way is remembered by
@@ -96,6 +104,8 @@ public struct SeveralSources: PictureSource {
 
         var trouble: (any Error)?
         var holding: [(source: any CountedSource, pictures: Int)] = []
+        // The sources a pick was made from, in the order they were drawn.
+        var drawn: [any CountedSource] = []
         let moment = now()
         for source in sources {
             do {
@@ -115,6 +125,7 @@ public struct SeveralSources: PictureSource {
                 chosen += 1
             }
             let source = holding.remove(at: chosen).source
+            drawn.append(source)
             do {
                 let picked = try source.writePictureAndCount(fitting: box, to: destination)
                 if let pictures = picked.pictures {
@@ -130,6 +141,17 @@ public struct SeveralSources: PictureSource {
                 throw late
             } catch {
                 known[source.countName] = nil
+                trouble = trouble ?? error
+            }
+        }
+        for source in drawn {
+            do {
+                if let resize = try source.writePictureGoingThrough(fitting: box, to: destination) {
+                    return resize
+                }
+            } catch let late as TimedOut {
+                throw late
+            } catch {
                 trouble = trouble ?? error
             }
         }

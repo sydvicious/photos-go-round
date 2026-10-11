@@ -349,6 +349,86 @@ struct SeveralSourcesTests {
             try several([StubSource([]), broken], in: scratch).writePicture(fitting: box, to: written(in: scratch))
         }
     }
+
+    // MARK: - When a pick gives nothing
+
+    /// Syd, 2026-10-11: "a random file is determined from a random source
+    /// like we have been doing. If the file is not available, cycle the
+    /// Sources until we find one. If we don't, then go sequentailly through
+    /// the orignal source".
+
+    /// A source that says it holds five and gives none of them to a pick.
+    /// Gone through, it comes to a picture when `finds` is set.
+    func barren(in scratch: ScratchFolder, named name: String, finds: Bool = false) throws -> StubSource {
+        let source = StubSource([], named: name, counting: 5)
+        if finds { source.find(goingThrough: try scratch.picture("originals/\(name).jpg")) }
+        return source
+    }
+
+    @Test("A source that gives nothing to a pick is passed over for the next, and none is gone through")
+    func nextSourceBeforeGoingThrough() throws {
+        let scratch = try ScratchFolder()
+        let first = try barren(in: scratch, named: "first", finds: true)
+        let second = try stub(in: scratch, named: "second")
+
+        let resize = try several([first, second], in: scratch).writePicture(fitting: box, to: written(in: scratch))
+
+        #expect(resize != nil)
+        #expect(first.timesAsked == 1)
+        #expect(second.timesAsked == 1)
+        #expect(first.timesGoneThrough == 0)
+    }
+
+    @Test("When no source gives a picture to a pick, the one drawn first is gone through")
+    func firstDrawnIsGoneThrough() throws {
+        let scratch = try ScratchFolder()
+        let first = try barren(in: scratch, named: "first", finds: true)
+        let second = try barren(in: scratch, named: "second", finds: true)
+
+        let resize = try several([first, second], in: scratch).writePicture(fitting: box, to: written(in: scratch))
+
+        #expect(resize != nil)
+        #expect(first.timesGoneThrough == 1)
+        #expect(second.timesGoneThrough == 0)
+    }
+
+    @Test("And then the others in the order they were drawn, until one gives a picture")
+    func thenTheOthers() throws {
+        let scratch = try ScratchFolder()
+        let first = try barren(in: scratch, named: "first")
+        let second = try barren(in: scratch, named: "second", finds: true)
+
+        let resize = try several([first, second], in: scratch).writePicture(fitting: box, to: written(in: scratch))
+
+        #expect(resize != nil)
+        #expect(first.timesGoneThrough == 1)
+        #expect(second.timesGoneThrough == 1)
+    }
+
+    @Test("With every source gone through and none giving a picture, there is none")
+    func noneAfterGoingThroughAll() throws {
+        let scratch = try ScratchFolder()
+        let first = try barren(in: scratch, named: "first")
+        let second = try barren(in: scratch, named: "second")
+
+        let resize = try several([first, second], in: scratch).writePicture(fitting: box, to: written(in: scratch))
+
+        #expect(resize == nil)
+        #expect(first.timesGoneThrough == 1)
+        #expect(second.timesGoneThrough == 1)
+    }
+
+    @Test("A source that fails when gone through does not stop the next")
+    func failureGoingThrough() throws {
+        let scratch = try ScratchFolder()
+        let first = try barren(in: scratch, named: "first")
+        first.failGoingThrough()
+        let second = try barren(in: scratch, named: "second", finds: true)
+
+        let resize = try several([first, second], in: scratch).writePicture(fitting: box, to: written(in: scratch))
+
+        #expect(resize != nil)
+    }
 }
 
 /// A source that says how many pictures it holds, and is never answered when
