@@ -14,7 +14,6 @@ import OSLog
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
 import PhotosGoRoundWidgetSettings
-import TinyCache
 import WidgetKit
 
 struct PhotoEntry: TimelineEntry {
@@ -36,23 +35,46 @@ struct PhotoTimeline: TimelineProvider {
     /// made there does not wait this long.
     private static let retry: TimeInterval = 15 * 60
 
-    private static let log = Logger(subsystem: "com.sydpolk.photosgoround", category: "widget")
-
     func placeholder(in context: Context) -> PhotoEntry {
         PhotoEntry(date: .now, face: .scanning)
     }
 
     func getSnapshot(in context: Context, completion: @escaping @Sendable (PhotoEntry) -> Void) {
         let wake = Wake(context)
-        completion(PhotoEntry(date: .now, face: wake.pictures.last(from: wake.sources, fitting: wake.box)))
+        let face = wake.pictures.last(
+            from: wake.sources, fitting: wake.box, inGallery: context.isPreview)
+        // What the gallery was given for each size, and whether the picture
+        // it names is still there to draw.
+        Log.widget.info(
+            """
+            \(Log.widgetsTag, privacy: .public) snapshot, \
+            \(String(describing: context.family), privacy: .public), \
+            \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
+            \(Self.describe(face), privacy: .public)
+            """)
+        completion(PhotoEntry(date: .now, face: face))
+    }
+
+    /// A face in a few words, for the log.
+    private static func describe(_ face: WidgetFace.Content) -> String {
+        switch face {
+        case .picture(let file):
+            let there = FileManager.default.fileExists(atPath: file.path(percentEncoded: false))
+            return "picture \(file.lastPathComponent)\(there ? "" : ", which is gone")"
+        case .nothingChosen: return "nothing chosen"
+        case .scanning: return "scanning"
+        case .noPhotos: return "no photos"
+        case .noAccess: return "no access"
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<PhotoEntry>) -> Void) {
         let wake = Wake(context)
         let now = Date.now
-        Self.log.notice(
+        // Once for each reload, with the size the system handed the widget.
+        Log.widget.notice(
             """
-            \(SystemPhotoLibraryPictures.logTag, privacy: .public) timeline asked, \
+            \(Log.widgetsTag, privacy: .public) timeline asked, \
             \(String(describing: context.family), privacy: .public), \
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
             \(wake.sources.count) sources
@@ -99,9 +121,11 @@ private struct Wake {
         // One cache for each size, for now, as on the Mac: two widgets of one
         // size share it. It is the extension's own, apart from the app's
         // preview.
+        let every = URL.cachesDirectory.appending(path: "Widgets", directoryHint: .isDirectory)
         pictures = WidgetPictures(
-            directory: URL.cachesDirectory
-                .appending(path: "Widgets", directoryHint: .isDirectory)
-                .appending(path: String(describing: context.family), directoryHint: .isDirectory))
+            directory: every.appending(path: String(describing: context.family), directoryHint: .isDirectory),
+            // So the gallery can show a size that has no picture yet one of
+            // another size's.
+            among: every)
     }
 }

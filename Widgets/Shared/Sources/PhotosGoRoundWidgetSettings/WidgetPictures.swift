@@ -22,11 +22,17 @@ import TinyCache
 
 public struct WidgetPictures: Sendable {
     private let pictures: CachedPreviewPictures
+    private let root: URL?
 
-    /// - Parameter directory: Somewhere of this widget's own to keep its
-    ///   pictures and its counts.
-    public init(directory: URL) {
+    /// - Parameters:
+    ///   - directory: Somewhere of this widget's own to keep its pictures
+    ///     and its counts.
+    ///   - root: The folder that holds every size's `directory`, when the
+    ///     sizes are kept side by side. It is where the gallery's preview of
+    ///     a size with no picture yet looks for another size's.
+    public init(directory: URL, among root: URL? = nil) {
         pictures = CachedPreviewPictures(directory: directory)
+        self.root = root
     }
 
     /// The face for this wake. May block: it reads Photos or walks a folder.
@@ -50,11 +56,55 @@ public struct WidgetPictures: Sendable {
     }
 
     /// What it showed last, with nothing asked of any source: for the widget
-    /// gallery, which wants a face at once. "Scanning…" when there is nothing
-    /// kept, since a picture is on its way.
-    public func last(from sources: [SourceSpec], fitting box: CGSize) -> WidgetFace.Content {
+    /// gallery, which wants a face at once.
+    ///
+    /// **A size that has shown nothing borrows another size's picture.** Syd,
+    /// 2026-10-10. Until a widget of a size has been placed, that size has no
+    /// picture of its own, and the gallery showed "Scanning…" for it. The
+    /// picture borrowed is the one made for the biggest widget, which loses
+    /// least when it is drawn larger.
+    ///
+    /// **With no picture from any size, the gallery shows the plain icon.**
+    /// Syd, 2026-10-10: "just the app icon without an overlay". Nothing is
+    /// being scanned there; a widget fetches once it is placed. Anywhere
+    /// else it is "Scanning…", since a picture is on its way.
+    public func last(
+        from sources: [SourceSpec], fitting box: CGSize, inGallery: Bool = false
+    ) -> WidgetFace.Content {
         guard !sources.isEmpty else { return .nothingChosen }
-        return pictures.last(for: sources, fitting: box).map { .picture($0) } ?? .scanning
+        if let own = pictures.last(for: sources, fitting: box) { return .picture(own) }
+        if let another = lastOfAnySize(from: sources) { return .picture(another) }
+        // The plain icon is the face for nothing chosen, and is what is
+        // wanted here too.
+        return inGallery ? .nothingChosen : .scanning
+    }
+
+    /// The last picture shown for these sources by any size under `root`,
+    /// preferring the one made for the most pixels. The layout is the
+    /// extension's: a folder for each size of widget, in it one for each
+    /// size in pixels, in that one for each list of sources.
+    private func lastOfAnySize(from sources: [SourceSpec]) -> URL? {
+        guard let root else { return nil }
+        let manager = FileManager.default
+        func folders(in folder: URL) -> [URL] {
+            (try? manager.contentsOfDirectory(
+                at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
+        }
+        let name = CacheFolders.name(forSources: CachedPreviewPictures.names(of: sources))
+        var best: (pixels: Int, file: URL)?
+        for sized in folders(in: root).flatMap(folders(in:)) {
+            // Named for its pixels, as in "600x600".
+            let sides = sized.lastPathComponent.split(separator: "x").compactMap { Int($0) }
+            guard sides.count == 2 else { continue }
+            let shown = sized.appending(path: name).appending(path: "shown")
+            guard let last = folders(in: shown).max(by: { $0.lastPathComponent < $1.lastPathComponent })
+            else { continue }
+            let pixels = sides[0] * sides[1]
+            if best == nil || pixels > best!.pixels {
+                best = (pixels, last)
+            }
+        }
+        return best?.file
     }
 
     /// Fetches the next wake's picture now, so that wake has it without

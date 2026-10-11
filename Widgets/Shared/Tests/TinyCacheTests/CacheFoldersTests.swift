@@ -56,4 +56,15 @@ struct CacheFoldersTests {
             try CacheFolders.folder(in: base, forSources: ["photos|album"])
         }
     }
+
+    @Test("A folder's name goes by its sources and not their order, and is the name the folder gets")
+    func name() throws {
+        let scratch = try ScratchFolder()
+
+        #expect(CacheFolders.name(forSources: ["a", "b"]) == CacheFolders.name(forSources: ["b", "a"]))
+        #expect(CacheFolders.name(forSources: ["a", "b"]) != CacheFolders.name(forSources: ["a", "c"]))
+        #expect(
+            try CacheFolders.folder(in: scratch.url, forSources: ["a", "b"]).lastPathComponent
+                == CacheFolders.name(forSources: ["a", "b"]))
+    }
 }

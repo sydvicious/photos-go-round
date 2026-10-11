@@ -109,4 +109,79 @@ struct WidgetPicturesTests {
 
         #expect(isPicture(widget.turn(from: [folder(pictures)], fitting: box)))
     }
+
+    /// Two sizes of widget, each with a cache of its own under one folder,
+    /// as the extension keeps them.
+    func sizes(in root: ScratchFolder) -> (small: WidgetPictures, large: WidgetPictures) {
+        (
+            WidgetPictures(directory: root.url.appending(path: "systemSmall"), among: root.url),
+            WidgetPictures(directory: root.url.appending(path: "systemLarge"), among: root.url)
+        )
+    }
+
+    @Test("In the gallery, a size with no picture of its own shows the last one another size showed")
+    func anotherSizesPicture() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+        let shown = small.turn(from: [folder(pictures)], fitting: box)
+
+        let borrowed = large.last(from: [folder(pictures)], fitting: CGSize(width: 600, height: 600))
+
+        #expect(file(shown) != nil)
+        #expect(file(borrowed) == file(shown))
+    }
+
+    @Test("Of the other sizes' pictures it takes the one made for the biggest widget")
+    func theBiggest() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+        let medium = WidgetPictures(directory: root.url.appending(path: "systemMedium"), among: root.url)
+        _ = small.turn(from: [folder(pictures)], fitting: box)
+        let wide = medium.turn(from: [folder(pictures)], fitting: CGSize(width: 400, height: 200))
+
+        let borrowed = large.last(from: [folder(pictures)], fitting: CGSize(width: 600, height: 600))
+
+        #expect(file(borrowed) == file(wide))
+    }
+
+    @Test("A picture from other sources than are chosen now is not shown")
+    func otherSources() throws {
+        let pictures = try ScratchFolder()
+        let others = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+        _ = small.turn(from: [folder(pictures)], fitting: box)
+
+        #expect(large.last(from: [folder(others)], fitting: CGSize(width: 600, height: 600)) == .scanning)
+    }
+
+    @Test("In the gallery, with no picture from any size, it shows the plain icon and not Scanning")
+    func galleryWithNothing() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+
+        #expect(large.last(from: [folder(pictures)], fitting: box, inGallery: true) == .nothingChosen)
+
+        let shown = small.turn(from: [folder(pictures)], fitting: box)
+        #expect(file(large.last(from: [folder(pictures)], fitting: box, inGallery: true)) == file(shown))
+    }
+
+    @Test("Its own last picture comes before another size's")
+    func itsOwnFirst() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+        _ = small.turn(from: [folder(pictures)], fitting: box)
+        let own = large.turn(from: [folder(pictures)], fitting: CGSize(width: 600, height: 600))
+
+        #expect(file(large.last(from: [folder(pictures)], fitting: CGSize(width: 600, height: 600))) == file(own))
+    }
 }

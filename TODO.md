@@ -347,3 +347,5 @@ Syd, 2026-10-09: "Add a line in the agent dashboard somewhere that loads by widg
 ## The name is "PhotosGoRound" everywhere
 
 Syd, 2026-10-10: "Name of the application needs to be changed to "PhotosGoRound" everywhere since the hyphenated name does not fit on the iOS springboard, and I want consistency."
+
+Every form of the name, whatever its case, is to read `photosgoround` or `PhotosGoRound`, with no hyphen. And no instance of `photogoround`, the name without its "s", is to be left anywhere, in any case. Syd, the same day: "all forms of the name, indepedent of case, say photosgoround or PhotosGoRound with no hyphen. No instances of photogoround should be left."

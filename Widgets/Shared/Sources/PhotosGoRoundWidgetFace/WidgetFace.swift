@@ -14,6 +14,7 @@
 // with "No Photos found" when sources are chosen and no picture is to be had.
 // And, 2026-10-10, with "No Photos Access" when Photos access is off.
 
+import ImageIO
 import SwiftUI
 
 #if canImport(UIKit)
@@ -34,6 +35,7 @@ public struct WidgetFace: View {
     }
 
     private let content: Content
+    @Environment(\.displayScale) private var displayScale
 
     public init(_ content: Content) {
         self.content = content
@@ -64,10 +66,14 @@ public struct WidgetFace: View {
     /// The icon, plain when there are no words and greyed over when there are.
     private func iconFace(words: String?) -> some View {
         ZStack {
-            Self.icon?
-                .resizable()
-                .scaledToFit()
-                .padding(8)
+            GeometryReader { space in
+                // No bigger than it is drawn. See `icon(side:scale:)`.
+                Self.icon(side: min(space.size.width, space.size.height) - 16, scale: displayScale)?
+                    .resizable()
+                    .scaledToFit()
+                    .padding(8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
             if let words {
                 Color.gray.opacity(0.65)
                 Text(words)
@@ -95,17 +101,38 @@ extension WidgetFace {
     ///         "Artwork/PhotosGoRound.icon" --export-image \
     ///         --output-file "Widgets/Shared/Sources/PhotosGoRoundWidgetFace/Resources/PhotosGoRoundIcon.png" \
     ///         --platform iOS --rendition Default --width 1024 --height 1024 --scale 1
-    @MainActor static let icon: Image? = {
-        guard let file = Bundle.module.url(forResource: "PhotosGoRoundIcon", withExtension: "png")
+    ///
+    /// **Drawn from a copy no bigger than it is shown.** In the widget
+    /// gallery on 2026-10-10, on an iPad mini and an iPhone Duo, every preview
+    /// showing this icon at its full 1024 pixels was blank, and the one
+    /// showing a photograph at the widget's own size was not. With the
+    /// copy, they all drew. Claude's reading of why, from memory and not
+    /// from a log: the system leaves a widget blank when its pictures come to
+    /// more pixels than it allows. A widget extension is also held to a few
+    /// tens of megabytes, and the full picture is four of them.
+    @MainActor static func icon(side: CGFloat, scale: CGFloat) -> Image? {
+        // In steps of 64 pixels, so a few sizes are made and kept, not one
+        // for every size a window is dragged through.
+        let wanted = (max(side, 1) * max(scale, 1) / 64).rounded(.up) * 64
+        let pixels = Int(min(max(wanted, 64), 1024))
+        if let made = icons[pixels] { return made }
+        guard let file = Bundle.module.url(forResource: "PhotosGoRoundIcon", withExtension: "png"),
+            let source = CGImageSourceCreateWithURL(file as CFURL, nil),
+            let small = CGImageSourceCreateThumbnailAtIndex(
+                source, 0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceShouldCacheImmediately: true,
+                    kCGImageSourceThumbnailMaxPixelSize: pixels,
+                ] as CFDictionary)
         else { return nil }
-        #if canImport(UIKit)
-            return UIImage(contentsOfFile: file.path(percentEncoded: false)).map(Image.init(uiImage:))
-        #elseif canImport(AppKit)
-            return NSImage(contentsOf: file).map(Image.init(nsImage:))
-        #else
-            return nil
-        #endif
-    }()
+        let image = Image(decorative: small, scale: 1)
+        icons[pixels] = image
+        return image
+    }
+
+    /// The icon at each size it has been asked for.
+    @MainActor private static var icons: [Int: Image] = [:]
 }
 
 /// One photograph, read once and kept. The file may be cleared away while it

@@ -10,13 +10,12 @@
 import Foundation
 
 public enum CacheFolders {
-    /// The folder under `base` for a cache showing exactly these sources, with
-    /// everything else under `base` removed. `base` is one widget's own, and
-    /// holds nothing but its caches.
+    /// What the folder for a cache showing exactly these sources is called,
+    /// wherever it is.
     ///
     /// - Parameter names: One string per source, saying all that makes it that
     ///   source. Their order does not matter.
-    public static func folder(in base: URL, forSources names: [String]) throws -> URL {
+    public static func name(forSources names: [String]) -> String {
         // FNV-1a, 64 bits. Not Swift's `Hasher`, which is seeded afresh in
         // every process: the folder has to be found again by the next one.
         var hash: UInt64 = 14_695_981_039_346_656_037
@@ -24,7 +23,14 @@ public enum CacheFolders {
             hash ^= UInt64(byte)
             hash = hash &* 1_099_511_628_211
         }
-        let name = "sources-" + String(hash, radix: 16)
+        return "sources-" + String(hash, radix: 16)
+    }
+
+    /// The folder under `base` for a cache showing exactly these sources, with
+    /// everything else under `base` removed. `base` is one widget's own, and
+    /// holds nothing but its caches.
+    public static func folder(in base: URL, forSources names: [String]) throws -> URL {
+        let name = name(forSources: names)
 
         let manager = FileManager.default
         if manager.fileExists(atPath: base.path(percentEncoded: false)) {

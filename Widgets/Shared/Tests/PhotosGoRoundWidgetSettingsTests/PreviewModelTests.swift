@@ -601,6 +601,22 @@ struct PreviewModelTests {
         #expect(preview.size == CGSize(width: 338, height: 740))
     }
 
+    @Test("On a device with two screens, the preview shows the sizes of the screen the app is on")
+    func twoScreens() {
+        let sizes = recorded([:])
+        sizes.record(CGSize(width: 402, height: 190), forFamily: "systemMedium")
+        sizes.record(CGSize(width: 334, height: 158), forFamily: "systemMedium")
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([]), device: .phone, screen: CGSize(width: 466, height: 678), scale: 3,
+            recorded: sizes)
+        preview.family = .medium
+        #expect(preview.size == CGSize(width: 334, height: 158))
+
+        preview.use(screen: CGSize(width: 669, height: 951), scale: 3)
+
+        #expect(preview.size == CGSize(width: 402, height: 190))
+    }
+
     @Test("The bounds are as tall as the large size, however tall the fourth is")
     func boundsAreTheLarge() {
         let preview = preview(

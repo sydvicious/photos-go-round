@@ -110,6 +110,8 @@ let package = Package(
         ),
         .target(
             name: "TinyCache",
+            // For `Log`, which every process logs through.
+            dependencies: ["PhotosGoRoundAgentAPI"],
             path: "Widgets/Shared/Sources/TinyCache",
             swiftSettings: everyTarget
         ),

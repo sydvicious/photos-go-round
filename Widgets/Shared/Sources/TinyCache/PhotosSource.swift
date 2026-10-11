@@ -15,6 +15,7 @@ import CoreGraphics
 import Foundation
 import OSLog
 import Photos
+import PhotosGoRoundAgentAPI
 
 #if canImport(AppKit)
     import AppKit
@@ -235,9 +236,9 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
             // Photos lists the photograph and will not hand it over. Without
             // this line all that shows is "No Photos found", as on the iPhone
             // Duo simulator on 2026-10-10.
-            Self.log.error(
+            Log.widget.error(
                 """
-                \(Self.logTag, privacy: .public) Photos gave no picture for a \
+                \(Log.widgetsTag, privacy: .public) Photos gave no picture for a \
                 \(asset.pixelWidth)x\(asset.pixelHeight) photograph \
                 asked for at \(Int(box.width))x\(Int(box.height)): \
                 \(found.why ?? "no reason given", privacy: .public)
@@ -246,12 +247,6 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         }
         return LibraryPicture(image: image, originalWidth: asset.pixelWidth, originalHeight: asset.pixelHeight)
     }
-
-    private static let log = Logger(subsystem: "com.sydpolk.photosgoround", category: "widget")
-
-    /// At the start of each line logged here, so the lines can be found by
-    /// typing it into a console's filter. Syd, 2026-10-10.
-    public static let logTag = "[PGR-Widgets]"
 
     /// What Photos says about a request that came back with no picture.
     private static func reason(_ info: [AnyHashable: Any]?) -> String {

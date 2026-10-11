@@ -11,6 +11,7 @@
 
 import CoreGraphics
 import Foundation
+import OSLog
 import Observation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
@@ -55,7 +56,7 @@ public final class PreviewModel {
     /// the tall fourth size comes to be known.
     public var families: [WidgetFamily] {
         let listed = WidgetSizes.families(on: device)
-        return WidgetFamily.allCases.filter { listed.contains($0) || recordedSizes[$0] != nil }
+        return WidgetFamily.allCases.filter { listed.contains($0) || handed[$0] != nil }
     }
 
     private let pictures: any PreviewPictures
@@ -74,8 +75,15 @@ public final class PreviewModel {
     /// Whether the person has picked a size for themselves.
     private var personChose = false
     private let recorded: RecordedWidgetSizes?
-    /// The sizes the widgets have been handed, as last read.
-    private var recordedSizes: [WidgetFamily: CGSize]
+    /// Whether the sizes have been written to the log since the app started:
+    /// the first look logs them even when nothing is new.
+    private var hasLoggedSizes = false
+    /// Every size the widgets have been handed, as last read.
+    private var handed: [WidgetFamily: [CGSize]]
+    /// Of those, the ones for the screen the app is on.
+    private var recordedSizes: [WidgetFamily: CGSize] {
+        RecordedWidgetSizes.chosen(from: handed, for: screen, on: device)
+    }
 
     public init(
         pictures: any PreviewPictures, device: WidgetDevice, screen: CGSize?, scale: CGFloat,
@@ -86,7 +94,7 @@ public final class PreviewModel {
         self.screen = screen
         self.scale = scale
         self.recorded = recorded
-        recordedSizes = recorded?.all ?? [:]
+        handed = recorded?.all ?? [:]
         // The smallest, until `settle` knows what there is room for.
         showing = WidgetSizes.families(on: device).first ?? .small
     }
@@ -170,6 +178,9 @@ public final class PreviewModel {
 
     /// The screen the app is on, and how many pixels it has to a point.
     public func use(screen: CGSize, scale: CGFloat) {
+        // Told often, and nearly always what it knew: nothing is to redraw
+        // for that.
+        guard screen != self.screen || scale != self.scale else { return }
         self.screen = screen
         self.scale = scale
     }
@@ -195,8 +206,23 @@ public final class PreviewModel {
     /// before the next picture.
     public func lookAgain() {
         // A widget may have been placed, or handed another size, meanwhile.
-        if let handed = recorded?.all, handed != recordedSizes {
-            recordedSizes = handed
+        if let now = recorded?.all, now != handed || !hasLoggedSizes {
+            handed = now
+            hasLoggedSizes = true
+            // The only record of what a device's widgets really measure,
+            // for whoever is working out a new device.
+            let listed = WidgetFamily.allCases.compactMap { family in
+                now[family].map { sizes in
+                    family.kitName + " "
+                        + sizes.map { "\(Int($0.width.rounded()))x\(Int($0.height.rounded()))" }
+                        .joined(separator: " ")
+                }
+            }
+            Log.widget.info(
+                """
+                \(Log.widgetsTag, privacy: .public) sizes the widgets were handed: \
+                \(listed.joined(separator: "; "), privacy: .public)
+                """)
         }
         if content == .noPhotos {
             content = .scanning

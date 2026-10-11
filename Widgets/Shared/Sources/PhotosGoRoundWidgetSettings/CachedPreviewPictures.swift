@@ -27,29 +27,28 @@ public struct CachedPreviewPictures: PreviewPictures {
             directory: folder(for: sources, fitting: box),
             source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
         // Whoever asked shows "No Photos found" for an error and for nothing
-        // alike, so which it was is said here.
+        // alike, so which it was is said here. Nothing found is an empty
+        // album as often as a fault, and is asked again every few seconds, so
+        // it is logged where it is not kept.
         do {
             let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file
             if file == nil {
-                Self.log.error(
+                Log.widget.info(
                     """
-                    \(Self.tag, privacy: .public) No picture from any of \(sources.count) sources, \
-                    asked for at \(Int(box.width))x\(Int(box.height)), and no error either.
+                    \(Log.widgetsTag, privacy: .public) no picture from any of \(sources.count) sources, \
+                    asked for at \(Int(box.width))x\(Int(box.height)), and no error either
                     """)
             }
             return file
         } catch {
-            Self.log.error(
+            Log.widget.error(
                 """
-                \(Self.tag, privacy: .public) The preview could not get a picture: \
+                \(Log.widgetsTag, privacy: .public) could not get a picture: \
                 \(String(describing: error), privacy: .public)
                 """)
             throw error
         }
     }
-
-    private static let log = Logger(subsystem: "com.sydpolk.photosgoround", category: "widget")
-    private static var tag: String { SystemPhotoLibraryPictures.logTag }
 
     /// The picture is a file on disk and stays there when the app goes, so
     /// the next launch has it without asking Photos for anything. Syd,
@@ -85,10 +84,11 @@ public struct CachedPreviewPictures: PreviewPictures {
                     return file
                 }
             } catch {
-                Self.log.error(
+                Log.widget.error(
                     """
-                    \(Self.tag, privacy: .public) No first picture from a \(spec.kind.rawValue, privacy: .public) \
-                    source: \(String(describing: error), privacy: .public)
+                    \(Log.widgetsTag, privacy: .public) no first picture from a \
+                    \(spec.kind.rawValue, privacy: .public) source: \
+                    \(String(describing: error), privacy: .public)
                     """)
             }
         }
@@ -100,8 +100,12 @@ public struct CachedPreviewPictures: PreviewPictures {
     private func folder(for sources: [SourceSpec], fitting box: CGSize) -> URL {
         let sized = directory.appending(
             path: "\(Int(box.width))x\(Int(box.height))", directoryHint: .isDirectory)
-        let names = sources.map { "\($0.kind.rawValue)|\($0.locator)|\($0.recursive)" }
-        return (try? CacheFolders.folder(in: sized, forSources: names)) ?? sized
+        return (try? CacheFolders.folder(in: sized, forSources: Self.names(of: sources))) ?? sized
+    }
+
+    /// What each source is called when a cache's folder is named for them.
+    static func names(of sources: [SourceSpec]) -> [String] {
+        sources.map { "\($0.kind.rawValue)|\($0.locator)|\($0.recursive)" }
     }
 
     private var counts: URL { directory.appending(path: "counts.json") }

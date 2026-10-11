@@ -118,6 +118,10 @@ the step that never happens unless the plan says so.
 - **No `pgr_ctl` command for turning chatter on.** `log config --subsystem com.sydpolk.photogoround`
   already does it, persistently. Wrapping the system tool is maintenance Syd asked not to take on.
 
+- **The Widgets app and its extension on iOS log through `Log.widget`, and begin every line with
+  `[PGR-Widgets]`.** The tag is Syd's, 2026-10-10: "a tag on the logs that I can filter for". It
+  is `Log.widgetsTag`. Their levels follow the rule above: by how often a line happens.
+
 # Background
 
 - **`Log` and `Console` are already separate, and correctly so.** `Log` is unified logging for every
@@ -425,6 +429,25 @@ What is worth pinning:
 `MacOS/Shared/Tests/PhotoGoRoundKitTests/TestLoggingTests.swift` already exists and pins the test-subsystem split,
 so there is a home for the first two.
 
+## The Widgets app and its extension, on iOS
+
+Added 2026-10-10, when the iOS app got its widget extension. The lines themselves, and how to read
+them on a simulator or a phone, are in `Plans/PGR Widgets - iOS.md`, *Reading the logs*.
+
+- **One logger, the project's.** The first lines written for them each made a `Logger` of their
+  own with the subsystem spelled out. That put a test run's lines in the real log, which is what
+  `Log.subsystem` exists to prevent. They go through `Log.widget` now, and `TinyCache` depends on
+  `PhotosGoRoundAgentAPI` to reach it.
+- **A tag, because there are two processes and Xcode's console filters by words.** The app's lines
+  show in Xcode's console and the extension's do not; `[PGR-Widgets]` finds both in Console.app
+  and in `log show`. The category `widget` is shared with the Mac's widget extension, whose own
+  lines begin `widget:` and are unchanged.
+- **Levels by how often.** *Error* when Photos will not hand over a photograph or a pick fails.
+  *Notice* for `timeline asked`, once for each reload of a widget, five minutes apart at the
+  least. *Info* for the gallery's `snapshot` line, for the sizes the widgets were handed, and for
+  a pick that found nothing with no error, which repeats every few seconds while a preview has
+  nothing to show.
+
 ## What this does not touch
 
 - **`AgentErrors`.** The error ledger is a separate record with its own bound (100 entries) and the
@@ -437,6 +460,7 @@ so there is a home for the first two.
 
 # References
 
+- `Plans/PGR Widgets - iOS.md`, *Reading the logs* — the iOS Widgets app's lines and how to read them.
 - `TODO.md`, *Next: the agent's own log file grows without bound* — the 2026-09-19 measurement this
   plan is answering.
 - `Shared/Sources/PhotoGoRoundAgentAPI/Support/Log.swift` — the subsystem, the categories, and the existing

@@ -21,9 +21,6 @@ after it. The to-dos under each phase are Claude's.
   - The alert, and the picker again, when a source is wrong at opening.
   - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
-  - The recorded sizes are one for each family. A device with two screens, the iPhone Duo, or
-    two orientations, an iPad, is handed more than one; the last one handed is what the preview
-    shows.
   - A cache for each widget. There is one for each size today, so two widgets of one size share
     it.
   - How often a widget changes, as each widget's own setting. It is five minutes for all.
@@ -338,6 +335,29 @@ all, with no widget placed.
   table's nearest row had given 158, 338 by 158 and 338 by 354.
 - **There is a fourth size on a phone**, the system's "extra large portrait". The table has no
   figure for it, so the preview offers it only once it has been recorded.
+- **Every size a family is handed is kept, and the preview uses the ones for the screen it is
+  on.** Syd, 2026-10-10. The iPhone Duo has two screens and an iPad two ways up, and each hands
+  a widget a different size. The system does not say which screen a size is for, so it is worked
+  out (`RecordedWidgetSizes.chosen`): the sizes handed for one screen share their figures, so one
+  family is settled by its width and the others follow it. On a phone it is the widest set that
+  leaves room on the screen as it is turned, across and down, and the narrowest when none does;
+  on an iPad the narrower for
+  upright and the wider for on its side. Both rules are Claude's.
+- **What the iPhone Duo's widgets are handed**, from Syd's log of its simulator, 2026-10-10. Two
+  sets, both at once, each time the widgets reload, whichever screen is in use; turning it
+  brought the same two again, and folding it brought nothing:
+  - small 190 square, medium 402 by 190, large 402 by 426, the tall size 402 by 662;
+  - small 158 square, medium 334 by 158, large 334 by 354, the tall size 334 by 550.
+
+  Syd's pictures the same day show where each is used. The cover, 466 points wide, has the
+  second set: it keeps a column at the right for the clock and the dock, and its Home Screen
+  does not turn ("spring board isn't rotating"). The inner screen upright, 669 wide, has the
+  first. The inner screen on its side, 669 high, has the second again: the first set's tall size
+  is 662 points high and does not go in.
+- **What an iPad mini's widgets are handed**, from Syd's log of its simulator, 2026-10-10: small
+  141 square and extra large 634 by 305, and the same after it was turned. Apple's table had
+  given 120 and 540 by 260. So this iPad has one set both ways up, and the iPad half of the rule
+  above has nothing to choose between there.
 - **The preview's bounds are as tall as the large size.** Syd: "I think the the preview's
   bounding box should be set to the Large widget, because the fourth is very tall. The preview
   itself should be the correct size and scrollable." It starts on the largest size that fits
@@ -1237,6 +1257,44 @@ widgets.
 5, and the settings screen has no button for it. Not said: whether a person can see it again
 after the first launch.
 
+## Reading the logs
+
+The app and its widget extension log to the unified log, under the project's subsystem and the
+category `widget`, through `Log.widget` as everything else in the project does. Each of their
+lines begins `[PGR-Widgets]`; Syd, 2026-10-10, asked for "a tag on the logs that I can filter
+for". A test run logs under the tests' subsystem, apart from a real one.
+
+**Two processes.** The app's lines show in Xcode's console when it is run from Xcode; type the tag
+in the console's filter. The extension is a process of its own and its lines do not, unless Xcode
+is attached to it (Debug, Attach to Process). Console.app shows both, for a simulator or a
+connected phone.
+
+**From a terminal, for a simulator.** `booted` is enough when one simulator is running; otherwise
+its name or identifier, from `xcrun simctl list devices`:
+
+```bash
+xcrun simctl spawn booted log show --last 10m --info --style compact --predicate 'eventMessage CONTAINS "[PGR-Widgets]"'
+```
+
+`--info` is needed for the lines marked so below; without it only the others print.
+
+**What is logged:**
+
+- `timeline asked, systemLarge, 350x365 points, 2 sources` — the extension, once for each reload
+  of a widget, with the size the system handed it.
+- `snapshot, systemLarge, 350x365 points, picture …` — the extension, each time the gallery asks
+  for a preview, with the face it was given: a picture and whether its file was still there, or
+  the plain icon, or scanning. *Info.*
+- `sizes the widgets were handed: …` — the app, the first time it looks and whenever they have
+  changed: every size recorded for each family. It is how a new device's sizes are read.
+  *Info.*
+- `no picture from any of N sources … and no error either` — nothing was found and nothing went
+  wrong, as with an empty album. *Info.*
+- `could not get a picture: …` and `no first picture from a … source: …` — a pick failed, with
+  the error.
+- `Photos gave no picture for a … photograph asked for at …: …` — Photos listed a photograph and
+  would not hand it over, with its reason.
+
 ## Identity
 
 **The bundle identifier is `com.sydpolk.photosgoround.widgets`.** Syd, 2026-10-09. The widget
@@ -1302,6 +1360,17 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
 - **Each widget has its own cache, as in the widgets plan.** Two widgets showing the same picture
   by chance is fine. Syd, 2026-10-10: "Each widget does have its own cache. But if each widget
   ends up with the same picture by happenstance, that's ok".
+- **In the gallery, a size with no picture of its own shows another size's.** Until a widget of a
+  size has been placed, that size has shown nothing, and its preview said "Scanning…". It borrows
+  the last picture another size showed, the one made for the biggest widget. Syd, 2026-10-10.
+  With no widget placed at all there is nothing to borrow, and the previews show the plain app
+  icon: "just the app icon without an overlay", which he chose over a neutral photograph of his
+  own and over leaving "Scanning…".
+  The system keeps the previews it has drawn and asks for new ones in its own time; Syd saw them
+  catch up a little while after placing widgets.
+- **A face's icon is drawn from a copy no bigger than it is shown.** At its full 1024 pixels
+  every gallery preview showing it was blank on an iPad mini and an iPhone Duo; with the copy
+  they draw. 2026-10-10.
 - **The app tells the widgets to look again when a person leaves it**, so a change of sources
   shows without waiting for a widget's next turn.
 - Debug, Release and Claude builds carry different identifiers, as on the Mac. See *Identity*.
