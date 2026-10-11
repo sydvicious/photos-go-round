@@ -22,7 +22,8 @@ after it. The to-dos under each phase are Claude's.
   - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
   - A cache for each widget. There is one for each size today, so two widgets of one size share
-    it.
+    it. The system gives a widget nothing to be told apart by but its settings: looked up
+    2026-10-10, see *Telling one widget from another*.
   - How often a widget changes, as each widget's own setting. It is five minutes for all.
   - Look at a widget's memory and its first wake on a real device with a large library.
   - Spike: can the extension open a folder the app chose?
@@ -37,6 +38,9 @@ after it. The to-dos under each phase are Claude's.
 The iOS app's to-dos are kept here while the work is on its branch. `TODO.md` at the top level is
 the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 
+- **Include the app package on the release DMG for now, until there is TestFlight or the App
+  Store.** Syd, 2026-10-10. The image is built by `Scripts/release-build.sh`; `Plans/Release
+  DMG.md`.
 - **Before the Photos prompt appears there is nothing on screen to say the app is waiting.** On a
   simulator booted a minute earlier the prompt took ten seconds or more to come up, and the screen
   showed "No collections chosen." meanwhile.
@@ -1256,6 +1260,31 @@ widgets.
 **The how-to page is part of the launch-time wizard.** Syd, 2026-10-10. So it is built in Phase
 5, and the settings screen has no button for it. Not said: whether a person can see it again
 after the first launch.
+
+## Telling one widget from another
+
+Looked up 2026-10-10, before building a cache for each widget.
+
+- **The system has no name or number for a placed widget.** A timeline provider is told the
+  widget's kind, its size, and its settings, and nothing else. Apple's page on the provider says
+  a person can add several of one widget and the provider "needs a way to differentiate which
+  instance" is asked about, and that the settings are that way.
+- **Two widgets with the same settings are, to the system, one.** From a reply on Apple's
+  developer forum, not from Apple's documentation: there is no way to tell them apart "by
+  design", and the system appears to feed both from one timeline. So they would show the same
+  picture at the same moment whatever the extension kept for each.
+- **So a cache for each widget can only be a cache for each set of settings.** Today the widget
+  has no settings. When it has its own interval, widgets set differently are different widgets,
+  and ones set alike are not.
+
+**Two settings, then.** Syd, 2026-10-10, chose that widgets of one size differ by the interval
+and by "a second setting whose only job is to make a widget different", so that two with the
+same interval can still show different pictures. He chose it over the interval alone and over
+leaving one cache for each size. What the second setting looks like is not said yet.
+
+Sources: Apple, [AppIntentTimelineProvider](https://developer.apple.com/documentation/widgetkit/appintenttimelineprovider);
+Apple Developer Forums, [Is it possible to uniquely identify a widget during timeline
+creation?](https://developer.apple.com/forums/thread/738251).
 
 ## Reading the logs
 

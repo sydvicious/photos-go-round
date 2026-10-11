@@ -625,7 +625,10 @@ blur-replace, and a widget may not honour all of them.
 - **The space for 30.** Only the fill limit of 20 is enforced; no size ceiling is, until a picture
   at the extra-large size has been measured.
 - **A TinyCache per widget.** There is one per size, so two widgets of one size share. A widget has
-  no name yet.
+  no name yet. Looked up 2026-10-10: the system gives a placed widget none, and tells two widgets
+  apart only by their settings; `Plans/PGR Widgets - iOS.md`, *Telling one widget from another*. Syd
+  chose two settings for that: the interval, and a second whose only job is to make a widget
+  different.
 - **Walking the folder once.** Each picture fetched walks the whole folder again to choose one at
   random, holding only the one path. Fine for a folder of thousands; not looked at beyond that.
 - **The release script.** `Scripts/release-build.sh` checks the nested bundles it knows by name,
