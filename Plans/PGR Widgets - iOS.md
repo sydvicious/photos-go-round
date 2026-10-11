@@ -21,6 +21,8 @@ after it. The to-dos under each phase are Claude's.
   - The alert, and the picker again, when a source is wrong at opening.
   - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
+  - Spike: can a widget have a setting a person never sees, with a value of its own for each
+    placed widget, that stays put? *Telling one widget from another*.
   - A cache for each widget. There is one for each size today, so two widgets of one size share
     it. The system gives a widget nothing to be told apart by but its settings: looked up
     2026-10-10, see *Telling one widget from another*.
@@ -1280,7 +1282,13 @@ Looked up 2026-10-10, before building a cache for each widget.
 **Two settings, then.** Syd, 2026-10-10, chose that widgets of one size differ by the interval
 and by "a second setting whose only job is to make a widget different", so that two with the
 same interval can still show different pictures. He chose it over the interval alone and over
-leaving one cache for each size. What the second setting looks like is not said yet.
+leaving one cache for each size.
+
+**What he hopes the second setting is: an invisible random seed.** "I was kind of hoping we would
+have some kind of invisible random seed as a setting". So nothing for a person to see or set:
+each widget gets a seed of its own when it is placed, and keeps it. Whether the system allows a
+setting that is both hidden and different for each placed widget is not known; what was found
+above says it gives a widget no identity of its own. To be tried before anything is built on it.
 
 Sources: Apple, [AppIntentTimelineProvider](https://developer.apple.com/documentation/widgetkit/appintenttimelineprovider);
 Apple Developer Forums, [Is it possible to uniquely identify a widget during timeline
