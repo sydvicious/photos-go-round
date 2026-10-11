@@ -27,9 +27,14 @@ left of it. The to-dos are Claude's unless they say otherwise.
   Phase 1: Syd, 2026-10-11. *When a source goes wrong*.
   - The alert, and the picker again, when a source is wrong at opening; and the removal if it is
     not put right.
-- **Phase 4** — Files and folders, with adding and removing. Not the priority, and may not be
-  done: Syd, 2026-10-11, "I could remove them and ship now". *The files and folders*.
-  - Spike: can the extension open a folder the app chose?
+- **Phase 4** — Files and folders, with adding and removing. Next, before Phase 3: Syd,
+  2026-10-11, "I think we need to do files and folders next, because it colors how we deal with
+  connections to sources not working". Earlier that day it was not the priority and might not
+  be done: "I could remove them and ship now". *The files and folders*.
+  - Each folder's subfolders option, by tapping its row.
+  - Another look at how a file or folder is taken out. The swipe is what there is. *Taking a
+    source out of a list*.
+  - What the person is told when something chosen cannot be added. It may belong to Phase 3.
 - **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
   to-dos under *iOS and iPadOS* in `Plans/Photos-Go-Round Widgets.md`, which is closed; the rest
   of that plan's are in `TODO.md`. The widgets have run
@@ -127,8 +132,8 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   the narrowest window.
 - **The Photos button is the photo-library symbol and the Files button a folder.** What the Photos
   button brings up goes by the access there is: the collections sheet, the system's picker with
-  limited access, or the "No Photos Access" alert. The Files button is greyed out until adding
-  files and folders is built. Syd, 2026-10-10.
+  limited access, or the "No Photos Access" alert. The Files button brings up the Files browser.
+  Syd, 2026-10-10.
 - **The preview is pinned, and the lists scroll under it.** Tried both ways. Syd, 2026-10-10: "I
   want the pinned behavior".
 - **The preview's bounds are as tall as the large size, from the top of the view, with the widget
@@ -249,11 +254,21 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 
 *Files and folders*
 
-- **Files and folders are not the priority, and may not be done at all.** A phase of their own,
-  after the alerts. Syd, 2026-10-10, and 2026-10-11: "I could remove them and ship now".
+- **Files and folders come before the alerts.** Syd, 2026-10-11: "I think we need to do files and
+  folders next, because it colors how we deal with connections to sources not working". Until
+  then they were not the priority and might not have been done at all: 2026-10-10, and earlier
+  on 2026-10-11, "I could remove them and ship now".
 - **The list takes single image files as well as folders, as the Mac's does.** Syd, 2026-10-09.
 - **Each folder has its own option for including its subfolders, changed by tapping its row.** It
   starts off. As on the Mac. Syd, 2026-10-09.
+- **One Files browser takes folders and image files.** The Mac app has a menu item for each.
+  Claude's, 2026-10-11, and Syd's to overrule. *The files and folders*, *Choosing*.
+- **A file or folder is opened through a bookmark, by the app as well as by its widgets, and
+  never by its path.** The bookmarks are in the App Group container. Claude's, 2026-10-11.
+- **A folder in iCloud Drive does not show in a widget, and that waits for an iOS update.** The
+  app's preview shows it. Syd, 2026-10-11. In `TODO.md`.
+- **What a bookmark cannot be left for is not added.** Only the log says so. Claude's,
+  2026-10-11; what the person is told is not decided.
 
 *The widgets*
 
@@ -342,6 +357,17 @@ we can test everythingmelse including files and folders and simple photo library
 - **Also only on a phone**, by their nature and not by this rule: the extension's memory against
   the 30 MB ceiling, which a simulator is not expected to enforce, and what a widget can do while
   the phone is locked. Both are to-dos under the iOS phase of `Plans/Photos-Go-Round Widgets.md`.
+- **Whether a widget can open a folder the app chose is the phone's to answer too.** From
+  memory, not checked: a simulator does not enforce the sandbox, so a yes there does not say
+  what a phone will do. Files and folders are otherwise tested on a simulator, as Syd said.
+- **Putting pictures where a simulator's Files browser shows them.** "On My iPhone" is a folder on
+  the Mac:
+  `~/Library/Developer/CoreSimulator/Devices/<UDID>/data/Containers/Shared/AppGroup/<UUID>/File Provider Storage`.
+  The `<UUID>` is the AppGroup folder whose `.com.apple.mobile_container_manager.metadata.plist`
+  names `group.com.apple.FileProvider.LocalStorage`. What is copied there shows at once. A big
+  folder is cloned there with `cp -cR`, which takes almost no room on the same volume: Syd,
+  2026-10-11, "I did not want to copy a big folder into simulator". A symlink shows as a folder
+  and does not open, tried the same day; Syd, on his: "simulator does not like the symlink".
 - **Which simulators.** Claude's own, *Claude iPhone* and *Claude iPad* on iOS 27, no more than two
   running at a time. Every other simulator on the Mac is Syd's. The iPhone Duo needs the iOS
   27.1 runtime and Xcode 27.1, and is Syd's to run.
@@ -967,17 +993,21 @@ A request that Photos really leaves unanswered has not been seen since the limit
 
 ## The files and folders
 
-**Not the priority, and perhaps not at all.** Syd, 2026-10-10, asking for the preview next: "We
-may not even do files and folders. We probably will but it's not the priority." And 2026-10-11,
-making them Phase 4: "I could remove them and ship now". The list and its heading are on the
-screen and removal works; nothing can be added yet, and the bar's Files button is greyed out. If
-they are not done, the list and the button come off the screen, and what this section says is
-for when they are.
+**Next, before the alerts.** Syd, 2026-10-11: "I think we need to do files and folders next,
+because it colors how we deal with connections to sources not working". Before that they were
+not the priority: 2026-10-10, asking for the preview next, "We may not even do files and folders.
+We probably will but it's not the priority", and earlier on 2026-10-11, "I could remove them and
+ship now".
+
+**What there is.** The bar's Files button adds folders and image files, each gets a row with its
+count, the preview and the widgets show from them, and a swipe takes one out. A folder's
+subfolders option is not on the screen yet.
 
 **Single files as well as folders.** Syd, 2026-10-09: the bottom list takes both, as the Mac's
 does, so the shared view is the same everywhere. The Mac app has a menu item for each, *Add
 Files…* and *Add Folder…*. A single file is one picture, and one that is no longer there is not
-counted as none: it cannot be read.
+counted as none: it cannot be read. It is a source in its own right, `FileSource`; until
+2026-10-11 a file had a row and a count and no picture ever came from it.
 
 **Each folder has its subfolders option, as on the Mac.** Syd, 2026-10-09, choosing that over a
 folder always including its subfolders. Tapping a folder's row brings up its options, where the
@@ -988,8 +1018,28 @@ the pictures directly in the folder, so a folder never brings in more than was a
 2026-10-09.
 
 **Choosing.** SwiftUI's `fileImporter` on both platforms, in place of the Mac app's `NSOpenPanel`.
-It puts up the Files browser on iOS and the open panel on the Mac, and can be asked for folders or
-for image files.
+It puts up the Files browser on iOS and the open panel on the Mac. It is asked for folders and
+image files together, several at once, so the one button does for both. On iOS, seen on a
+simulator, 2026-10-11:
+
+- An image file has a circle to tick, and several can be ticked.
+- A folder is chosen by going into it and pressing Open with nothing ticked. So files and a
+  folder are not chosen in the same go.
+- Open at the top level chooses the whole of "On My iPhone" as a folder.
+
+**A path is not enough on iOS, for the app as much as for a widget.** The Files browser lets the
+app into what was chosen for as long as the app runs. After that the path is refused, and a
+bookmark made while the app was let in is what opens it again. So:
+
+- The app leaves a bookmark for each file and folder as it is added, in `WidgetSource` in the App
+  Group container, which is where the Mac's app leaves its own. Removing the row removes the
+  bookmark.
+- The app's preview and counts and the extension's wakes all open through those bookmarks:
+  `BookmarkedSources`, in `TinyCache`. Each is opened once in a process and kept open.
+- Nothing is read by its path while bookmarks are kept. One whose bookmark does not open cannot
+  be read, which is not holding nothing. A simulator would read the path, and so would say a
+  widget can open what on a phone it cannot.
+- What no bookmark can be left for is not added, and only the log says so.
 
 **The risk is the widget reading what the app chose.** A sandboxed app is given a folder only
 because the person chose it, and keeps that with a bookmark. The widget is another process. On the
@@ -997,11 +1047,87 @@ Mac a bookmark the app leaves is what the widget opens today (`Widgets/macOS/Sou
 From memory, not checked: iOS bookmarks are made without the Mac's security-scope option, and
 whether an extension can open one its app made is not something I know. If it can't, a folder's
 pictures would have to be copied into the App Group container, or folders would work only in the
-preview. The spike is Phase 4's, after the list can be added to. If the answer is no, the list
-stands and what changes is what adding a folder does underneath.
+preview. If the answer is no, the list stands and what changes is what adding a folder does
+underneath.
+
+**On a simulator the answer is yes.** 2026-10-11, *Claude iPhone*, iOS 27: with a folder and a
+file added, the extension's next wake logged `opened Coins through its bookmark, and it can be
+read: 4 things in it`, and the same for the file. The app, quit and launched again, opened both
+the same way. A widget drawing a folder's picture was not looked at. The phone's answer is the
+one that counts, and is a to-do under Phase 4: the same line from the extension's process, or
+`did not open` or `cannot be read` in its place.
+
+**On Syd's phone the app shows files from iCloud Drive, and a widget does not.** Syd,
+2026-10-11: "This is working well. And on my device, it's working with files from my iCloud
+drive", and then of the widget: ""No photos found" for iCloud files". So the app's own bookmark
+opens there and the extension gets no picture. Files kept on the phone itself do show in a
+widget: "I was able to see files actually stored "On My Phone"". So the extension opens the
+app's bookmark for those, on a day the app has been used. And after a restart of the phone they
+still do: "I restarted. The widgets are showing the files from the "On My Phone" folder". The
+app had not been opened since: "the pictures started showing after a restart without opening
+the app".
+
+**For the iCloud Drive folder the extension never found the bookmark.** The phone's log,
+2026-10-11: the extension, `no bookmark has been left for Public`, on every wake; the app, the
+same minute, `opened Public through its bookmark, and it can be read: 90 things in it`. A
+bookmark's file is named for the folder's path, and the name was worked out with
+`standardizedFileURL`, which asks the disk and takes `/private` off the front of a path it can
+see. The app could see the folder and the extension could not, so they had two names for it.
+The name now goes by the path's spelling alone (`FolderBookmarks.fileName`). A file or folder
+added before that has to be taken out and added again. With that done on the phone: Syd,
+2026-10-11, "Hey! The widgets are working now!", and then "I removed the icloud folder and the
+on-device files started showing up". While the iCloud Drive folder was chosen the
+widgets said "No Photos found", and the phone's own files did not show either. So the extension
+finds that bookmark now and still gets no picture; which step fails has not been read from its
+log.
+
+**iCloud Drive in a widget waits for an iOS update.** Syd, 2026-10-11: "Add that to the global
+TODO.md. They won't change it until there is a software update, and I run the beta updates, so I
+will see it". It is in `TODO.md`, and nothing more is built for it here: no copies, and no cache
+for them.
+
+**If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
+have to download files at new sizes, it sounds like we have to reproduce the caching that we do
+in the PGR Service", "so we don't fill up the phone". Nothing is copied as things are: a widget
+keeps the picture it is showing and one more, at its own size, for each setting at each size.
+A widget cannot read iCloud Drive through the bookmark, and Syd's answer to that is to wait for
+iOS and not to copy, below.
 
 **Folders in iCloud Drive** may not be downloaded. From memory: reading one can mean waiting for
 it, which a widget extension has little time for.
+
+**What the web says, 2026-10-11.** Apple's forums and two scripting apps' forums; no Apple
+document covers a widget opening a bookmark its app made. Nothing here has been tried on the phone.
+
+- iOS has no security-scope option; a plain bookmark is what keeps access. Apple DTS, forum
+  threads 766646 (Oct 2024) and 797469 (Aug 2025). This was "from memory" above and is now checked.
+- Another process opening it is not promised. DTS, thread 797469, Dec 2025: a plain bookmark
+  carries an "implicit ephemeral" scope that gives access to any process that resolves it, lasting
+  "until reboot at the latest", believed to hang on the access of the app that made it, and "not
+  formally documented nor something that can really be relied on". So it can work in the extension
+  on the day the app was used and fail after a restart.
+- The one report of this exact case on iOS failed. Thread 693819, Nov 2021: a bookmark made in the
+  app with no options, passed through the App Group, gave "you don't have permission to view it" in
+  a Share Extension. Nobody answered it.
+- On the Mac, DTS said the same of app-scoped bookmarks: valid only in the app that made them
+  (thread 66259, 2018). Its way round, each process making its own bookmark from a URL handed to it,
+  needs the extension to be handed a URL, and a widget cannot show the Files browser.
+- Scriptable keeps its bookmarks by process for this reason: one made in the app's settings works
+  "in the app and not from the Share Sheet, Siri and Shortcuts", and one for Shortcuts has to be
+  made by a Shortcuts action. Its documentation does not mention widgets.
+- An app's own iCloud container is a different thing from a folder chosen in iCloud Drive, and a
+  widget with the iCloud entitlement can reach it, with trouble: `url(forUbiquityContainerIdentifier:)`
+  began returning nil in a widget in the iOS 16.1 beta (thread 715078, FB11529890, no answer).
+- A file in iCloud Drive that is not downloaded is the other way a widget gets nothing. Scriptable
+  and Pythonista widgets go blank or are refused on such files while the app reads them; the
+  download has to be asked for and waited on.
+- Where everyone ends up: the app reads what was chosen and puts small copies in the App Group
+  container, and the widget reads only those.
+
+What this does not settle is which of the two it is on Syd's phone, the bookmark or the download.
+A file kept on the phone itself shows in a widget, and after a restart too, above. So the
+bookmark is not what fails there, whatever DTS will promise of it. For the iCloud Drive folder
+it was neither of the two: the extension looked for the bookmark under another name, above.
 
 **It matters least here.** Syd, 2026-10-08: on an iPhone hardly anyone will use a folder, on an
 iPad slightly more will.
@@ -1318,6 +1444,14 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   answer or came inside the wait.
 - `cleared away N caches no widget has: …` — the extension, when a wake found caches for
   settings no placed widget has, with their folders' names. *Info.*
+- `opened Coins through its bookmark, and it can be read: N things in it` — the app or the
+  extension, the first time a process opens a chosen file or folder; a file's line ends at
+  `read`. `…, and it cannot be read: …` when the bookmark resolved and the process is still
+  refused. Which process it was is in the log's process column. *The files and folders*.
+- `the bookmark for Coins did not open: …` and `no bookmark has been left for Coins` — the same
+  opening, failed. Asked again at the next count or pick.
+- `no bookmark could be left for Coins, so it was not added: …` — the app, when something chosen
+  in the Files browser could not be bookmarked.
 
 ## Identity
 

@@ -170,8 +170,15 @@ private struct Wake: Sendable {
                 path: Self.folder(for: context.family, every: every), directoryHint: .isDirectory),
             // So the gallery can show a size that has no picture yet one of
             // another size's.
-            among: Self.caches)
+            among: Self.caches,
+            bookmarks: Self.bookmarks)
     }
+
+    /// What a file or folder the person chose in the app is opened through:
+    /// the bookmark the app left for it. One for the life of the process,
+    /// since what it has opened stays open from one wake to the next.
+    private static let bookmarks = BookmarkedSources.inAppGroup(
+        Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
 
     /// Where every widget's cache is: the extension's own, apart from the
     /// app's preview.

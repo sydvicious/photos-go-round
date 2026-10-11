@@ -16,6 +16,25 @@ struct FolderBookmarksTests {
         #expect(!name.contains("/"))
     }
 
+    /// The app can see a folder the person chose and its widget cannot, and
+    /// both have to come to the same name for it. On Syd's phone, 2026-10-11,
+    /// they did not for a folder in iCloud Drive: the widget said no bookmark
+    /// had been left for one the app had just opened through its own.
+    @Test("The name is the same whether or not the folder can be seen")
+    func nameDoesNotDependOnTheDisk() throws {
+        let scratch = try ScratchFolder()
+        // Spelled with `/private` in front, as the Files browser hands a
+        // location over on a phone.
+        let seen = scratch.url.appending(path: "Coins").path(percentEncoded: false)
+        let path = seen.hasPrefix("/private/") ? seen : "/private" + seen
+        let unseen = FolderBookmarks.fileName(forFolderAt: path)
+
+        try FileManager.default.createDirectory(atPath: path, withIntermediateDirectories: true)
+        try #require(FileManager.default.fileExists(atPath: path))
+
+        #expect(FolderBookmarks.fileName(forFolderAt: path) == unseen)
+    }
+
     @Test("Two folders' bookmarks have different names")
     func namesDiffer() {
         #expect(

@@ -140,3 +140,32 @@ public struct FolderSource: CountedSource {
         UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) ?? false
     }
 }
+
+/// One image file, chosen by itself. It is one picture, and every pick from
+/// it is that picture.
+public struct FileSource: CountedSource {
+    public let file: URL
+
+    public init(file: URL) {
+        self.file = file
+    }
+
+    /// A file that will not decode has nothing to show, as a folder of such
+    /// files has not. One that is not there is an error: it cannot be read,
+    /// which is not the same as holding nothing.
+    public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
+        _ = try file.checkResourceIsReachable()
+        do {
+            return try PictureResizer().write(file, fitting: box, to: destination)
+        } catch PictureResizer.Failure.notAPicture {
+            return nil
+        }
+    }
+
+    public var countName: String { "file|\(file.path(percentEncoded: false))" }
+
+    public func pictureCount() throws -> Int {
+        _ = try file.checkResourceIsReachable()
+        return 1
+    }
+}

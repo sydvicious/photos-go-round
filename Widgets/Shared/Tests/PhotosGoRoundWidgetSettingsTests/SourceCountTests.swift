@@ -2,6 +2,7 @@ import Foundation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundPhotoLibrary
 import Testing
+import TinyCache
 
 @testable import PhotosGoRoundWidgetSettings
 
@@ -129,6 +130,20 @@ struct SourceCountTests {
 
         #expect(model.collections.map(\.count) == [1203])
     }
+
+    @Test("A file or folder that is added is counted without waiting for the app to come forward")
+    func addedInTheBrowser() async throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let model = model(
+            SampleLibrary(access: .authorized), SampleCounts([moon.path(percentEncoded: false): 1]))
+        await model.start()
+
+        model.add([moon])
+        await model.counting?.value
+
+        #expect(model.filesAndFolders.map(\.count) == [1])
+    }
 }
 
 @Suite("Counting a source the way a widget does")
@@ -166,5 +181,35 @@ struct LibrarySourceCountsTests {
     @Test("A source of a kind that is not counted has no count")
     func unknownKind() throws {
         #expect(try LibrarySourceCounts().count(of: SourceSpec(kind: .googleAlbum, locator: "x")) == nil)
+    }
+
+    @Test("With bookmarks kept, a folder is counted through the one left for it")
+    func throughABookmark() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("Coins/coin.png")
+        try scratch.picture("Coins/more/stamp.png")
+        let coins = scratch.url.appending(path: "Coins", directoryHint: .isDirectory)
+        let bookmarks = BookmarkedSources(directory: scratch.url.appending(path: "shared"))
+        try bookmarks.leave(for: coins)
+
+        let count = try LibrarySourceCounts(through: bookmarks)
+            .count(of: .folder(coins.path(percentEncoded: false)))
+
+        #expect(count == 1)
+    }
+
+    @Test("With bookmarks kept, what has none cannot be read, though it is there")
+    func noBookmark() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let bookmarks = BookmarkedSources(directory: scratch.url.appending(path: "shared"))
+        let counts = LibrarySourceCounts(through: bookmarks)
+
+        #expect(throws: (any Error).self) {
+            try counts.count(of: .folder(scratch.url.path(percentEncoded: false)))
+        }
+        #expect(throws: (any Error).self) {
+            try counts.count(of: SourceSpec(kind: .file, locator: moon.path(percentEncoded: false)))
+        }
     }
 }

@@ -10,7 +10,9 @@
 // and folders; they are stored together, in the order they were chosen.
 
 import Foundation
+import OSLog
 import PhotosGoRoundAgentAPI
+import TinyCache
 
 public struct ChosenSources: Sendable {
     private let preferences: Preferences
@@ -69,6 +71,15 @@ public struct ChosenSources: Sendable {
         preferences.setSources(kept + added)
     }
 
+    /// What choosing in the Files browser does: each of `added` goes after
+    /// everything else, in the order given. One that is already chosen stays
+    /// as it is, with what was stored about it.
+    public func add(_ added: [SourceSpec]) {
+        let stored = preferences.sources
+        var have = Set(stored.map(\.locator))
+        preferences.setSources(stored + added.filter { have.insert($0.locator).inserted })
+    }
+
     /// Stores what a source is called and where it sits now, when Photos says
     /// that has changed. The source stays where it is in the list.
     public func describe(_ locator: String, as description: SourceDescription) {
@@ -80,5 +91,26 @@ public struct ChosenSources: Sendable {
 
     public func remove(_ source: SourceSpec) {
         _ = preferences.removeSource(locator: source.locator)
+    }
+}
+
+extension BookmarkedSources {
+    /// The bookmarks to the chosen files and folders, in the container of the
+    /// App Group the sources themselves are kept in, with how each opening
+    /// went written to the log. Nil when the group has no container, which
+    /// leaves files and folders to be read by their paths.
+    ///
+    /// The app and its extension each keep one for the life of the process:
+    /// what it has opened stays open.
+    public static func inAppGroup(_ group: String?) -> BookmarkedSources? {
+        guard let group,
+            let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+        else { return nil }
+        // The folder the Mac's app leaves its bookmarks in.
+        return BookmarkedSources(
+            directory: container.appending(path: "WidgetSource", directoryHint: .isDirectory)
+        ) { sentence in
+            Log.widget.notice("\(Log.widgetsTag, privacy: .public) \(sentence, privacy: .public)")
+        }
     }
 }

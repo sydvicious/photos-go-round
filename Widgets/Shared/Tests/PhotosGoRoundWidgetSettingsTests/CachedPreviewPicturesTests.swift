@@ -29,6 +29,39 @@ struct CachedPreviewPicturesTests {
         #expect(pixels(of: made) == CGSize(width: 200, height: 150))
     }
 
+    @Test("A single file's picture comes back too, made to fit the box")
+    func fromAFile() throws {
+        let pictures = try ScratchFolder()
+        let cache = try ScratchFolder()
+        let moon = try pictures.picture("moon.png", width: 800, height: 600)
+        let source = SourceSpec(kind: .file, locator: moon.path(percentEncoded: false))
+        let box = CGSize(width: 200, height: 200)
+        let preview = CachedPreviewPictures(directory: cache.url)
+
+        // The first is cleared away as the next is taken, so each is looked
+        // at while it is the one showing.
+        let first = try #require(try preview.first(from: [source], fitting: box))
+        #expect(pixels(of: first) == CGSize(width: 200, height: 150))
+
+        let next = try #require(try preview.next(from: [source], fitting: box))
+        #expect(pixels(of: next) == CGSize(width: 200, height: 150))
+    }
+
+    @Test("With bookmarks kept, a folder's picture comes through the one left for it")
+    func throughABookmark() throws {
+        let pictures = try ScratchFolder()
+        let cache = try ScratchFolder()
+        try pictures.picture("Coins/coin.png", width: 800, height: 600)
+        let coins = pictures.url.appending(path: "Coins", directoryHint: .isDirectory)
+        let bookmarks = BookmarkedSources(directory: cache.url.appending(path: "shared"))
+        try bookmarks.leave(for: coins)
+
+        let file = try CachedPreviewPictures(directory: cache.url, bookmarks: bookmarks)
+            .next(from: [.folder(coins.path(percentEncoded: false))], fitting: CGSize(width: 200, height: 200))
+
+        #expect(pixels(of: try #require(file)) == CGSize(width: 200, height: 150))
+    }
+
     @Test("Asked again, it gives another file, and the one before has gone")
     func oneAtATime() throws {
         let pictures = try ScratchFolder()

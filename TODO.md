@@ -371,3 +371,7 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 - **Whether a folder bookmark lasts**: after a restart, after the app is rebuilt, and after the folder moves. The plain bookmark opened with "stale" true. Closed plan, *The bookmark test worked*.
 - **TinyCache has no size ceiling.** Only the fill limit is enforced; space for 30 at the extra-large size measured about 12 MB at the largest, fitted. Closed plan, *What it leaves out*.
 - **Whether Notification Center on the Mac offers either extra-large size.** Closed plan, *Control Center and Notification Center on the Mac*.
+
+## A folder in iCloud Drive gives "No Photos found" in an iOS widget
+
+On Syd's phone, 2026-10-11: with a folder from iCloud Drive chosen, the app's preview shows its pictures and the widgets say "No Photos found"; with it taken out, the phone's own files show again. To look at again after each iOS update. Syd: "They won't change it until there is a software update, and I run the beta updates, so I will see it". Which step fails in the extension has not been read from its log. `Plans/PGR Widgets - iOS.md`, *The files and folders*.

@@ -42,11 +42,14 @@ public struct WidgetPictures: Sendable {
     ///     a size with no picture yet looks for another size's.
     ///   - library: Where Photos sources get their pictures. A test hands
     ///     over one of its own.
+    ///   - bookmarks: What files and folders are opened through: the
+    ///     bookmarks the app left. Without it they are read by their paths.
     public init(
         directory: URL, among root: URL? = nil,
-        library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()
+        library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
+        bookmarks: BookmarkedSources? = nil
     ) {
-        pictures = CachedPreviewPictures(directory: directory, library: library)
+        pictures = CachedPreviewPictures(directory: directory, library: library, bookmarks: bookmarks)
         self.root = root
         asking = directory.appending(path: "asking.json")
     }

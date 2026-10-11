@@ -6,10 +6,12 @@
 // that did not take.
 
 import Foundation
+import OSLog
 import Observation
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundPhotoLibrary
 import PhotosGoRoundWidgetFace
+import TinyCache
 
 @MainActor
 @Observable
@@ -116,10 +118,15 @@ public final class SettingsModel {
     /// it runs.
     public private(set) var counting: Task<Void, Never>?
 
+    /// Where a bookmark is left for each file and folder added, for the app
+    /// and its widgets to open it through.
+    private let bookmarks: BookmarkedSources?
+
     public init(
         sources: ChosenSources, library: any PhotoLibrary, preview: PreviewModel,
-        counts: any SourceCounts = NoSourceCounts()
+        counts: any SourceCounts = NoSourceCounts(), bookmarks: BookmarkedSources? = nil
     ) {
+        self.bookmarks = bookmarks
         self.counts = counts
         self.sources = sources
         self.library = library
@@ -255,9 +262,50 @@ public final class SettingsModel {
         counting = Task { await countSources() }
     }
 
+    /// What the Files browser hands back: each folder and each image file
+    /// chosen there becomes a source. A folder starts without the folders
+    /// inside it, as on the Mac; Syd, 2026-10-09.
+    ///
+    /// **A bookmark is left first, and what none can be left for is not
+    /// added.** Without one it could be read until the app was next launched
+    /// and never by a widget.
+    public func add(_ chosen: [URL]) {
+        var added: [SourceSpec] = []
+        for url in chosen {
+            do {
+                try bookmarks?.leave(for: url)
+            } catch {
+                Log.widget.error(
+                    """
+                    \(Log.widgetsTag, privacy: .public) no bookmark could be left for \
+                    \(url.lastPathComponent, privacy: .public), so it was not added: \
+                    \(String(describing: error), privacy: .public)
+                    """)
+                continue
+            }
+            let path = url.path(percentEncoded: false)
+            added.append(Self.isFolder(url) ? .folder(path) : SourceSpec(kind: .file, locator: path))
+        }
+        guard !added.isEmpty else { return }
+        sources.add(added)
+        reload()
+        counting = Task { await countSources() }
+    }
+
+    /// Asked of the disk, and of the location's own spelling when the disk
+    /// will not say.
+    private static func isFolder(_ url: URL) -> Bool {
+        let letIn = url.startAccessingSecurityScopedResource()
+        defer { if letIn { url.stopAccessingSecurityScopedResource() } }
+        return (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? url.hasDirectoryPath
+    }
+
     public func remove(_ row: Row) {
         guard row.isRemovable else { return }
         sources.remove(row.source)
+        if row.kind == .folder || row.kind == .file {
+            bookmarks?.forget(row.source.locator)
+        }
         reload()
     }
 }

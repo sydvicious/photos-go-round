@@ -117,4 +117,25 @@ struct ChosenSourcesTests {
 
         #expect(preferences.sources == [coins, cats])
     }
+
+    @Test("What is added goes after everything else, in the order it was given")
+    func adding() {
+        let cats = album("A2", "Cats")
+        preferences.setSources([coins, cats])
+        let stamps = SourceSpec.folder("/pictures/stamps")
+
+        chosen.add([oneFile, stamps])
+
+        #expect(preferences.sources == [coins, cats, oneFile, stamps])
+    }
+
+    @Test("What is already chosen is not added again, and keeps what was stored about it")
+    func addingWhatIsThere() {
+        let withSubfolders = SourceSpec.folder("/pictures/coins", recursive: true)
+        preferences.setSources([withSubfolders])
+
+        chosen.add([coins, oneFile, oneFile])
+
+        #expect(preferences.sources == [withSubfolders, oneFile])
+    }
 }

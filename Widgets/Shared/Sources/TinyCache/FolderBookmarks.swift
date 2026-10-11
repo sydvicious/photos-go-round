@@ -20,7 +20,12 @@ public enum FolderBookmarks {
     /// The name of the file a folder's bookmark is kept in: the same for a
     /// path however it is written, and with nothing of the path readable in it.
     public static func fileName(forFolderAt path: String) -> String {
-        let standard = URL(fileURLWithPath: path, isDirectory: true).standardizedFileURL
+        // By its spelling alone. `standardizedFileURL` asks the disk, and takes
+        // `/private` off the front of a path it can see: the app, let into a
+        // folder, and its widget, not let in, then got two names for one
+        // folder, and the widget found no bookmark. Syd's phone, 2026-10-11,
+        // for a folder in iCloud Drive.
+        let standard = URL(fileURLWithPath: path, isDirectory: true).standardized
             .path(percentEncoded: false)
         let trimmed = standard.count > 1 && standard.hasSuffix("/") ? String(standard.dropLast()) : standard
         // FNV-1a, 64 bits. Not Swift's `Hasher`, which is seeded afresh in

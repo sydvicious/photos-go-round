@@ -7,6 +7,7 @@ import PhotosGoRoundPhotoLibrary
 import PhotosGoRoundWidgetSettings
 import PhotosUI
 import SwiftUI
+import TinyCache
 import WidgetKit
 
 @main
@@ -27,7 +28,8 @@ struct WidgetsApp: App {
                 suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)),
         // The same thing counts for the rows and picks for the preview, so
         // a source is counted once.
-        counts: Self.pictures)
+        counts: Self.pictures,
+        bookmarks: Self.bookmarks)
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -88,7 +90,13 @@ struct WidgetsApp: App {
         _ = await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: controller)
     }
 
-    private static let pictures = CachedPreviewPictures(directory: previewCache)
+    private static let pictures = CachedPreviewPictures(directory: previewCache, bookmarks: bookmarks)
+
+    /// What the files and folders chosen in the Files browser are opened
+    /// through, by this app and by its widgets. One for the life of the app:
+    /// what it has opened stays open.
+    private static let bookmarks = BookmarkedSources.inAppGroup(
+        Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
 
     /// Where the preview keeps its pictures: the app's own, apart from any
     /// widget's.

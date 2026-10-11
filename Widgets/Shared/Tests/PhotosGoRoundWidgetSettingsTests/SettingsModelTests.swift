@@ -1,6 +1,7 @@
 import Foundation
 import PhotosGoRoundAgentAPI
 import Testing
+import TinyCache
 
 @testable import PhotosGoRoundWidgetSettings
 
@@ -123,5 +124,82 @@ struct SettingsModelTests {
         model.reload()
 
         #expect(model.filesAndFolders.map(\.title) == ["coins"])
+    }
+
+    // MARK: - Adding files and folders
+
+    func model(leaving bookmarks: BookmarkedSources) -> SettingsModel {
+        SettingsModel(
+            sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized),
+            preview: .sample(), bookmarks: bookmarks)
+    }
+
+    func bookmarks(in scratch: ScratchFolder) -> BookmarkedSources {
+        BookmarkedSources(directory: scratch.url.appending(path: "shared", directoryHint: .isDirectory))
+    }
+
+    @Test("A folder chosen in the Files browser gets a folder's row, and a file a file's")
+    func addingFilesAndFolders() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("Coins/coin.png")
+        let moon = try scratch.picture("moon.png")
+        let model = model
+
+        model.add([scratch.url.appending(path: "Coins"), moon])
+
+        #expect(model.filesAndFolders.map(\.kind) == [.folder, .file])
+        #expect(model.filesAndFolders.map(\.title) == ["Coins", "moon.png"])
+    }
+
+    @Test("A folder that is added starts without the folders inside it")
+    func addedFolderIsNotRecursive() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("Coins/coin.png")
+        let model = model
+
+        model.add([scratch.url.appending(path: "Coins")])
+
+        #expect(preferences.sources.map(\.recursive) == [false])
+    }
+
+    @Test("The preview is told about what is added")
+    func previewFollowsAdding() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let model = model
+
+        model.add([moon])
+
+        #expect(model.preview.content == .scanning)
+    }
+
+    @Test("A bookmark is left for each one added, where a widget can open it")
+    func addingLeavesBookmarks() throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("Coins/coin.png")
+        let moon = try scratch.picture("moon.png")
+        let bookmarks = bookmarks(in: scratch)
+        let model = model(leaving: bookmarks)
+
+        model.add([scratch.url.appending(path: "Coins"), moon])
+
+        let locators = preferences.sources.map(\.locator)
+        #expect(locators.count == 2)
+        #expect(locators.allSatisfy { bookmarks.location(of: $0) != nil })
+    }
+
+    @Test("Removing a file or folder removes the bookmark left for it")
+    func removingForgetsTheBookmark() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let bookmarks = bookmarks(in: scratch)
+        let model = model(leaving: bookmarks)
+        model.add([moon])
+        let locator = try #require(preferences.sources.first?.locator)
+
+        model.remove(model.filesAndFolders[0])
+
+        #expect(preferences.sources.isEmpty)
+        #expect(bookmarks.location(of: locator) == nil)
     }
 }

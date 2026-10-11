@@ -16,10 +16,12 @@
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundPhotoLibrary
 import SwiftUI
+import UniformTypeIdentifiers
 
 public struct SettingsView: View {
     @State private var model: SettingsModel
     @State private var showsNoAccess = false
+    @State private var showsFileBrowser = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     /// How tall the tallest size's shape is in the bar. It grows with the
@@ -107,6 +109,17 @@ public struct SettingsView: View {
                 model.chooseCollections(ticked)
             }
         }
+        // The Files browser on iOS, and the open panel on the Mac. Folders
+        // and image files in one browser, where the Mac app has a menu item
+        // for each.
+        .fileImporter(
+            isPresented: $showsFileBrowser, allowedContentTypes: [.folder, .image],
+            allowsMultipleSelection: true
+        ) { result in
+            // Cancelled, or the browser failed: nothing was chosen.
+            guard case .success(let chosen) = result else { return }
+            model.add(chosen)
+        }
         .alert("No Photos Access", isPresented: $showsNoAccess) {
             Button("Settings…") { openSettings() }
             Button("Cancel", role: .cancel) {}
@@ -176,14 +189,12 @@ public struct SettingsView: View {
         .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
         .disabled(model.chooser == .nothing)
 
-        // Adding a file or a folder is not built yet, so the button cannot be
-        // pressed.
         Button {
+            showsFileBrowser = true
         } label: {
             sourceSymbol("folder", compact: compact)
         }
         .accessibilityLabel("Add files or folders")
-        .disabled(true)
     }
 
     @ViewBuilder private func sourceSymbol(_ name: String, compact: Bool) -> some View {
@@ -244,9 +255,8 @@ public struct SettingsView: View {
                 ForEach(model.filesAndFolders) { row in
                     SourceRow(row: row)
                 }
-                // Nothing adds a file or a folder yet, and how one is to be
-                // taken out in this design was not said; the swipe is what
-                // there is.
+                // How one is to be taken out in this design was not said;
+                // the swipe is what there is.
                 .onDelete { offsets in remove(offsets, from: model.filesAndFolders) }
             }
         }

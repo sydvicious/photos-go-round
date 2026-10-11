@@ -16,15 +16,22 @@ import TinyCache
 public struct CachedPreviewPictures: PreviewPictures {
     private let directory: URL
     private let library: any PhotoLibraryPictures
+    private let bookmarks: BookmarkedSources?
 
     /// - Parameters:
     ///   - directory: Somewhere of the app's own to keep the pictures and the
     ///     counts, such as a folder in its caches.
     ///   - library: Where Photos sources get their pictures. A test hands
     ///     over one of its own.
-    public init(directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures()) {
+    ///   - bookmarks: What files and folders are opened through, where the
+    ///     Files browser chose them. Without it they are read by their paths.
+    public init(
+        directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
+        bookmarks: BookmarkedSources? = nil
+    ) {
         self.directory = directory
         self.library = library
+        self.bookmarks = bookmarks
     }
 
     public func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
@@ -91,7 +98,7 @@ public struct CachedPreviewPictures: PreviewPictures {
     public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
         let folder = folder(for: sources, fitting: box)
         for spec in sources {
-            guard let source = spec.firstPicture(in: library) else { continue }
+            guard let source = spec.firstPicture(in: library, through: bookmarks) else { continue }
             let cache = TinyCache(directory: folder, source: source, fitting: box, fillLimit: 1)
             do {
                 if let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file {
@@ -127,11 +134,12 @@ public struct CachedPreviewPictures: PreviewPictures {
     private var counts: URL { directory.appending(path: "counts.json") }
 
     /// One source made of every chosen one the preview can read: folders,
-    /// Photos collections, and the photographs picked with limited access. Every picture has an equal chance, whichever of
-    /// them it is in, as in a widget.
+    /// single files, Photos collections, and the photographs picked with
+    /// limited access. Every picture has an equal chance, whichever of them
+    /// it is in, as in a widget.
     private func source(for specs: [SourceSpec]) -> any PictureSource {
         SeveralSources(
-            specs.compactMap { $0.counted(in: library) },
+            specs.compactMap { $0.counted(in: library, through: bookmarks) },
             remembering: RememberedCounts(file: directory.appending(path: "counts.json")))
         // The same file a row's count is written to.
     }
@@ -144,8 +152,8 @@ public struct CachedPreviewPictures: PreviewPictures {
 /// that count is the slow part.
 extension CachedPreviewPictures: SourceCounts {
     public func count(of source: SourceSpec) throws -> Int? {
-        let count = try LibrarySourceCounts().count(of: source)
-        if let count, let counted = source.counted(in: library) {
+        let count = try LibrarySourceCounts(through: bookmarks).count(of: source)
+        if let count, let counted = source.counted(in: library, through: bookmarks) {
             // Nothing is remembered of an empty source, as in
             // `SeveralSources`: it is asked again each time. A pick may be
             // writing its own counts to the same file at this moment, and an
