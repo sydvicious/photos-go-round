@@ -21,14 +21,12 @@ after it. The to-dos under each phase are Claude's.
   - The alert, and the picker again, when a source is wrong at opening.
   - Files and folders, with adding and removing. Not the priority, and may not be done.
 - **Phase 2** — The widget extension.
-  - An iOS widget extension target, compiling the Mac's source files.
-  - The widget reads the sources from the App Group container.
-  - Each widget starts as the preview does: the picture it kept on disk from last time, then the
-    first source's first, then the weighted picks. Syd, 2026-10-10: "of course, each widget will
-    be doing this as well".
-  - The widget's list of sources takes the selection: `Settings.source(for:)` knows folders and
-    collections only.
-  - The extension records each size it is handed, and the preview uses them.
+  - The extension records each size it is handed, and the preview uses them. It logs them now
+    (`[PGR-Widgets] timeline asked`); on the iPhone 17 simulator a small widget was handed 164
+    by 164 points, where the table's nearest row says 158.
+  - A cache for each widget. There is one for each size, so two widgets of one size share it.
+  - How often a widget changes, as each widget's own setting. It is five minutes for all.
+  - Look at a widget's memory and its first wake on a real device with a large library.
   - Spike: can the extension open a folder the app chose?
 - **Phase 3** — What can only be found out on the phone. The to-dos are the ones under *iOS and
   iPadOS* in `Plans/Photos-Go-Round Widgets.md`.
@@ -1093,8 +1091,8 @@ Apple's spelling of macOS over the `MacOS` of the existing top-level folder.
   choosing that over plain files added to each app target. The models are written test-first.
   The target is `PhotosGoRoundWidgetSettings`, in the style of the package's longer names, and its
   tests are `PhotosGoRoundWidgetSettingsTests`: Syd, 2026-10-09, over the shorter `WidgetSettings`.
-- `Widgets/iOS` — the iOS app and its widget extension. It is made when the first file goes into
-  it; an empty folder is nothing to git.
+- `Widgets/iOS` — the iOS app, in `App`, and its widget extension, in `Extension`. Each has
+  `Sources`, and `Resources` with its `Info.plist` and its entitlements.
 
 **What stayed**, though it has "widget" in its name: `WidgetFolderBookmark.swift` in
 `MacOS/Desktop/Sources` is Photos-Go-Round.app's own file, and the plans stay in `Plans/`.
@@ -1271,12 +1269,15 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
   package already lists iOS 27, so the shared targets need no change for that.
 - A widget is an extension, so the app target needs a widget extension target to carry. Syd,
   2026-10-09, chose a second extension target for iOS, compiling the same source files as the
-  Mac's, over making the Mac's target build for both. The Mac's has an identifier for each build
+  Mac's, over making the Mac's target build for both. On 2026-10-10, with the shared faces and
+  the App Group decided since, he chose again: the iOS extension has small files of its own in
+  `Widgets/iOS/Extension`, what a wake does is in the shared package (`WidgetPictures`) where it
+  is tested, and the Mac widget's files are not touched. The target is `Photos-Go-Round Widgets
+  iOS Extension`, and the app's scheme builds it and puts it in the app. The Mac's has an identifier for each build
   configuration, Mac sandbox entitlements, and a place in Photos-Go-Round.app's release, and none
   of that is disturbed.
-- The source files are in `Widgets/macOS/Sources` today. Two of them are the Mac's alone as they
-  stand: `PhotoWidget.swift` loads its picture through `NSImage`, and `Settings.swift` reads the
-  Mac app's preferences. Where files shared by the two targets should live was not said.
+- **The app tells the widgets to look again when a person leaves it**, so a change of sources
+  shows without waiting for a widget's next turn.
 - Debug, Release and Claude builds carry different identifiers, as on the Mac. See *Identity*.
 - The version is the project's, in `Version.xcconfig`. A release on iOS is an archive uploaded to
   App Store Connect, not a DMG, so `Scripts/release-build.sh` does not cover it.

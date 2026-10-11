@@ -7,6 +7,7 @@ import PhotosGoRoundPhotoLibrary
 import PhotosGoRoundWidgetSettings
 import PhotosUI
 import SwiftUI
+import WidgetKit
 
 @main
 struct WidgetsApp: App {
@@ -21,6 +22,8 @@ struct WidgetsApp: App {
         // a source is counted once.
         counts: Self.pictures)
 
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup {
             SettingsView(model: model, selectPhotos: Self.selectPhotos)
@@ -33,6 +36,14 @@ struct WidgetsApp: App {
                         model.preview.use(screen: screen.bounds.size, scale: screen.scale)
                         Self.limit(scene, in: window, on: screen)
                     })
+        }
+        // When a person leaves the app, the widgets look at what is chosen
+        // now. A widget with nothing to show otherwise waits a quarter of an
+        // hour before it asks again.
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
         }
     }
 

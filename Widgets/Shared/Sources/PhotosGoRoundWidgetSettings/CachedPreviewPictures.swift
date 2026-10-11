@@ -62,6 +62,16 @@ public struct CachedPreviewPictures: PreviewPictures {
         return (try? cache.lastShown()) ?? nil
     }
 
+    /// Fetches one picture ahead of time and keeps it waiting, so that the
+    /// next `next` has it without asking any source. A widget does this
+    /// after it has handed over what it is showing.
+    public func makeReady(from sources: [SourceSpec], fitting box: CGSize) {
+        let cache = TinyCache(
+            directory: folder(for: sources, fitting: box),
+            source: Self.source(for: sources, counts: directory), fitting: box, fillLimit: 1)
+        _ = try? cache.fill(to: 1)
+    }
+
     /// Each source is tried in the order it was chosen, and the first that
     /// gives a picture is the one. A source that cannot be read is passed
     /// over, as one with nothing in it is.

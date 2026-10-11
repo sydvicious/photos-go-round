@@ -54,6 +54,11 @@
 		AA0000000000000000000C11 /* PhotosGoRound.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PhotosGoRound.icon */; };
 		AA0000000000000000000C12 /* PhotosGoRoundPhotoLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C13 /* PhotosGoRoundPhotoLibrary */; };
 		AA0000000000000000000C14 /* PhotosGoRoundPhotoLibrary in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C15 /* PhotosGoRoundPhotoLibrary */; };
+		AA0000000000000000000D0C /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000D0D /* PhotosGoRoundAgentAPI */; };
+		AA0000000000000000000D0E /* TinyCache in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000D0F /* TinyCache */; };
+		AA0000000000000000000D10 /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000D11 /* PhotosGoRoundWidgetSettings */; };
+		AA0000000000000000000D12 /* PhotosGoRoundWidgetFace in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000D13 /* PhotosGoRoundWidgetFace */; };
+		AA0000000000000000000D14 /* Photos-Go-Round Widgets Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000D01 /* Photos-Go-Round Widgets Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +110,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AA0000000000000000000B00;
 			remoteInfo = "Photos-Go-Round Widget";
+		};
+		AA0000000000000000000D16 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA0000000000000000000D00;
+			remoteInfo = "Photos-Go-Round Widgets iOS Extension";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -162,6 +174,15 @@
 			);
 			name = "Embed Widget Extension";
 		};
+		AA0000000000000000000D15 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/PlugIns";
+			dstSubfolder = Product;
+			files = (
+				AA0000000000000000000D14 /* Photos-Go-Round Widgets Extension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -188,6 +209,7 @@
 		AA0000000000000000000932 /* Uninstaller.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = Uninstaller.icon; sourceTree = "<group>"; };
 		AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Photos-Go-Round Widget.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA0000000000000000000C01 /* Photos-Go-Round Widgets.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Photos-Go-Round Widgets.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0000000000000000000D01 /* Photos-Go-Round Widgets Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Photos-Go-Round Widgets Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -364,6 +386,16 @@
 			path = Resources;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000D05 /* Sources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000D06 /* Resources */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Resources;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -443,6 +475,15 @@
 				AA0000000000000000000C0F /* PhotosGoRoundWidgetSettings in Frameworks */,
 			);
 		};
+		AA0000000000000000000D03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				AA0000000000000000000D0C /* PhotosGoRoundAgentAPI in Frameworks */,
+				AA0000000000000000000D12 /* PhotosGoRoundWidgetFace in Frameworks */,
+				AA0000000000000000000D10 /* PhotosGoRoundWidgetSettings in Frameworks */,
+				AA0000000000000000000D0E /* TinyCache in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -484,6 +525,7 @@
 				AA0000000000000000000921 /* Uninstall Photos-Go-Round.app */,
 				AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */,
 				AA0000000000000000000C01 /* Photos-Go-Round Widgets.app */,
+				AA0000000000000000000D01 /* Photos-Go-Round Widgets Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -644,8 +686,18 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000C07 /* App */,
+				AA0000000000000000000D07 /* Extension */,
 			);
 			path = iOS;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000D07 /* Extension */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000D06 /* Resources */,
+				AA0000000000000000000D05 /* Sources */,
+			);
+			path = Extension;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -894,8 +946,12 @@
 				AA0000000000000000000C02 /* Sources */,
 				AA0000000000000000000C03 /* Frameworks */,
 				AA0000000000000000000C04 /* Resources */,
+				AA0000000000000000000D15 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000D17 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				AA0000000000000000000C05 /* Sources */,
@@ -909,6 +965,30 @@
 			productName = "Photos-Go-Round Widgets iOS";
 			productReference = AA0000000000000000000C01 /* Photos-Go-Round Widgets.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AA0000000000000000000D00 /* Photos-Go-Round Widgets iOS Extension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000D08 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */;
+			buildPhases = (
+				AA0000000000000000000D02 /* Sources */,
+				AA0000000000000000000D03 /* Frameworks */,
+				AA0000000000000000000D04 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000D05 /* Sources */,
+			);
+			name = "Photos-Go-Round Widgets iOS Extension";
+			packageProductDependencies = (
+				AA0000000000000000000D0D /* PhotosGoRoundAgentAPI */,
+				AA0000000000000000000D13 /* PhotosGoRoundWidgetFace */,
+				AA0000000000000000000D11 /* PhotosGoRoundWidgetSettings */,
+				AA0000000000000000000D0F /* TinyCache */,
+			);
+			productName = "Photos-Go-Round Widgets iOS Extension";
+			productReference = AA0000000000000000000D01 /* Photos-Go-Round Widgets Extension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -951,6 +1031,7 @@
 				AA00000000000000000000F0 /* Photos-Go-Round Wallpaper Host */,
 				AA0000000000000000000B00 /* Photos-Go-Round Widget */,
 				AA0000000000000000000C00 /* Photos-Go-Round Widgets iOS */,
+				AA0000000000000000000D00 /* Photos-Go-Round Widgets iOS Extension */,
 				AA0000000000000000000920 /* Photos-Go-Round Uninstaller */,
 				AA0000000000000000000940 /* Release DMG */,
 				AA0000000000000000000063 /* Photos-Go-RoundTests */,
@@ -990,6 +1071,11 @@
 			isa = PBXResourcesBuildPhase;
 			files = (
 				AA0000000000000000000C11 /* PhotosGoRound.icon in Resources */,
+			);
+		};
+		AA0000000000000000000D04 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -1093,6 +1179,11 @@
 			files = (
 			);
 		};
+		AA0000000000000000000D02 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -1130,6 +1221,11 @@
 			isa = PBXTargetDependency;
 			target = AA0000000000000000000B00 /* Photos-Go-Round Widget */;
 			targetProxy = AA0000000000000000000B0F /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000D17 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA0000000000000000000D00 /* Photos-Go-Round Widgets iOS Extension */;
+			targetProxy = AA0000000000000000000D16 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -2189,6 +2285,90 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000D09 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Widgets/iOS/Extension/Resources/Photos-Go-Round Widgets Extension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/iOS/Extension/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
+				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000D0A /* Claude configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Widgets/iOS/Extension/Resources/Photos-Go-Round Widgets Extension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/iOS/Extension/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
+				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Claude;
+		};
+		AA0000000000000000000D0B /* Release configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = "Widgets/iOS/Extension/Resources/Photos-Go-Round Widgets Extension.entitlements";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Widgets/iOS/Extension/Resources/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhotosGoRound;
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Photos-Go-Round shows photographs from the albums you choose in its widgets. Nothing is ever uploaded or shared.";
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				OTHER_CODE_SIGN_FLAGS = "";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widgets$(STORAGE_ID_SUFFIX).extension";
+				PRODUCT_NAME = "Photos-Go-Round Widgets Extension";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = nonisolated;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -2309,6 +2489,15 @@
 			);
 			defaultConfigurationName = Release;
 		};
+		AA0000000000000000000D08 /* Build configuration list for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000D09 /* Debug configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */,
+				AA0000000000000000000D0A /* Claude configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */,
+				AA0000000000000000000D0B /* Release configuration for PBXNativeTarget "Photos-Go-Round Widgets iOS Extension" */,
+			);
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -2422,6 +2611,22 @@
 		AA0000000000000000000C15 /* PhotosGoRoundPhotoLibrary */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PhotosGoRoundPhotoLibrary;
+		};
+		AA0000000000000000000D0D /* PhotosGoRoundAgentAPI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundAgentAPI;
+		};
+		AA0000000000000000000D0F /* TinyCache */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TinyCache;
+		};
+		AA0000000000000000000D11 /* PhotosGoRoundWidgetSettings */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetSettings;
+		};
+		AA0000000000000000000D13 /* PhotosGoRoundWidgetFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetFace;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
