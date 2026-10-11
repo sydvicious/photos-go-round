@@ -80,6 +80,18 @@ public struct ChosenSources: Sendable {
         preferences.setSources(stored + added.filter { have.insert($0.locator).inserted })
     }
 
+    /// Whether a folder's pictures include those in the folders inside it.
+    /// The folder stays where it is in the list. Nothing else has the option.
+    public func include(subfolders: Bool, of folder: SourceSpec) {
+        var stored = preferences.sources
+        guard folder.kind == .folder,
+            let index = stored.firstIndex(where: { $0.kind == .folder && $0.locator == folder.locator }),
+            stored[index].recursive != subfolders
+        else { return }
+        stored[index].recursive = subfolders
+        preferences.setSources(stored)
+    }
+
     /// Stores what a source is called and where it sits now, when Photos says
     /// that has changed. The source stays where it is in the list.
     public func describe(_ locator: String, as description: SourceDescription) {

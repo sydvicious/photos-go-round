@@ -29,6 +29,9 @@ public final class SettingsModel {
         public let count: Int?
 
         public var id: String { source.locator }
+        /// Whether a folder's pictures include those in the folders inside
+        /// it. Nil for anything that is not a folder, which has no such box.
+        public var includesSubfolders: Bool? { kind == .folder ? source.recursive : nil }
         /// Selected Photos is there for as long as access is limited, and
         /// goes by itself when it is not.
         public var isRemovable: Bool { kind != .selectedPhotos }
@@ -63,6 +66,23 @@ public final class SettingsModel {
     public private(set) var photosAccess: LibraryAuthorization?
     /// Whether the collections sheet is up.
     public var showsCollectionPicker = false
+
+    /// The names of what could not be added just now. The screen puts up an
+    /// alert while there are any, and empties this when it is dismissed.
+    public var notAdded: [String] = []
+
+    /// What the alert says. Syd, 2026-10-11: "A modal alert saying "%s could
+    /// not be added." where the name of the file or folder or collection is
+    /// substituted". Several at once are named in the one sentence, as
+    /// several sources wrong at once get one alert. And: "if there is no
+    /// name, simply says "That item"".
+    public var notAddedMessage: String? {
+        guard !notAdded.isEmpty else { return nil }
+        let names = notAdded.map {
+            $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "That item" : $0
+        }
+        return "\(names.formatted(.list(type: .and))) could not be added."
+    }
 
     /// What the Photos button brings up: the collections sheet with full
     /// access, the system's own picker with limited access, the way to the
@@ -268,9 +288,11 @@ public final class SettingsModel {
     ///
     /// **A bookmark is left first, and what none can be left for is not
     /// added.** Without one it could be read until the app was next launched
-    /// and never by a widget.
+    /// and never by a widget. The person is told which: `notAdded`.
     public func add(_ chosen: [URL]) {
         var added: [SourceSpec] = []
+        var refused: [String] = []
+        defer { notAdded = refused }
         for url in chosen {
             do {
                 try bookmarks?.leave(for: url)
@@ -281,6 +303,7 @@ public final class SettingsModel {
                     \(url.lastPathComponent, privacy: .public), so it was not added: \
                     \(String(describing: error), privacy: .public)
                     """)
+                refused.append(url.lastPathComponent)
                 continue
             }
             let path = url.path(percentEncoded: false)
@@ -298,6 +321,18 @@ public final class SettingsModel {
         let letIn = url.startAccessingSecurityScopedResource()
         defer { if letIn { url.stopAccessingSecurityScopedResource() } }
         return (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? url.hasDirectoryPath
+    }
+
+    /// What ticking a folder's box does. Its count is of other pictures
+    /// from then on, so it is counted again, and the preview starts over.
+    /// Syd, 2026-10-11: "a checkbox in the same line as the entry that
+    /// toggles it on or off".
+    public func include(subfolders: Bool, of row: Row) {
+        guard row.kind == .folder, row.source.recursive != subfolders else { return }
+        sources.include(subfolders: subfolders, of: row.source)
+        counted[row.source.locator] = nil
+        reload()
+        counting = Task { await countSources() }
     }
 
     public func remove(_ row: Row) {

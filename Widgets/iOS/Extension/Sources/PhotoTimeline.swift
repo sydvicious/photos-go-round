@@ -33,11 +33,6 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     /// does.
     private static let wakes = SerialWork(label: "com.sydpolk.photosgoround.widgets.wakes")
 
-    /// How long to wait before asking again when there was nothing to show.
-    /// The app also reloads the widgets when a person leaves it, so a change
-    /// made there does not wait this long.
-    private static let retry: TimeInterval = 15 * 60
-
     func placeholder(in context: Context) -> PhotoEntry {
         PhotoEntry(date: .now, face: .scanning)
     }
@@ -117,7 +112,10 @@ struct PhotoTimeline: AppIntentTimelineProvider {
                 \(Int(wait.rounded(.up))) seconds
                 """)
         }
-        let due = wait.map { Date.now + $0 } ?? now + (showsPicture ? wake.every.seconds : Self.retry)
+        // Due at the widget's own time whatever it shows. With nothing to show
+        // it was a quarter of an hour, until Syd, 2026-10-11: "the widget
+        // looks again when the system pings it".
+        let due = wait.map { Date.now + $0 } ?? now + wake.every.seconds
         return Timeline(entries: [PhotoEntry(date: now, face: face)], policy: .after(due))
     }
 }

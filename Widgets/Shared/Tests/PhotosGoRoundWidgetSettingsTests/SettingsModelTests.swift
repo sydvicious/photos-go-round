@@ -202,4 +202,130 @@ struct SettingsModelTests {
         #expect(preferences.sources.isEmpty)
         #expect(bookmarks.location(of: locator) == nil)
     }
+
+    // MARK: - A folder's subfolders
+
+    @Test("Ticking a folder's box includes its subfolders, and the row shows it")
+    func tickingSubfolders() {
+        preferences.setSources([.folder("/pictures/coins")])
+        let model = model
+        #expect(model.filesAndFolders.map(\.includesSubfolders) == [false])
+
+        model.include(subfolders: true, of: model.filesAndFolders[0])
+
+        #expect(model.filesAndFolders.map(\.includesSubfolders) == [true])
+        #expect(preferences.sources == [.folder("/pictures/coins", recursive: true)])
+    }
+
+    @Test("Only a folder's row has the box")
+    func onlyFoldersHaveTheBox() {
+        preferences.setSources([
+            .folder("/pictures/coins"), SourceSpec(kind: .file, locator: "/pictures/moon.jpeg"),
+            album("A1", "Iceland"),
+        ])
+        let model = model
+
+        #expect(model.filesAndFolders.map(\.includesSubfolders) == [false, nil])
+        #expect(model.collections.map(\.includesSubfolders) == [nil])
+    }
+
+    @Test("A folder is counted again when its box is ticked, with what its subfolders hold")
+    func tickingCountsAgain() async throws {
+        let scratch = try ScratchFolder()
+        try scratch.picture("Coins/coin.png")
+        try scratch.picture("Coins/more/stamp.png")
+        let model = SettingsModel(
+            sources: ChosenSources(preferences: preferences), library: SampleLibrary(access: .authorized),
+            preview: .sample(), counts: LibrarySourceCounts())
+        model.add([scratch.url.appending(path: "Coins")])
+        await model.counting?.value
+        #expect(model.filesAndFolders.map(\.count) == [1])
+
+        model.include(subfolders: true, of: model.filesAndFolders[0])
+        await model.counting?.value
+
+        #expect(model.filesAndFolders.map(\.count) == [2])
+    }
+
+    // MARK: - What could not be added
+
+    /// Syd, 2026-10-11: "A modal alert saying "%s could not be added." where
+    /// the name of the file or folder or collection is substituted". A
+    /// bookmark cannot be left for a file that is not there, which is how one
+    /// fails to be added here.
+
+    @Test("What cannot be added is named in a sentence for the alert, and is not in the list")
+    func namesWhatWasNotAdded() throws {
+        let scratch = try ScratchFolder()
+        let model = model(leaving: bookmarks(in: scratch))
+
+        model.add([scratch.url.appending(path: "gone.png")])
+
+        #expect(model.notAdded == ["gone.png"])
+        #expect(model.notAddedMessage == "gone.png could not be added.")
+        #expect(model.filesAndFolders.isEmpty)
+    }
+
+    @Test("What can be added is, beside what cannot")
+    func addsTheRest() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let model = model(leaving: bookmarks(in: scratch))
+
+        model.add([scratch.url.appending(path: "gone.png"), moon])
+
+        #expect(model.notAdded == ["gone.png"])
+        #expect(model.filesAndFolders.map(\.title) == ["moon.png"])
+    }
+
+    @Test("Several that cannot be added are named in one sentence")
+    func namesSeveral() throws {
+        let scratch = try ScratchFolder()
+        let model = model(leaving: bookmarks(in: scratch))
+
+        model.add([scratch.url.appending(path: "gone.png"), scratch.url.appending(path: "Lost")])
+
+        let message = try #require(model.notAddedMessage)
+        #expect(model.notAdded == ["gone.png", "Lost"])
+        #expect(message.contains("gone.png"))
+        #expect(message.contains("Lost"))
+        #expect(message.hasSuffix(" could not be added."))
+    }
+
+    /// Syd, 2026-10-11: "for that alert, if there is no name, simply says
+    /// "That item"".
+    @Test("Something with no name is called \"That item\"")
+    func noName() {
+        let model = model
+
+        model.notAdded = [""]
+        #expect(model.notAddedMessage == "That item could not be added.")
+
+        model.notAdded = ["  "]
+        #expect(model.notAddedMessage == "That item could not be added.")
+    }
+
+    @Test("With everything added there is nothing to say")
+    func nothingToSay() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let model = model(leaving: bookmarks(in: scratch))
+
+        model.add([moon])
+
+        #expect(model.notAdded.isEmpty)
+        #expect(model.notAddedMessage == nil)
+    }
+
+    @Test("The next adding starts afresh: what was said before is not said again")
+    func startsAfresh() throws {
+        let scratch = try ScratchFolder()
+        let moon = try scratch.picture("moon.png")
+        let model = model(leaving: bookmarks(in: scratch))
+        model.add([scratch.url.appending(path: "gone.png")])
+
+        model.add([moon])
+
+        #expect(model.notAdded.isEmpty)
+    }
 }

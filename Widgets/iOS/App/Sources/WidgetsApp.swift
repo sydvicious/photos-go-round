@@ -47,8 +47,8 @@ struct WidgetsApp: App {
                     })
         }
         // When a person leaves the app, the widgets look at what is chosen
-        // now. A widget with nothing to show otherwise waits a quarter of an
-        // hour before it asks again.
+        // now. A widget otherwise waits for its own next change, which may
+        // be hours off.
         .onChange(of: scenePhase) { _, phase in
             if phase != .active {
                 WidgetCenter.shared.reloadAllTimelines()

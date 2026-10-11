@@ -120,6 +120,16 @@ public struct SettingsView: View {
             guard case .success(let chosen) = result else { return }
             model.add(chosen)
         }
+        // Something chosen in the Files browser that could not be added.
+        // Syd, 2026-10-11: "A modal alert saying "%s could not be added."".
+        .alert(
+            model.notAddedMessage ?? "",
+            isPresented: Binding(
+                get: { !model.notAdded.isEmpty },
+                set: { if !$0 { model.notAdded = [] } })
+        ) {
+            Button("OK", role: .cancel) {}
+        }
         .alert("No Photos Access", isPresented: $showsNoAccess) {
             Button("Settings…") { openSettings() }
             Button("Cancel", role: .cancel) {}
@@ -248,16 +258,33 @@ public struct SettingsView: View {
                     SourceRow(row: row, isWrong: row.isWrong || model.photosAccessIsOff)
                 }
             }
-            Section("Files and Folders") {
+            Section {
                 if model.filesAndFolders.isEmpty {
                     nothing("No files or folders chosen.")
                 }
                 ForEach(model.filesAndFolders) { row in
-                    SourceRow(row: row)
+                    SourceRow(row: row) { model.include(subfolders: $0, of: row) }
                 }
                 // How one is to be taken out in this design was not said;
                 // the swipe is what there is.
                 .onDelete { offsets in remove(offsets, from: model.filesAndFolders) }
+            } header: {
+                Text("Files and Folders")
+            } footer: {
+                // What a folder's box is for, and how a row is taken out,
+                // under the list and out of the rows' way. Syd, 2026-10-11:
+                // "needs some text somewhere explaining what it the checkbox
+                // is", and of the swipe, which nothing else shows a person,
+                // "We can just add text for the removal". The words are his.
+                // Each line only where there is something for it to be about.
+                VStack(alignment: .leading) {
+                    if model.filesAndFolders.contains(where: { $0.includesSubfolders != nil }) {
+                        Text("Include nested folders when checked.")
+                    }
+                    if !model.filesAndFolders.isEmpty {
+                        Text("Swipe left to remove the file or folder.")
+                    }
+                }
             }
         }
         // One backdrop for the preview and the lists.
@@ -359,6 +386,8 @@ struct SourceRow: View {
     let row: SettingsModel.Row
     /// Red when something is wrong with the source. Syd, 2026-10-09.
     var isWrong = false
+    /// Told when a folder's subfolders box is ticked or unticked.
+    var includeSubfolders: ((Bool) -> Void)?
 
     var body: some View {
         HStack {
@@ -371,7 +400,36 @@ struct SourceRow: View {
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
             }
+            // A folder's own option, in its row. Syd, 2026-10-11: "a checkbox
+            // in the same line as the entry that toggles it on or off", and
+            // "to the right of the count so it does not move around": the
+            // count's width changes and the row's edge does not.
+            if let includeSubfolders {
+                if let included = row.includesSubfolders {
+                    Button {
+                        includeSubfolders(!included)
+                    } label: {
+                        Self.box(ticked: included)
+                    }
+                    // A button in a row with other things in it: without
+                    // this the whole row is the button.
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Include subfolders")
+                    .accessibilityAddTraits(included ? .isSelected : [])
+                } else {
+                    // A single file has no box. The room for one is kept, so
+                    // that the counts in the list stay in one column.
+                    Self.box(ticked: false)
+                        .hidden()
+                        .accessibilityHidden(true)
+                }
+            }
         }
+    }
+
+    private static func box(ticked: Bool) -> some View {
+        Image(systemName: ticked ? "checkmark.square.fill" : "square")
+            .imageScale(.large)
     }
 
     private var symbol: String {
@@ -414,6 +472,8 @@ struct SourceRow: View {
                     kind: .photosCollection, locator: "A2",
                     description: SourceDescription(title: "Cats", collectionKind: "album")),
                 .folder("/pictures/Raw Coin Images"),
+                // One with its box ticked, to see both.
+                .folder("/pictures/Stamps", recursive: true),
                 SourceSpec(kind: .file, locator: "/pictures/moon.jpeg"),
             ],
             library: SampleLibrary(
@@ -425,7 +485,8 @@ struct SourceRow: View {
             // A library that holds what is chosen, a figure for each, and
             // something where the photograph goes. Syd, 2026-10-10.
             counts: [
-                "A1": 87, "A2": 1203, "/pictures/Raw Coin Images/": 412, "/pictures/moon.jpeg": 1,
+                "A1": 87, "A2": 1203, "/pictures/Raw Coin Images/": 412, "/pictures/Stamps/": 96,
+                "/pictures/moon.jpeg": 1,
             ],
             pictures: SamplePictures()))
     }

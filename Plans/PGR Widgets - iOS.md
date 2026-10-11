@@ -31,16 +31,7 @@ left of it. The to-dos are Claude's unless they say otherwise.
   2026-10-11, "I think we need to do files and folders next, because it colors how we deal with
   connections to sources not working". Earlier that day it was not the priority and might not
   be done: "I could remove them and ship now". *The files and folders*.
-  - Each folder's subfolders option, by tapping its row.
-  - Another look at how a file or folder is taken out. The swipe is what there is. *Taking a
-    source out of a list*.
-  - What the person is told when something chosen cannot be added. It may belong to Phase 3.
   - On Syd's phone, and his to run: an iCloud Drive folder after a restart.
-  - Decide how soon a widget looks again when an iCloud Drive folder has nothing on the phone.
-    It is a quarter of an hour. And the system may not ask even then: the phone's log for 15:01
-    to 15:23 on 2026-10-11, with the app killed, holds no wake of any widget.
-  - Decide whether a Photos collection goes through its photographs too when one gives no
-    picture, as a folder now does.
 - **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
   to-dos under *iOS and iPadOS* in `Plans/Photos-Go-Round Widgets.md`, which is closed; the rest
   of that plan's are in `TODO.md`. The widgets have run
@@ -269,8 +260,10 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   then they were not the priority and might not have been done at all: 2026-10-10, and earlier
   on 2026-10-11, "I could remove them and ship now".
 - **The list takes single image files as well as folders, as the Mac's does.** Syd, 2026-10-09.
-- **Each folder has its own option for including its subfolders, changed by tapping its row.** It
-  starts off. As on the Mac. Syd, 2026-10-09.
+- **Each folder has its own option for including its subfolders, and it is a checkbox in the
+  folder's row.** It starts off, as on the Mac. Syd, 2026-10-09, and 2026-10-11 for the checkbox:
+  "a checkbox in the same line as the entry that toggles it on or off". Until then it was to be
+  changed by tapping the row, as the Mac's sheet is.
 - **One Files browser takes folders and image files.** The Mac app has a menu item for each.
   Claude's, 2026-10-11, and Syd's to overrule. *The files and folders*, *Choosing*.
 - **A file or folder is opened through a bookmark, by the app as well as by its widgets, and
@@ -283,12 +276,18 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   sequentially until you find one, or until we determine that there are zero in that source, and
   only then, show "No Photos Found"". After the first source the others are gone through too,
   in the order they were drawn: Claude's reading of "always". Built for folders; a Photos
-  collection is drawn and passed over like any source, and cannot be gone through yet.
+  collection is drawn and passed over like any source and is not gone through: Syd, the same
+  day, "photos collection not gone through; we already have a mechanism", which is the time
+  limit and the waits of *When Photos does not answer*.
 - **Finding a picture may take a long time.** Syd, 2026-10-11: "widgets don't change files that
   often, so taking a long time to find one is not a big deal", "we have at least five minutes".
   From memory, not checked: the system gives one wake of a widget less than that, and stops it.
-- **What a bookmark cannot be left for is not added.** Only the log says so. Claude's,
-  2026-10-11; what the person is told is not decided.
+- **What a bookmark cannot be left for is not added, and an alert says so.** "Coins could not be
+  added.", with an OK button. Syd, 2026-10-11: "A modal alert saying "%s could not be added."
+  where the name of the file or folder or collection is substituted", and "if there is no name,
+  simply says "That item"". Several at once are named in the one alert. Nothing can fail to be
+  added for a collection as things are, so it is a file's or a folder's alert until something
+  can.
 
 *The widgets*
 
@@ -765,9 +764,10 @@ there; the pickers no longer show it to untick.
   minus button, with unticking for collections.
 - **A file or folder** leaves by a swipe to the left on its row. It has no sheet, so the swipe is
   its one way out. Syd, 2026-10-10: "the only thing that bothers me is how to remove files/folder
-  sources, but swipe is probably good enough." A swipe is not something a person is shown, and the
-  redesign did not say how a file or folder is taken out, so if files and folders are built this
-  is the place to look again.
+  sources, but swipe is probably good enough." A swipe is not something a person is shown, so a line under the
+  list says so: Syd, 2026-10-11, "We can just add text for the removal", and the words are his,
+  "Swipe left to remove the file or folder." It follows the line about a folder's checkbox, and
+  shows whenever the list has anything in it.
 - **There is no Edit button.** Offered three ways on 2026-10-09, with an Edit button that put the
   lists into delete mode as the third, Syd said "all three". On 2026-10-10, with the preview
   pinned: "let's ditch the Edit button as well".
@@ -1020,8 +1020,8 @@ We probably will but it's not the priority", and earlier on 2026-10-11, "I could
 ship now".
 
 **What there is.** The bar's Files button adds folders and image files, each gets a row with its
-count, the preview and the widgets show from them, and a swipe takes one out. A folder's
-subfolders option is not on the screen yet.
+count, the preview and the widgets show from them, and a swipe takes one out. A folder's row
+has a checkbox for its subfolders.
 
 **Single files as well as folders.** Syd, 2026-10-09: the bottom list takes both, as the Mac's
 does, so the shared view is the same everywhere. The Mac app has a menu item for each, *Add
@@ -1030,12 +1030,23 @@ counted as none: it cannot be read. It is a source in its own right, `FileSource
 2026-10-11 a file had a row and a count and no picture ever came from it.
 
 **Each folder has its subfolders option, as on the Mac.** Syd, 2026-10-09, choosing that over a
-folder always including its subfolders. Tapping a folder's row brings up its options, where the
-Mac app has a sheet with the folder's name, its location and one switch, "Add contents of
-contained folders" (`ConfigureSourceView`). The widget's code already reads the option for each
-folder, as `SourceSpec.recursive`. A newly added folder starts with it off, as on the Mac: only
-the pictures directly in the folder, so a folder never brings in more than was asked for. Syd,
-2026-10-09.
+folder always including its subfolders. It is a checkbox at the right of the folder's row, after its
+count: Syd, 2026-10-11, "I'm thinking a checkbox in the same line as the entry that toggles it
+on or off", and "I want the checkbox to the right of the count so it does not move around". A
+single file's row keeps the room a box would take, so the list's counts stay in one column. The
+Photos list's counts are at the edge, a box's width further right, and that stays: Syd, the
+same day, "this is fine the way it is". The Mac app has a sheet for it, with the folder's name, its location and
+one switch, "Add contents of contained folders" (`ConfigureSourceView`); tapping the row to
+bring up such a sheet was the plan here until then. A file's row has no box. Ticking it counts
+the folder again and starts the preview over, since it is other pictures from then on. The
+widget's code reads the option for each folder, as `SourceSpec.recursive`. A newly added folder
+starts with it off, as on the Mac: only the pictures directly in the folder, so a folder never
+brings in more than was asked for. Syd, 2026-10-09.
+
+**A line under the list says what the box is for.** Syd, 2026-10-11: "needs some text somewhere
+explaining what it the checkbox is", and the words are his: "Include nested folders when checked."
+It is the list's footer, out of the rows' way, and shows only when the list
+has a folder in it. The line about the swipe is under it: *Taking a source out of a list*. VoiceOver reads the box as "Include subfolders".
 
 **Choosing.** SwiftUI's `fileImporter` on both platforms, in place of the Mac app's `NSOpenPanel`.
 It puts up the Files browser on iOS and the open panel on the Mac. It is asked for folders and
@@ -1059,7 +1070,7 @@ bookmark made while the app was let in is what opens it again. So:
 - Nothing is read by its path while bookmarks are kept. One whose bookmark does not open cannot
   be read, which is not holding nothing. A simulator would read the path, and so would say a
   widget can open what on a phone it cannot.
-- What no bookmark can be left for is not added, and only the log says so.
+- What no bookmark can be left for is not added, and an alert names it.
 
 **The risk is the widget reading what the app chose.** A sandboxed app is given a folder only
 because the person chose it, and keeps that with a bookmark. The widget is another process. On the
@@ -1161,8 +1172,10 @@ iCloud Drive folder by itself, without the app, and nothing more is needed from 
 iOS.
 
 What a widget shows while a folder has nothing on the phone is "No Photos found", by Syd's rule:
-it has been gone through and has none to give. Not decided: how soon it looks again, which is a
-quarter of an hour as things are.
+it has been gone through and has none to give. It looks again at its own time, like any other change: Syd,
+2026-10-11, "the widget looks again when the system pings it", choosing that over the quarter of
+an hour it was. And the system may not ask even then: the phone's log for 15:01 to 15:23 that
+day, with the app killed and the screen locking, holds no wake of any widget.
 
 **If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
 have to download files at new sizes, it sounds like we have to reproduce the caching that we do
@@ -1622,8 +1635,8 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
 - **What a wake does.** Each wake shows one picture and keeps one more, as on the Mac. It records
   the size it was handed, takes the face for these sources at this size, hands over a timeline of
   one entry with the next reload the widget's own duration on, and then fetches one more so the next wake has
-  it. With nothing to show it asks again in a quarter of an hour; the app also reloads the
-  widgets when a person leaves it. It declares all five families; the system offers what the
+  it. With nothing to show it asks again at the same time as with a picture; the app also
+  reloads the widgets when a person leaves it. It declares all five families; the system offers what the
   device has.
 - **In the gallery, a size with no picture of its own shows another size's.** Until a widget of a
   size has been placed, that size has shown nothing, and its preview said "Scanning…". It borrows

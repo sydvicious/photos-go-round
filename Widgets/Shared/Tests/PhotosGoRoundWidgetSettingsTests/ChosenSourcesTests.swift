@@ -138,4 +138,24 @@ struct ChosenSourcesTests {
 
         #expect(preferences.sources == [withSubfolders, oneFile])
     }
+
+    @Test("A folder's subfolders option is stored, and the folder keeps its place")
+    func includingSubfolders() {
+        let cats = album("A2", "Cats")
+        preferences.setSources([coins, cats, oneFile])
+
+        chosen.include(subfolders: true, of: coins)
+
+        #expect(preferences.sources == [SourceSpec.folder("/pictures/coins", recursive: true), cats, oneFile])
+    }
+
+    @Test("It can be switched off again, and only a folder has it")
+    func subfoldersOffAndOnlyFolders() {
+        preferences.setSources([SourceSpec.folder("/pictures/coins", recursive: true), oneFile])
+
+        chosen.include(subfolders: false, of: coins)
+        chosen.include(subfolders: true, of: oneFile)
+
+        #expect(preferences.sources == [coins, oneFile])
+    }
 }
