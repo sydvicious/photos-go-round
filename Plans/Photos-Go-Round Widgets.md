@@ -1,3 +1,10 @@
+**CLOSED.** Syd, 2026-10-11: "all of the TODO.md in that plan should be integrated into TODO.md.
+Everything else can be left there, and we can basically close it." Its to-dos are in `TODO.md`,
+*Photos-Go-Round Widgets, carried out of its plan*. The plan is kept as written: it is the record
+of the Mac proof of concept, as `Plans/PGR Widgets - iOS.md` is of the iOS app, and its Design
+Decisions still hold for the product and are what the iOS plan means by "everything in that plan
+holds here".
+
 # Summary
 
 Photos-Go-Round Widgets.app: a self-contained App Store app for macOS, iOS, iPadOS and visionOS, with
@@ -31,7 +38,9 @@ design that works the same on the Mac and on devices that never had an agent.
 - *iOS and iPadOS* — the same widgets in an app on the iOS App Store. Before the Mac's menubar
   app: Syd, 2026-10-09, "I want to do the iOS app before the menubar app". Tested in a simulator,
   and on his own phone for iCloud Photo Library. The app itself is planned in
-  `Plans/PGR Widgets - iOS.md`.
+  `Plans/PGR Widgets - iOS.md`. The widgets have run on his phone, on his iCloud library with
+  8,000-plus favorites, for 13 hours and more by 2026-10-11: "it has been working great".
+  Nothing has been killed; no memory figure has been read.
   - Investigate how widgets work on iPhone Duo.
   - Find out whether the widget can query Photos while the phone is locked.
   - Read the extension's memory on the phone, where the 30 MB ceiling is expected to be enforced.
