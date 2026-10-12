@@ -19,11 +19,70 @@ public final class SettingsModel {
     public struct Row: Identifiable, Equatable, Sendable {
         public enum Kind: Sendable { case collection, selectedPhotos, folder, file }
 
+        /// What is wrong with a source. Syd, 2026-10-11: "grey - something
+        /// that is probably temporary; red - a problem that needs to be
+        /// addressed". One that has gone is grey too: "It's gone from the
+        /// source, but up to the user to remove".
+        public enum Trouble: Sendable, Equatable {
+            /// Gone from where it was. Grey, and it stays until the person
+            /// takes it out.
+            case removed
+            /// Out of reach just now, which should pass. Grey.
+            case unavailable
+            /// A collection with Photos access off. Red.
+            case noAccess
+
+            /// What is beside the name. The two greys are told apart by it,
+            /// and not by their colour.
+            public var words: String? {
+                switch self {
+                case .removed: "(removed)"
+                case .unavailable: "(unavailable)"
+                case .noAccess: nil
+                }
+            }
+
+            /// What a file or folder that could not be read is taken for.
+            /// Syd, 2026-10-11: gone, when the app cannot tell whether it was
+            /// deleted or is out of reach. So it is out of reach only when
+            /// the system says something that passes.
+            static func ofFile(failingWith error: any Error) -> Trouble {
+                passes(error) ? .unavailable : .removed
+            }
+
+            /// No connection, a server that does not answer, iCloud not to
+            /// be had. Which errors the system gives for those on a phone is
+            /// not checked; these are the ones that say so.
+            private static func passes(_ error: any Error) -> Bool {
+                let error = error as NSError
+                switch error.domain {
+                case NSURLErrorDomain:
+                    return true
+                case NSPOSIXErrorDomain:
+                    let passing: [POSIXErrorCode] = [
+                        .ETIMEDOUT, .ENETDOWN, .ENETUNREACH, .EHOSTDOWN, .EHOSTUNREACH, .ENOTCONN,
+                    ]
+                    if passing.contains(where: { Int($0.rawValue) == error.code }) { return true }
+                case NSCocoaErrorDomain:
+                    let passing = [
+                        NSUbiquitousFileUnavailableError, NSUbiquitousFileNotUploadedDueToQuotaError,
+                        NSUbiquitousFileUbiquityServerNotAvailable,
+                    ]
+                    if passing.contains(error.code) { return true }
+                default:
+                    break
+                }
+                // What the file system said, under what Foundation says of it.
+                guard let under = error.userInfo[NSUnderlyingErrorKey] as? any Error else { return false }
+                return passes(under)
+            }
+        }
+
         public let source: SourceSpec
         public let kind: Kind
         public let title: String
-        /// Whether something is wrong with the source, which draws it red.
-        public let isWrong: Bool
+        /// What is wrong with the source, if anything is.
+        public let trouble: Trouble?
         /// How many pictures the source holds, once it has been counted. None
         /// is a count like any other: an empty album is not wrong.
         public let count: Int?
@@ -32,13 +91,10 @@ public final class SettingsModel {
         /// Whether a folder's pictures include those in the folders inside
         /// it. Nil for anything that is not a folder, which has no such box.
         public var includesSubfolders: Bool? { kind == .folder ? source.recursive : nil }
-        /// Selected Photos is there for as long as access is limited, and
-        /// goes by itself when it is not.
-        public var isRemovable: Bool { kind != .selectedPhotos }
 
-        init(_ source: SourceSpec, isWrong: Bool = false, count: Int? = nil) {
+        init(_ source: SourceSpec, trouble: Trouble? = nil, count: Int? = nil) {
             self.source = source
-            self.isWrong = isWrong
+            self.trouble = trouble
             self.count = count
             switch source.kind {
             case .photosSelection:
@@ -82,6 +138,27 @@ public final class SettingsModel {
             $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "That item" : $0
         }
         return "\(names.formatted(.list(type: .and))) could not be added."
+    }
+
+    /// What the alert for sources that have gone says, while there is
+    /// something to say. The screen empties it when the alert is dismissed.
+    /// No picker follows it; Syd, 2026-10-11: "We have told the user that
+    /// something is gone, and they can see what it is".
+    public var goneMessage: String?
+
+    /// Whether the alert about Photos access is up. It comes by itself, once
+    /// in a run of the app, and from the bar's Photos button.
+    public var showsNoAccess = false
+
+    /// Syd's words, 2026-10-11, with "Cancel" and "Settings" under them.
+    public static let noAccessMessage =
+        "PhotosGoRound needs access to Photos to continue serving your pictures."
+
+    /// Whether the collections' rows are red, which is when the "Photos"
+    /// heading and the bar's Photos button are. Syd, 2026-10-11: only then.
+    /// Grey rows change neither.
+    public var collectionsAreRefused: Bool {
+        photosAccessIsOff && !collections.isEmpty
     }
 
     /// What the Photos button brings up: the collections sheet with full
@@ -130,6 +207,21 @@ public final class SettingsModel {
     private var catalog: PhotosCollectionCatalog
     /// The chosen collections the library no longer holds, as last looked.
     private var gone: Set<String> = []
+    /// Whether the library could not be read when last looked, with access
+    /// to it given. Nothing is called gone then, and nothing can be shown.
+    private var unread = false
+    /// What is wrong with each file and folder that could not be counted
+    /// when last tried, by its locator.
+    private var failed: [String: Row.Trouble] = [:]
+
+    /// What this run of the app has already said is gone, so that it is said
+    /// once. Syd, 2026-10-11: "the first time the app is launched or brought
+    /// forward, and then every time it is launched from them on". A model
+    /// lasts a run, so nothing is kept between runs for it.
+    private var toldGone: Set<String> = []
+    /// Whether this run has put up the alert about Photos access since
+    /// access was last found off.
+    private var toldAccessIsOff = false
 
     private let counts: any SourceCounts
     /// What each source held when it was last counted, by its locator.
@@ -186,11 +278,50 @@ public final class SettingsModel {
             showsCollectionPicker = access == .authorized
         }
         photosAccess = access
+        // Before the selection is dropped for access being off: it is a
+        // source that depended on Photos.
+        tellOfAccess()
         // With limited access the photographs the person picked are the one
         // Photos source. Syd, 2026-10-09.
         sources.keepSelectedPhotos(access == .limited)
         await refreshCollections()
-        await countSources()
+        await countSources(tellingOfGone: true)
+    }
+
+    /// Puts up the alert about Photos access when it is off and something
+    /// chosen depends on it. Syd, 2026-10-11: "if there are sources that
+    /// depend on it, and it's gone, present. otherwise don't", and "the first
+    /// time the app is launched or brought forward after access is turned
+    /// off, and then once per launch until it is fixed".
+    private func tellOfAccess() {
+        guard photosAccessIsOff else {
+            toldAccessIsOff = false
+            return
+        }
+        let dependsOnPhotos = !sources.collections.isEmpty || sources.showsSelectedPhotos
+        guard dependsOnPhotos, !toldAccessIsOff else { return }
+        toldAccessIsOff = true
+        showsNoAccess = true
+    }
+
+    /// Says what has gone since this run last said so: at launch that is
+    /// everything gone, and later only what has gone since. One alert for
+    /// both lists, and it names nothing.
+    private func tellOfGone() {
+        let lost = (collections + filesAndFolders).filter { $0.trouble == .removed }
+        let new = lost.filter { !toldGone.contains($0.id) }
+        toldGone = Set(lost.map(\.id))
+        guard !new.isEmpty else { return }
+        let ofCollections = new.contains { $0.kind == .collection }
+        let ofFiles = new.contains { $0.kind != .collection }
+        // The words for each list are Syd's, 2026-10-11; those for both at
+        // once are Claude's.
+        goneMessage =
+            switch (ofCollections, ofFiles) {
+            case (true, true): "Some collections, files and/or folders are no longer available."
+            case (true, false): "Some collections are no longer available."
+            default: "Some files and/or folders are no longer available."
+            }
     }
 
     /// Counts every source that can be counted now, one after another, each
@@ -199,22 +330,43 @@ public final class SettingsModel {
     /// A collection is counted only with full access and only while the
     /// library still holds it; what cannot be counted now loses the figure it
     /// had, and what can keeps its old one until the new one is in.
-    private func countSources() async {
-        var countable = sources.filesAndFolders
-        if sources.holdsSelectedPhotos {
-            countable.append(ChosenSources.selectedPhotos)
+    ///
+    /// **The counting is also the looking, for a file or folder.** One that
+    /// cannot be counted is gone or out of reach, by what the failure was.
+    /// They are counted first, so that with `tellingOfGone` the alert comes
+    /// before Photos is asked anything.
+    private func countSources(tellingOfGone: Bool = false) async {
+        let files = sources.filesAndFolders
+        var photos: [SourceSpec] = []
+        if sources.showsSelectedPhotos {
+            photos = [ChosenSources.selectedPhotos]
         } else if photosAccess == .authorized {
-            countable += sources.collections.filter { !gone.contains($0.locator) }
+            photos = sources.collections.filter { !gone.contains($0.locator) }
         }
-        let locators = Set(countable.map(\.locator))
+        let locators = Set((files + photos).map(\.locator))
         counted = counted.filter { locators.contains($0.key) }
+        failed = failed.filter { locators.contains($0.key) }
         reload()
 
+        await count(files)
+        if tellingOfGone { tellOfGone() }
+        await count(photos)
+    }
+
+    private func count(_ countable: [SourceSpec]) async {
         let counts = counts
         for source in countable {
-            // Off the main thread: a folder is walked, and Photos is asked.
-            let count = (try? await BlockingWork.run { try counts.count(of: source) }) ?? nil
-            counted[source.locator] = count
+            do {
+                // Off the main thread: a folder is walked, and Photos is asked.
+                counted[source.locator] = try await BlockingWork.run { try counts.count(of: source) }
+                failed[source.locator] = nil
+            } catch {
+                counted[source.locator] = nil
+                // A collection is gone only when the library says so.
+                if source.kind == .folder || source.kind == .file {
+                    failed[source.locator] = .ofFile(failingWith: error)
+                }
+            }
             reload()
         }
     }
@@ -229,10 +381,15 @@ public final class SettingsModel {
         // as a whole. And a library that cannot be read is no evidence that
         // anything has gone from it.
         // Nor is a limited library: it lists no albums of the person's own.
-        guard photosAccess == .authorized, !chosen.isEmpty,
-            let listed = try? await library.collections()
-        else {
+        guard photosAccess == .authorized, !chosen.isEmpty else {
             gone = []
+            unread = false
+            reload()
+            return
+        }
+        guard let listed = try? await library.collections() else {
+            gone = []
+            unread = true
             reload()
             return
         }
@@ -252,7 +409,16 @@ public final class SettingsModel {
             }
         }
         gone = missing
+        unread = false
         reload()
+    }
+
+    /// Red with access off, whatever else is so: the library cannot be asked
+    /// then, and no one collection is singled out.
+    private func trouble(of collection: SourceSpec) -> Row.Trouble? {
+        if photosAccessIsOff { return .noAccess }
+        if gone.contains(collection.locator) { return .removed }
+        return unread ? .unavailable : nil
     }
 
     /// A model for the collections sheet, opening with what is chosen now.
@@ -263,14 +429,23 @@ public final class SettingsModel {
     /// Reads both lists again from what is stored.
     public func reload() {
         // While the selection is a source it is the only row: the collections
-        // chosen with full access are kept, and cannot be read.
+        // chosen with full access are kept, and cannot be read. Once the
+        // person has taken it out it is no row at all, and it is still held,
+        // switched off, whatever access becomes; so with it held that way
+        // the collections show only when access is known not to be limited.
+        let selection = ChosenSources.selectedPhotos
+        let limited = photosAccess == nil || photosAccess == .limited
         collections =
-            sources.holdsSelectedPhotos
-            ? [Row(ChosenSources.selectedPhotos, count: counted[ChosenSources.selectedPhotos.locator])]
-            : sources.collections.map {
-                Row($0, isWrong: gone.contains($0.locator), count: counted[$0.locator])
+            if sources.showsSelectedPhotos {
+                [Row(selection, count: counted[selection.locator])]
+            } else if sources.holdsSelectedPhotos && limited {
+                []
+            } else {
+                sources.collections.map { Row($0, trouble: trouble(of: $0), count: counted[$0.locator]) }
             }
-        filesAndFolders = sources.filesAndFolders.map { Row($0, count: counted[$0.locator]) }
+        filesAndFolders = sources.filesAndFolders.map {
+            Row($0, trouble: failed[$0.locator], count: counted[$0.locator])
+        }
         preview.show(sources.shown)
     }
 
@@ -335,12 +510,27 @@ public final class SettingsModel {
         counting = Task { await countSources() }
     }
 
+    /// A swipe on a row. Syd, 2026-10-11: "you can remove any source line
+    /// with a swipe. the widgets will continue operating as normal when the
+    /// sources are updated".
     public func remove(_ row: Row) {
-        guard row.isRemovable else { return }
-        sources.remove(row.source)
-        if row.kind == .folder || row.kind == .file {
+        switch row.kind {
+        case .selectedPhotos:
+            sources.showSelectedPhotos(false)
+        case .collection:
+            sources.remove(row.source)
+        case .folder, .file:
+            sources.remove(row.source)
             bookmarks?.forget(row.source.locator)
         }
         reload()
+    }
+
+    /// What the Photos button does once the system's picker for the
+    /// selection has gone: Selected Photos is a row again if it had been
+    /// taken out, and the library is read again.
+    public func selectedPhotosChanged() async {
+        sources.showSelectedPhotos(true)
+        await start()
     }
 }

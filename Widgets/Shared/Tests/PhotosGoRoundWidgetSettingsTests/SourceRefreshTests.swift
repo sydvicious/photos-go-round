@@ -60,7 +60,7 @@ struct SourceRefreshTests {
         #expect(preferences.sources == [spec("A1", "Iceland", in: ["Trips"])])
     }
 
-    @Test("A collection that is no longer in the library is wrong, and stays in the list")
+    @Test("A collection that is no longer in the library is removed, and stays in the list")
     func gone() async {
         preferences.setSources([spec("A2", "Cats"), spec("GONE", "Deleted")])
         let model = model(library([LibraryCollection(identifier: "A2", title: "Cats", kind: .userAlbum)]))
@@ -68,7 +68,7 @@ struct SourceRefreshTests {
         await model.start()
 
         #expect(model.collections.map(\.title) == ["Cats", "Deleted"])
-        #expect(model.collections.map(\.isWrong) == [false, true])
+        #expect(model.collections.map(\.trouble) == [nil, .removed])
         #expect(preferences.sources.count == 2)
     }
 
@@ -79,21 +79,21 @@ struct SourceRefreshTests {
 
         await model.start()
 
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [nil])
     }
 
-    @Test("When the library cannot be read, nothing is called wrong and nothing stored is changed")
+    @Test("When the library cannot be read, nothing is called removed and nothing stored is changed")
     func unreadable() async {
         preferences.setSources([spec("A2", "Cats")])
         let model = model(SampleLibrary(access: .authorized, failing: true))
 
         await model.start()
 
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [.unavailable])
         #expect(preferences.sources == [spec("A2", "Cats")])
     }
 
-    @Test("With Photos access off the library is not asked, and no collection is singled out")
+    @Test("With Photos access off the library is not asked, and every collection is refused alike")
     func accessOff() async {
         preferences.setSources([spec("A2", "Cats")])
         let model = model(SampleLibrary(access: .denied))
@@ -101,7 +101,7 @@ struct SourceRefreshTests {
         await model.start()
 
         #expect(model.photosAccessIsOff)
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [.noAccess])
     }
 
     @Test("Each time the app comes forward, a preview that had found nothing looks again")
@@ -143,17 +143,17 @@ struct SourceRefreshTests {
         return picker.tree.map { $0.item?.count }
     }
 
-    @Test("A collection that comes back is no longer wrong the next time the app comes forward")
+    @Test("A collection that comes back is no longer removed the next time the app comes forward")
     func comesBack() async {
         preferences.setSources([spec("A2", "Cats")])
         let library = SampleLibrary(access: .authorized)
         let model = model(library)
         await model.start()
-        #expect(model.collections.map(\.isWrong) == [true])
+        #expect(model.collections.map(\.trouble) == [.removed])
 
         library.replaceCollections([LibraryCollection(identifier: "A2", title: "Cats", kind: .userAlbum)])
         await model.start()
 
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [nil])
     }
 }

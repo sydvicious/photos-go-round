@@ -31,13 +31,41 @@ public struct ChosenSources: Sendable {
         preferences.sources.contains { $0.kind == .photosSelection }
     }
 
+    /// Whether the selection is a source the widgets show from. It is not
+    /// once the person has taken its row out, though it is still held.
+    public var showsSelectedPhotos: Bool {
+        preferences.sources.contains { $0.kind == .photosSelection && $0.enabled }
+    }
+
+    /// Takes the selection's row out, or brings it back. Syd, 2026-10-11:
+    /// "you can remove any source line with a swipe", and it comes back "By
+    /// the Photos button".
+    ///
+    /// **Switched off, not dropped.** The app adds the selection whenever it
+    /// finds access limited and none held, so one that was dropped would be
+    /// back the next time the app came forward. Switched off it is still
+    /// held, and a widget shows only from what is switched on. It stays
+    /// held, switched off, whatever access becomes: Syd, 2026-10-11, over
+    /// the row coming back when access is made limited again.
+    public func showSelectedPhotos(_ shown: Bool) {
+        preferences.setSourceEnabled(shown, locator: Self.selectedPhotos.locator)
+    }
+
     /// Makes the selection a source, or stops it being one. The collections
     /// chosen with full access are left as they are either way: the person may
     /// give full access back.
     public func keepSelectedPhotos(_ keep: Bool) {
-        guard keep != holdsSelectedPhotos else { return }
-        let others = preferences.sources.filter { $0.kind != .photosSelection }
-        preferences.setSources(keep ? others + [Self.selectedPhotos] : others)
+        let stored = preferences.sources
+        if keep {
+            guard !holdsSelectedPhotos else { return }
+            preferences.setSources(stored + [Self.selectedPhotos])
+        } else {
+            // One the person took out is left, switched off: that is how
+            // the swipe is remembered.
+            let kept = stored.filter { $0.kind != .photosSelection || !$0.enabled }
+            guard kept.count != stored.count else { return }
+            preferences.setSources(kept)
+        }
     }
 
     public var collections: [SourceSpec] {

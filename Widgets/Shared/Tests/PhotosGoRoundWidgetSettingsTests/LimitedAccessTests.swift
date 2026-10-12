@@ -74,7 +74,7 @@ struct LimitedAccessTests {
         await model.start()
 
         #expect(model.collections.map(\.title) == ["Cats"])
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [nil])
         #expect(preferences.sources == [cats])
     }
 
@@ -86,18 +86,6 @@ struct LimitedAccessTests {
         await model.start()
 
         #expect(preferences.sources == [ChosenSources.selectedPhotos])
-    }
-
-    @Test("Selected Photos cannot be taken out of the list by hand")
-    func notRemovable() async {
-        let model = model(SampleLibrary(access: .limited))
-        await model.start()
-        let row = model.collections[0]
-        #expect(!row.isRemovable)
-
-        model.remove(row)
-
-        #expect(model.collections.map(\.title) == ["Selected Photos"])
     }
 
     @Test("What the Photos button brings up goes by the access there is")

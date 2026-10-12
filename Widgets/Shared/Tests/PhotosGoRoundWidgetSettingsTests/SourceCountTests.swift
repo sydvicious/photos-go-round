@@ -56,7 +56,7 @@ struct SourceCountTests {
         await model.start()
 
         #expect(model.collections.map(\.count) == [0])
-        #expect(model.collections.map(\.isWrong) == [false])
+        #expect(model.collections.map(\.trouble) == [nil])
     }
 
     @Test("A collection that has gone from the library shows no count")

@@ -23,23 +23,7 @@ left of it. The to-dos are Claude's unless they say otherwise.
 
 - **Phase 1** — The app. Complete; Syd, 2026-10-11.
 - **Phase 2** — The widget extension. Complete; Syd, 2026-10-11.
-- **Phase 3** — When a source is wrong. A phase of its own, since it kept being moved out of
-  Phase 1: Syd, 2026-10-11. *When a source goes wrong*.
-  - The alert when a source has gone at opening. No picker follows it, and nothing is removed.
-  - A red nearer orange, picked by Claude and judged by Syd on his phone, wherever the view
-    draws red.
-  - The "Photos" heading in red text with a warning triangle beside it, and the Photos button in
-    the bar on a red background, when the collections' rows are red. Syd, 2026-10-11.
-  - A source that has disappeared drawn in grey, with "(removed)" beside it, until the person
-    takes it out; and one with trouble that should pass in grey, with "(unavailable)". Syd,
-    2026-10-11.
-  - An alert with the way to the system's settings when Photos access has been revoked. Syd,
-    2026-10-11.
-  - A swipe to the left on a collection's row, as on a file's or folder's, and the line that
-    says so between the preview and the lists. Syd, 2026-10-11.
-  - "Selected Photos" swiped away as any row is, and back by the Photos button.
-  - Looking at each file and folder when the app comes forward. Only collections are looked at
-    as built.
+- **Phase 3** — When a source is wrong. Complete; Syd, 2026-10-11. *When a source goes wrong*.
 - **Phase 4** — Files and folders, with adding and removing. Complete; Syd, 2026-10-11. *The
   files and folders*.
 - **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
@@ -77,13 +61,15 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **Two full test runs each failed one unrelated suite, while the Mac was overloaded.** Seven tests in
   the agent's `PhotosEndpointTests` ("Key 'authorization' not found"), then one in
   `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
-  that fail when the Mac is busy are still worth a look.
+  that fail when the Mac is busy are still worth a look. A third: the agent's
+  `ConsoleMirrorTests`, "A change keeps its mark and its suffix", with the load average over 700.
 - **A phone always offers the tall fourth size.** Syd, 2026-10-11, after a run that showed only
   three. The preview offers it only once a widget has been handed it, and Apple's table has no
   figure for it, so the table needs one of our own: a large and a medium with the gap between
   two mediums, which `RecordedWidgetSizes` already reckons. The iPad's fourth, the wide extra
   large, is in the table already and offered from the start, so nothing changes there.
-  Test-first.
+  Test-first. Next, as a change of its own after Phase 3: Syd, 2026-10-11, "the preview should
+  have the four sizes".
 - **Particular photographs can be picked only with limited access, or by making an album in
   Photos.** Syd, 2026-10-11: "it's a hole in the entire design". With full access there is no
   way to say "these photographs". And what Photos gives back after limited access, then none,
@@ -176,7 +162,13 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   The widgets carry on as usual with the sources that are left. *Taking a source out of a list*.
 - **One line between the preview and the lists says how: "To remove a collection, file, or
   folder, swipe left on it."** It takes the place of the line under the files, scrolls with the
-  lists, and is always there. Syd, 2026-10-11.
+  lists, and is always there. It is over the "Photos" heading, 16 points above it, and not a row
+  of its own. Syd, 2026-10-11.
+- **The two lines of words about the lists are in the colour of normal text, and the same as
+  each other.** That line, and "Include nested folders when checked." under the files. Syd,
+  2026-10-11.
+- **The room the line takes is not added to what has to fit under the preview.** Syd,
+  2026-10-11: "I don't see a problem".
 - **No About page, and no button on this screen for the "How to add a widget" page.** The page is
   the wizard's. Syd, 2026-10-10.
 - **Nothing in this view sets how often a widget changes.** That is each widget's own
@@ -272,8 +264,8 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   Photos button changes which are picked, the row has no button of its own and leaves by a swipe
   as any row does (2026-10-11; until then it could not be removed), and the system's ask on every
   run is turned off. Swiped away, the row comes back by the Photos button, and the app does not
-  add it by itself until then. Syd, 2026-10-09 and 2026-10-10. *Limited
-  access*.
+  add it by itself until then, whatever access becomes in between. Syd, 2026-10-09, 2026-10-10
+  and 2026-10-11. *Limited access*.
 
 *When a source goes wrong*
 
@@ -281,16 +273,16 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   addressed.** Syd, 2026-10-11: "grey - something that is probably temporary; red - a problem
   that needs to be addressed".
 - **The red is one nearer orange or pink.** Syd is colour blind and cannot tell red from grey.
-  2026-10-11: "the red needs to be closer to orange/pink". Claude picks one between red and
-  orange, and Syd judges it on his phone beside a grey row; over the system's orange and its
-  pink. What to aim for, in his words: "it's a bright, light red with a hint of yellow mixed in". Every red in the view, the "No Photos
-  Access" row's among them: Claude's reading.
+  2026-10-11: "the red needs to be closer to orange/pink", and "it's a bright, light red with a
+  hint of yellow mixed in". It is red 1.0, green 0.39, blue 0.28, `Color.trouble`, Claude's
+  pick; of it in a preview, the same day: "that red is perfect for me", and "the red looks good
+  in dark mode as well". Every red in the view
+  is that one, the "No Photos Access" row's among them: Claude's reading.
 - **Trouble that should pass leaves the source in place, grey, with "(unavailable)" beside it,
   until it has passed.** No connection is the example. Syd, 2026-10-09, and 2026-10-11 for the
   grey and the word: until then it was red.
 - **A source that has gone is put to the person when the app is opened or brought forward, in an
-  alert.** Both lists, and several gone at once get one alert. Syd, 2026-10-09. The looking is
-  built for collections; the alert is not.
+  alert.** Both lists, and several gone at once get one alert. Syd, 2026-10-09.
 - **No picker or Files browser comes up after the alert.** Syd, 2026-10-11: "We have told the
   user that something is gone, and they can see what it is". From 2026-10-09 until then the
   picker was to follow.
@@ -298,8 +290,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   available.", with "OK".** It names none of them. Syd, 2026-10-11; on 2026-10-09 one alert was
   to name them all.
 - **For collections that have gone it is the same alert with words to match: "Some collections
-  are no longer available."** When both lists have lost something, one alert covers both. Syd, 2026-10-11. Its words then are Claude's, and Syd's to overrule:
-  "Some collections, files and/or folders are no longer available."
+  are no longer available."** When both lists have lost something, one alert covers both. Syd,
+  2026-10-11. Its words then are Claude's, and Syd's to overrule: "Some collections, files
+  and/or folders are no longer available."
 - **The alert for a source that has gone comes at every launch, and the first time the app is
   brought forward and finds it gone.** Not each time the app comes forward. Syd, 2026-10-11.
 - **The app removes nothing.** Syd, 2026-10-11. Until then a source not put right was removed.
@@ -316,6 +309,10 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   whether it was deleted or is out of reach.** Syd, 2026-10-11. It is looked at again each time
   the app comes forward, so one that is back is drawn as usual again: Claude's, and Syd's to
   overrule.
+- **A file or folder is looked at by being counted.** One that cannot be counted is "(removed)",
+  unless the failure is one that passes, such as no connection, and then it is "(unavailable)".
+  A collection is "(unavailable)" when access is given and the library cannot be read. Both
+  Claude's, 2026-10-11.
 - **The person takes a removed one out, and the app does not.** A collection goes when the Photos
   picker is opened again and Done pressed; a file or folder by a swipe to the left on its row.
   Syd, 2026-10-11.
@@ -831,15 +828,24 @@ there; the pickers no longer show it to untick.
 - **A collection** leaves by being unticked in the sheet and Done pressed, or by a swipe to the
   left on its row. Syd, 2026-10-11: "I think we need to implement swipe left behavior in the
   settings panel like we do for files anyway, and that will give a good way to remove troublesome
-  connections". Until then its row could not be swiped: 2026-10-10, "non-editable". The swipe is
-  not built. The Mac keeps what it has: select a row and press the minus button, with unticking
+  connections". Until then its row could not be swiped: 2026-10-10, "non-editable". The Mac
+  keeps what it has: select a row and press the minus button, with unticking
   for collections.
 - **The line that says so is between the preview and the lists**, since both lists swipe now.
   Syd, 2026-10-11: "A line between the preview and the sources list. "To remove a collection,
   file, or folder, swipe left on it."" And: "it replaces the other message; it scrolls with the
   list; it is always there". So it shows with no sources chosen too, and "Swipe left to remove
-  the file or folder." under the files goes. It adds a line to what has to fit under the
-  preview before the lists go beside it, and in an iPad's smallest window (*iPad*).
+  the file or folder." under the files goes.
+  - It is part of the "Photos" heading, over the word. As a row of its own it stood apart from
+    the preview and from the lists: Syd, 2026-10-11, "too much space between the preview, and
+    the lists". With 8 points under it: "Just a bit more space between text and list". With 16:
+    "this looks good".
+  - It is in the colour of normal text, as the line about a folder's box is. Syd, 2026-10-11:
+    "These should be the same color. I think that they should be black (in light mode), the
+    same as normal text. The size is right."
+  - It makes the heading taller, and what has to fit under the preview before the lists go
+    beside it is reckoned without it (`SettingsLayout`), as is an iPad's smallest window. Asked
+    whether to add it, Syd, 2026-10-11: "I don't see a problem".
 - **Any row of a source**, "Selected Photos" among them. Syd, 2026-10-11: "you can remove any
   source line with a swipe. the widgets will continue operating as normal when the sources are
   updated". The "No Photos Access" row is not a source and has no swipe: Claude's reading.
@@ -928,10 +934,10 @@ away in the settings panel. For Files, the user will have to swipe left to remov
   when the lists are scrolled out of sight or beside the preview.
 - The colours have one rule. Asked what a row with trouble that should pass looks like, Syd,
   2026-10-11: "grey - something that is probably temporary; red - a problem that needs to be
-  addressed". Every row in trouble is red as built, so the rows with passing trouble change.
+  addressed".
 - Syd cannot see the difference himself: "not that I personally can tell them apart - the red
-  needs to be closer to orange/pink. I am color blind." The view draws its trouble in the
-  system's red, `.red` in `SettingsView`, so that changes wherever it is used.
+  needs to be closer to orange/pink. I am color blind." So the view draws no system red:
+  every red in it is `Color.trouble`.
 - A source that has gone is grey, though it will not come back by itself. Asked which colour,
   Syd, 2026-10-11: "Gray "(removed)". It's gone from the source, but up to the user to remove".
   So red on a row is left for what the app is refused, which is Photos access turned off.
@@ -948,8 +954,16 @@ away in the settings panel. For Files, the user will have to swipe left to remov
   on an unplugged drive may say "(removed)", and since nothing is removed for it, it is there
   when the drive is back. Syd, the same day: "removable media is not a common case for iOS, and
   a little more probably in iPadOS, but not worth doing much about".
-- Files and folders are not looked at for trouble as built; only collections are
-  (`SettingsModel`, `gone`).
+- A file or folder is looked at by being counted, which happens each time the app comes forward
+  anyway. One that cannot be counted is "(removed)", unless the failure is one that passes:
+  any error of the URL loading system, a time-out or an unreachable network or host from the
+  file system, or iCloud saying a file or its server is not to be had; and what the file system
+  said is looked for under what Foundation says of it. That list is Claude's guess at what the
+  system gives, and is not tried on a phone. `SettingsModel.Row.Trouble`.
+- Files and folders are counted before Photos is asked anything, and the alert for what has
+  gone waits for them. With a large folder that may be some seconds after launch.
+- A collection is "(unavailable)" when access is given and the library cannot be read, which is
+  when nothing can be called gone. Claude's.
 - The heading and the button go red only with red rows. Syd, 2026-10-11, over any row that is
   not normal, and over red and "(removed)" rows. His first note had them red for "any problems
   with the sources"; with gone and unavailable sources grey, that is Photos access off and
@@ -968,9 +982,8 @@ collections will be displayed with red text." And a collection's row takes the s
 has, which "will give a good way to remove troublesome connections" (*Taking a source out of a
 list*).
 
-- The red text is built: with access off the chosen collections stay, red, under the "No Photos
-  Access" row (*Photos access*). An alert that comes by itself is new; the one there is comes
-  from the bar's Photos button.
+- With access off the chosen collections stay, red, under the "No Photos Access" row (*Photos
+  access*). The alert comes by itself, and from the bar's Photos button.
 - With no Photos sources chosen, the alert for revoked access does not come. Syd, 2026-10-11:
   "if there are no photos sources in the settings, do NOT bring it forward at all". So a person
   who refuses at first launch, and has chosen nothing, gets no alert for it. And it is one
@@ -985,20 +998,19 @@ list*).
   next to "Photos"". The rows under it are red and nothing more; the "No Photos Access" row
   above them has its warning icon already.
 
-**The looking is built; what is done about it is not.** Each time the app comes forward:
+**The looking.** Each time the app comes forward:
 
 - What is stored is read afresh.
 - Each chosen collection is looked up in the library as it is now. One renamed in Photos, or
   moved to another folder, takes its new name and place, and that is stored. One that is no
-  longer there stays in the list, red. Syd, 2026-10-10: "we need to refresh the source list when
+  longer there stays in the list, grey, "(removed)". Syd, 2026-10-10: "we need to refresh the source list when
   the app is activated".
 - The library itself is asked, not the picker's sections, so a collection the pickers now leave
   out, chosen before they did, is still found.
 - When the library cannot be read, nothing is called gone: that is no evidence that anything is.
   Nor with limited access, where no albums of the person's own are listed.
-- With Photos access off, no one collection is singled out; the list says access is off.
-
-The alert is Phase 3.
+- With Photos access off, no one collection is singled out: every one is red, and the list says
+  access is off.
 
 ## Photos access
 
@@ -1040,8 +1052,8 @@ Syd chose three ways to the system's settings, 2026-10-10:
   Access" text, and "Settings..." button". So the collections section has one row: a warning icon,
   "No Photos Access" in red, and the button. The chosen collections stay under it, red.
 - **The bar's Photos button** stays pressable and brings up an alert, "No Photos Access", with
-  "Settings…" and "Cancel". Since 2026-10-11 it is to be the alert that comes by itself, with its
-  words (*Design Decisions*, *Photos access*); the older one is what is built.
+  "Settings…" and "Cancel". Since 2026-10-11 it is the alert that comes by itself, with its
+  words (*Design Decisions*, *Photos access*).
 - **The preview's face** says "No Photos Access" when it has no picture to show, in place of the
   plain icon or "No Photos found", and tapping it goes to the system's settings. A folder's
   pictures still show with Photos access off.
@@ -1103,12 +1115,14 @@ each time it comes forward. `ChosenSources.keepSelectedPhotos`.
   a smart album such as Favorites, with the picked photographs that are in it, and those would be
   counted twice. `SystemPhotoLibraryPictures`.
 - **With full access the selection gives none**, so it is never every photograph.
-- **The row is not removable**, as built. Since 2026-10-11 it is to leave by a swipe as any row
-  does. The app adds it each time it comes forward and finds access limited, so a swipe does
-  not last until that changes. It comes back by the Photos button, when the system's picker has
-  gone: Syd, 2026-10-11, "By the Photos button. And if access is denied, we already have that
-  case handled". So the app has to keep that the row was swiped away, and stop adding it by
-  itself until the button is used.
+- **The row leaves by a swipe, as any row does, and comes back by the Photos button**, when the
+  system's picker has gone: Syd, 2026-10-11, "By the Photos button. And if access is denied, we
+  already have that case handled". Until then it could not be removed.
+- **Swiped away, the selection is still stored, switched off.** A widget shows only from what
+  is switched on, and the app adds a selection only when none is stored, so the row stays away.
+  It stays stored that way whatever access becomes: asked whether the row should be back when
+  access is made limited again after being off or full, Syd, 2026-10-11, chose the swipe
+  remembered. `ChosenSources.showSelectedPhotos`.
 
 From memory, not checked: the Mac has no limited answer, so there it is full or none already.
 

@@ -20,7 +20,6 @@ import UniformTypeIdentifiers
 
 public struct SettingsView: View {
     @State private var model: SettingsModel
-    @State private var showsNoAccess = false
     @State private var showsFileBrowser = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
@@ -130,9 +129,22 @@ public struct SettingsView: View {
         ) {
             Button("OK", role: .cancel) {}
         }
-        .alert("No Photos Access", isPresented: $showsNoAccess) {
-            Button("Settings…") { openSettings() }
+        // Photos access is off and something chosen needs it: by itself once
+        // in a run of the app, and from the bar's Photos button. The words
+        // are Syd's, 2026-10-11.
+        .alert(SettingsModel.noAccessMessage, isPresented: $model.showsNoAccess) {
             Button("Cancel", role: .cancel) {}
+            Button("Settings") { openSettings() }
+        }
+        // Sources that have gone. It waits for the alert about access, which
+        // comes first when both do: two cannot be up at once.
+        .alert(
+            model.goneMessage ?? "",
+            isPresented: Binding(
+                get: { model.goneMessage != nil && !model.showsNoAccess },
+                set: { if !$0 { model.goneMessage = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
         }
         // Each time the app is opened or brought forward: the first time this
         // asks for Photos access, and after that it reads what the person has
@@ -190,12 +202,16 @@ public struct SettingsView: View {
             switch model.chooser {
             case .collections: model.showsCollectionPicker = true
             case .selectedPhotos: changeSelection()
-            case .settings: showsNoAccess = true
+            case .settings: model.showsNoAccess = true
             case .nothing: break
             }
         } label: {
-            sourceSymbol("photo.on.rectangle.angled", compact: compact)
+            sourceSymbol(
+                "photo.on.rectangle.angled", compact: compact, refused: model.collectionsAreRefused)
         }
+        // On a red background while the collections' rows are red. Syd,
+        // 2026-10-11. An ordinary bar button takes it as its tint.
+        .modifier(Refused(model.collectionsAreRefused && !compact))
         .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
         .disabled(model.chooser == .nothing)
 
@@ -207,11 +223,15 @@ public struct SettingsView: View {
         .accessibilityLabel("Add files or folders")
     }
 
-    @ViewBuilder private func sourceSymbol(_ name: String, compact: Bool) -> some View {
+    @ViewBuilder private func sourceSymbol(_ name: String, compact: Bool, refused: Bool = false) -> some View {
         if compact {
             Image(systemName: name)
                 .font(.body.weight(.medium))
+                .foregroundStyle(refused ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
                 .frame(minWidth: 36, minHeight: 36)
+                .background(
+                    refused ? Color.trouble : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
                 .contentShape(Rectangle())
         } else {
             Image(systemName: name)
@@ -244,18 +264,49 @@ public struct SettingsView: View {
         .clipped()
     }
 
-    /// What is chosen, under the preview or beside it. A collection leaves by being
-    /// unticked in the sheet; Syd, 2026-10-10: "non-editable".
+    /// What is chosen, under the preview or beside it. Any row leaves by a
+    /// swipe, and a collection also by being unticked in the sheet. Syd,
+    /// 2026-10-11: "you can remove any source line with a swipe".
     private var lists: some View {
         List {
-            Section("Photos") {
+            Section {
                 if model.photosAccessIsOff {
                     accessOff
                 } else if model.collections.isEmpty {
                     nothing("No collections chosen.")
                 }
                 ForEach(model.collections) { row in
-                    SourceRow(row: row, isWrong: row.isWrong || model.photosAccessIsOff)
+                    SourceRow(row: row)
+                }
+                .onDelete { offsets in remove(offsets, from: model.collections) }
+            } header: {
+                // Syd, 2026-10-11, of 8 points between the line and the
+                // heading: "Just a bit more space between text and list".
+                VStack(alignment: .leading, spacing: 16) {
+                    // A swipe is not something a person is shown. Between the
+                    // preview and the lists, scrolling with them, and always
+                    // there; the words are Syd's, 2026-10-11. Over the first
+                    // heading and not a row of its own, which stood apart
+                    // from both: "too much space between the preview, and
+                    // the lists".
+                    Text("To remove a collection, file, or folder, swipe left on it.")
+                        .font(.footnote)
+                        .fontWeight(.regular)
+                        .textCase(nil)
+                        .foregroundStyle(Self.words)
+                    // Red, with a warning triangle so that it is not told
+                    // from a normal heading by its colour alone, while the
+                    // rows under it are red. Syd, 2026-10-11.
+                    if model.collectionsAreRefused {
+                        HStack(spacing: 4) {
+                            Text("Photos")
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .accessibilityLabel("No Photos access")
+                        }
+                        .foregroundStyle(Color.trouble)
+                    } else {
+                        Text("Photos")
+                    }
                 }
             }
             Section {
@@ -265,31 +316,30 @@ public struct SettingsView: View {
                 ForEach(model.filesAndFolders) { row in
                     SourceRow(row: row) { model.include(subfolders: $0, of: row) }
                 }
-                // How one is to be taken out in this design was not said;
-                // the swipe is what there is.
                 .onDelete { offsets in remove(offsets, from: model.filesAndFolders) }
             } header: {
                 Text("Files and Folders")
             } footer: {
-                // What a folder's box is for, and how a row is taken out,
-                // under the list and out of the rows' way. Syd, 2026-10-11:
-                // "needs some text somewhere explaining what it the checkbox
-                // is", and of the swipe, which nothing else shows a person,
-                // "We can just add text for the removal". The words are his.
-                // Each line only where there is something for it to be about.
-                VStack(alignment: .leading) {
-                    if model.filesAndFolders.contains(where: { $0.includesSubfolders != nil }) {
-                        Text("Include nested folders when checked.")
-                    }
-                    if !model.filesAndFolders.isEmpty {
-                        Text("Swipe left to remove the file or folder.")
-                    }
+                // What a folder's box is for, under the list and out of the
+                // rows' way. Syd, 2026-10-11: "needs some text somewhere
+                // explaining what it the checkbox is". The words are his.
+                // Only where there is a folder for it to be about.
+                if model.filesAndFolders.contains(where: { $0.includesSubfolders != nil }) {
+                    Text("Include nested folders when checked.")
+                        .foregroundStyle(Self.words)
                 }
             }
         }
         // One backdrop for the preview and the lists.
         .scrollContentBackground(.hidden)
     }
+
+    /// The colour of the two lines of words about the lists: that of normal
+    /// text, and the same for both. Syd, 2026-10-11: "These should be the
+    /// same color. I think that they should be black (in light mode), the
+    /// same as normal text". The colour itself and not the first level of
+    /// whatever a heading or a footer is drawn in, which is grey.
+    private static let words = Color.primary
 
     private static var backdrop: Color {
         #if os(iOS)
@@ -305,7 +355,7 @@ public struct SettingsView: View {
     private var accessOff: some View {
         HStack {
             Label("No Photos Access", systemImage: "exclamationmark.triangle")
-                .foregroundStyle(.red)
+                .foregroundStyle(Color.trouble)
             Spacer()
             #if os(iOS)
                 Button("Settings…") { openSettings() }
@@ -330,7 +380,7 @@ public struct SettingsView: View {
     private func changeSelection() {
         Task {
             await selectPhotos?()
-            await model.start()
+            await model.selectedPhotosChanged()
         }
     }
 
@@ -342,6 +392,32 @@ public struct SettingsView: View {
         // Collected first: removing one row re-reads the list under the rest.
         for row in offsets.map({ rows[$0] }) {
             model.remove(row)
+        }
+    }
+}
+
+extension Color {
+    /// The red of a problem that needs to be addressed. Syd is colour blind
+    /// and cannot tell the system's red from grey; 2026-10-11: "it's a
+    /// bright, light red with a hint of yellow mixed in". Of this one, in a
+    /// preview beside grey rows, the same day: "that red is perfect for me".
+    static let trouble = Color(red: 1.0, green: 0.39, blue: 0.28)
+}
+
+/// The bar's Photos button on a red background: the tinted prominent style,
+/// which is how a bar button of the system's own is given one.
+private struct Refused: ViewModifier {
+    let isRefused: Bool
+
+    init(_ isRefused: Bool) {
+        self.isRefused = isRefused
+    }
+
+    func body(content: Content) -> some View {
+        if isRefused {
+            content.buttonStyle(.borderedProminent).tint(Color.trouble)
+        } else {
+            content
         }
     }
 }
@@ -384,15 +460,13 @@ private struct SizeShape: View {
 /// One source: what it is, what it is called, and how many pictures it holds.
 struct SourceRow: View {
     let row: SettingsModel.Row
-    /// Red when something is wrong with the source. Syd, 2026-10-09.
-    var isWrong = false
     /// Told when a folder's subfolders box is ticked or unticked.
     var includeSubfolders: ((Bool) -> Void)?
 
     var body: some View {
         HStack {
-            Label(row.title, systemImage: symbol)
-                .foregroundStyle(isWrong ? AnyShapeStyle(.red) : AnyShapeStyle(.primary))
+            Label(name, systemImage: symbol)
+                .foregroundStyle(colour)
             Spacer()
             // At the right of the row, as in the collections sheet.
             if let count = row.count {
@@ -432,6 +506,23 @@ struct SourceRow: View {
             .imageScale(.large)
     }
 
+    /// The source's name, with what is wrong beside it when that has a word.
+    private var name: String {
+        guard let words = row.trouble?.words else { return row.title }
+        return "\(row.title) \(words)"
+    }
+
+    /// Grey for trouble that is probably temporary, and for a source that
+    /// has gone; red for a problem that needs to be addressed. Syd,
+    /// 2026-10-11.
+    private var colour: AnyShapeStyle {
+        switch row.trouble {
+        case .removed, .unavailable: AnyShapeStyle(.secondary)
+        case .noAccess: AnyShapeStyle(Color.trouble)
+        case nil: AnyShapeStyle(.primary)
+        }
+    }
+
     private var symbol: String {
         switch row.kind {
         case .collection, .selectedPhotos: "photo.on.rectangle"
@@ -448,7 +539,8 @@ struct SourceRow: View {
         /// preferences folder.
         static func preview(
             _ sources: [SourceSpec], library: SampleLibrary = SampleLibrary(access: .authorized),
-            counts: [String: Int] = [:], pictures: any PreviewPictures = NoPictures()
+            counts: [String: Int] = [:], failing: [String: any Error] = [:],
+            pictures: any PreviewPictures = NoPictures()
         ) -> SettingsModel {
             let folder = URL.temporaryDirectory.appending(path: "pgr-preview-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -457,7 +549,7 @@ struct SourceRow: View {
             preferences.setSources(sources)
             return SettingsModel(
                 sources: ChosenSources(preferences: preferences), library: library,
-                preview: .sample(pictures), counts: SampleCounts(counts))
+                preview: .sample(pictures), counts: SampleCounts(counts, failing: failing))
         }
     }
 
@@ -525,6 +617,33 @@ struct SourceRow: View {
                         kind: .photosCollection, locator: "A2",
                         description: SourceDescription(title: "Cats", collectionKind: "album")),
                     .folder("/pictures/Raw Coin Images"),
-                ], library: SampleLibrary(access: .denied)))
+                ], library: SampleLibrary(access: .denied),
+                counts: ["/pictures/Raw Coin Images/": 412]))
+    }
+
+    #Preview("Sources gone and out of reach") {
+        SettingsView(
+            model: .preview(
+                [
+                    SourceSpec(
+                        kind: .photosCollection, locator: "A2",
+                        description: SourceDescription(title: "Cats", collectionKind: "album")),
+                    // One the library no longer holds.
+                    SourceSpec(
+                        kind: .photosCollection, locator: "A1",
+                        description: SourceDescription(title: "Iceland", collectionKind: "album")),
+                    .folder("/pictures/Raw Coin Images"),
+                    .folder("/pictures/Stamps"),
+                    SourceSpec(kind: .file, locator: "/pictures/moon.jpeg"),
+                ],
+                library: SampleLibrary(
+                    access: .authorized,
+                    collections: [LibraryCollection(identifier: "A2", title: "Cats", kind: .userAlbum)]),
+                counts: ["A2": 1203, "/pictures/Raw Coin Images/": 412],
+                failing: [
+                    "/pictures/Stamps/": CocoaError(.fileReadNoSuchFile),
+                    "/pictures/moon.jpeg": POSIXError(.ETIMEDOUT),
+                ],
+                pictures: SamplePictures()))
     }
 #endif

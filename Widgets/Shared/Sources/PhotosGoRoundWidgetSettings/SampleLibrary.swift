@@ -80,12 +80,15 @@
     }
 
     /// Counts made of values, by each source's locator. A source it has no
-    /// figure for cannot be counted.
+    /// figure for cannot be counted: it fails with what `failing` has for
+    /// it, or with nothing to say why.
     final class SampleCounts: SourceCounts {
         private let counts: Mutex<[String: Int]>
+        private let failing: Mutex<[String: any Error]>
 
-        init(_ counts: [String: Int]) {
+        init(_ counts: [String: Int], failing: [String: any Error] = [:]) {
             self.counts = Mutex(counts)
+            self.failing = Mutex(failing)
         }
 
         /// What each source holds from now on.
@@ -95,7 +98,7 @@
 
         func count(of source: SourceSpec) throws -> Int? {
             guard let count = counts.withLock({ $0[source.locator] }) else {
-                throw CocoaError(.fileReadUnknown)
+                throw failing.withLock { $0[source.locator] } ?? CocoaError(.fileReadUnknown)
             }
             return count
         }
