@@ -356,11 +356,11 @@ struct PreviewModelTests {
         #expect(preview.content == .scanning)
     }
 
-    @Test("A phone offers small, medium and large, and is on the smallest until it knows its room")
+    @Test("A phone offers its four sizes from the start, and is on the smallest until it knows its room")
     func phoneSizes() {
         let preview = preview(ScriptedPictures([]))
 
-        #expect(preview.families == [.small, .medium, .large])
+        #expect(preview.families == [.small, .medium, .large, .extraLargePortrait])
         #expect(preview.family == .small)
         #expect(preview.size == CGSize(width: 158, height: 158))
     }
@@ -730,18 +730,38 @@ struct PreviewModelTests {
         #expect(preview.size == CGSize(width: 338, height: 158))
     }
 
-    @Test("A size the table does not have is offered once a widget has been handed it")
+    @Test("The tall size is offered before any widget has been handed it, at a size reckoned for the screen, and at the handed size after")
     func fourthSize() {
         let sizes = recorded([:])
         let preview = preview(recorded: sizes)
-        #expect(preview.families == [.small, .medium, .large])
+        #expect(preview.families == [.small, .medium, .large, .extraLargePortrait])
+        preview.family = .extraLargePortrait
+        #expect(preview.size == CGSize(width: 338, height: 550))
 
         sizes.record(CGSize(width: 338, height: 740), forFamily: "systemExtraLargePortrait")
         preview.lookAgain()
 
         #expect(preview.families == [.small, .medium, .large, .extraLargePortrait])
-        preview.family = .extraLargePortrait
         #expect(preview.size == CGSize(width: 338, height: 740))
+    }
+
+    @Test("With a large and a medium handed and no tall one, the tall size is reckoned from those and not from the table")
+    func fourthSizeFromWhatWasHanded() {
+        let preview = preview(
+            recorded: recorded([
+                "systemMedium": CGSize(width: 350, height: 164), "systemLarge": CGSize(width: 350, height: 366),
+            ]))
+
+        preview.family = .extraLargePortrait
+
+        #expect(preview.size == CGSize(width: 350, height: 568))
+    }
+
+    @Test("An iPad is not offered the tall size")
+    func noTallOnAnIPad() {
+        let preview = preview(ScriptedPictures([]), device: .pad)
+
+        #expect(preview.families == [.small, .medium, .large, .extraLarge])
     }
 
     @Test("On a device with two screens, the preview shows the sizes of the screen the app is on")

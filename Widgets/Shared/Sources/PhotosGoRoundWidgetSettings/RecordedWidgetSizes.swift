@@ -127,7 +127,7 @@ public struct RecordedWidgetSizes: Sendable {
                 }
                 if let tall = ofThisSet(.extraLargePortrait) { return tall.height }
                 guard let large = ofThisSet(.large), let medium = ofThisSet(.medium) else { return nil }
-                return 2 * large.height - medium.height
+                return WidgetSizes.tall(large: large, medium: medium).height
             }
             // A phone with one screen has one set, and it is the one whatever
             // it leaves; that is the narrowest when none leaves room.

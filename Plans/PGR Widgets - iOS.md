@@ -63,13 +63,6 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
   that fail when the Mac is busy are still worth a look. A third: the agent's
   `ConsoleMirrorTests`, "A change keeps its mark and its suffix", with the load average over 700.
-- **A phone always offers the tall fourth size.** Syd, 2026-10-11, after a run that showed only
-  three. The preview offers it only once a widget has been handed it, and Apple's table has no
-  figure for it, so the table needs one of our own: a large and a medium with the gap between
-  two mediums, which `RecordedWidgetSizes` already reckons. The iPad's fourth, the wide extra
-  large, is in the table already and offered from the start, so nothing changes there.
-  Test-first. Next, as a change of its own after Phase 3: Syd, 2026-10-11, "the preview should
-  have the four sizes".
 - **Particular photographs can be picked only with limited access, or by making an album in
   Photos.** Syd, 2026-10-11: "it's a hole in the entire design". With full access there is no
   way to say "these photographs". And what Photos gives back after limited access, then none,
@@ -194,6 +187,10 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   unfolded. Where else a photograph may end up, such
   as StandBy, CarPlay or the Lock Screen, is not previewed. Syd, 2026-10-09, and 2026-10-11 for
   the fourth.
+- **A phone offers its tall size from the start, at a size of the app's own until a widget has
+  been handed the real one.** As wide as the large, and as tall as a large and a medium and the
+  gap between two mediums. Syd, 2026-10-11: "the preview should have the four sizes". *The sizes
+  the preview can take*.
 - **The Lock Screen's own sizes are not built.** The circle, the rectangle and the line of text.
   Syd, 2026-10-09.
 - **The preview starts on the largest size that fits its bounds without scrolling, or the small
@@ -499,10 +496,13 @@ the system knows it for certain.
   gets the row for the nearest one, and may be a few points out: the iPhone 17's 402 by 874 screen
   is not in it, and the table's nearest row gave 158, 338 by 158 and 338 by 354 where the widgets
   are really handed 164.3, 349.7 by 164.3 and 349.7 by 365. It has no figure at all for the tall
-  fourth size. Today the preview offers that size only once it has been recorded; the decision is
-  that a phone always offers it, with a figure of our own until the real one is recorded: a large
-  and a medium with the gap between two mediums, which `RecordedWidgetSizes` already reckons. See
-  *TODO*.
+  fourth size, so a phone's is reckoned until the real one is recorded: as wide as the large,
+  and as tall as a large and a medium and the gap between two mediums, which a large is two
+  mediums and (`WidgetSizes.tall`). For the Duo's two sets it gives what their widgets were
+  handed, to the point. It is reckoned from the large and the medium this phone's widgets were
+  handed, when they have been, and from the table's when not. Syd, 2026-10-11, of the four
+  shapes in previews: "this looks good. I checked big iphone, little iPhone, and iphone duo.
+  ipad always had four."
 - **The extension writes down each size it is handed** in the App Group's preferences
   (`RecordedWidgetSizes`), and the preview uses a recorded size in place of the table's, reading
   them again each time the app comes forward. The widget gallery asks for every size it offers, so

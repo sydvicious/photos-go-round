@@ -48,13 +48,26 @@ public enum WidgetFamily: String, CaseIterable, Identifiable, Sendable {
 public enum WidgetDevice: Sendable { case phone, pad }
 
 public enum WidgetSizes {
-    /// The sizes a device's Home Screen offers. The really big ones are not on
-    /// a phone.
+    /// The sizes a device's Home Screen offers: four on each, and the fourth
+    /// is tall on a phone and wide on an iPad. Syd, 2026-10-11: a phone's
+    /// tall size "will always be there", and "the preview should have the
+    /// four sizes".
     public static func families(on device: WidgetDevice) -> [WidgetFamily] {
         switch device {
-        case .phone: [.small, .medium, .large]
+        case .phone: [.small, .medium, .large, .extraLargePortrait]
         case .pad: [.small, .medium, .large, .extraLarge]
         }
+    }
+
+    /// The tall fourth size that goes with a large and a medium: as wide as
+    /// they are, and as tall as one of each and the gap between two mediums.
+    /// A large is two mediums and that gap, so the gap is known from them.
+    ///
+    /// Apple's table has no figure for the tall size, so this is the app's
+    /// own. It gives what the iPhone Duo's widgets were handed on 2026-10-10,
+    /// to the point, for both of its sets.
+    public static func tall(large: CGSize, medium: CGSize) -> CGSize {
+        CGSize(width: large.width, height: 2 * large.height - medium.height)
     }
 
     /// A widget's size in points on a device with this screen, or nil when the
@@ -75,9 +88,14 @@ public enum WidgetSizes {
         case .medium: return CGSize(width: row.wide, height: row.mediumHeight)
         case .large: return CGSize(width: row.wide, height: row.largeHeight)
         case .extraLarge: return row.extraWide.map { CGSize(width: $0, height: row.largeHeight) }
-        // Apple's table has no figure for it; it is known only from what a
-        // widget of that size was handed. `RecordedWidgetSizes`.
-        case .extraLargePortrait: return nil
+        // Apple's table has no figure for it, so it is reckoned from the
+        // row's large and medium until a widget of that size has been handed
+        // its own. `RecordedWidgetSizes`. An iPad has none.
+        case .extraLargePortrait:
+            guard device == .phone else { return nil }
+            return tall(
+                large: CGSize(width: row.wide, height: row.largeHeight),
+                medium: CGSize(width: row.wide, height: row.mediumHeight))
         }
     }
 

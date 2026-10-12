@@ -56,9 +56,8 @@ public final class PreviewModel {
             personChose = true
         }
     }
-    /// The sizes this device's Home Screen offers: the ones Apple's table
-    /// lists for it, and any other a widget here has been handed, which is how
-    /// the tall fourth size comes to be known.
+    /// The sizes this device's Home Screen offers, and any other a widget
+    /// here has been handed.
     public var families: [WidgetFamily] {
         let listed = WidgetSizes.families(on: device)
         return WidgetFamily.allCases.filter { listed.contains($0) || handed[$0] != nil }
@@ -114,7 +113,20 @@ public final class PreviewModel {
     /// when not. The table is wrong by a few points on screens it has no row
     /// for.
     private func size(of family: WidgetFamily) -> CGSize? {
+        size(of: family, onScreen: screen)
+    }
+
+    /// **A phone's tall size that no widget has been handed is reckoned from
+    /// this device's own large and medium**, which may themselves have been
+    /// handed: the table is a few points out on some screens, and the tall
+    /// size has to go with the other two.
+    private func size(of family: WidgetFamily, onScreen screen: CGSize?) -> CGSize? {
         if let handed = recordedSizes[family] { return handed }
+        if family == .extraLargePortrait, device == .phone,
+            let large = size(of: .large, onScreen: screen), let medium = size(of: .medium, onScreen: screen)
+        {
+            return WidgetSizes.tall(large: large, medium: medium)
+        }
         guard let screen else { return nil }
         return WidgetSizes.size(of: family, on: device, screen: screen)
     }
@@ -177,7 +189,7 @@ public final class PreviewModel {
     /// device in the table, so the bar is never empty.
     public func shape(of family: WidgetFamily, height: CGFloat) -> CGSize {
         func known(_ family: WidgetFamily) -> CGSize? {
-            recordedSizes[family] ?? WidgetSizes.size(of: family, on: device, screen: screen ?? .zero)
+            size(of: family, onScreen: screen ?? .zero)
         }
         let large = known(.large)?.height ?? families.compactMap { known($0)?.height }.max() ?? 0
         guard large > 0, let size = known(family) else { return .zero }

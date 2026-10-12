@@ -5,10 +5,40 @@ import Testing
 
 @Suite("How big a widget is, on which device")
 struct WidgetSizesTests {
-    @Test("A phone offers small, medium and large; an iPad offers extra large as well")
+    @Test("Each device offers four sizes, and the fourth is tall on a phone and wide on an iPad")
     func families() {
-        #expect(WidgetSizes.families(on: .phone) == [.small, .medium, .large])
+        #expect(WidgetSizes.families(on: .phone) == [.small, .medium, .large, .extraLargePortrait])
         #expect(WidgetSizes.families(on: .pad) == [.small, .medium, .large, .extraLarge])
+    }
+
+    @Test("A phone's tall size is as wide as its large, and as tall as a large and a medium and the gap between two mediums")
+    func tallOnAPhone() {
+        // A large is two mediums and the gap between them: 354 is 158 twice
+        // and 38. So the tall size is 354, 38 and 158.
+        #expect(
+            WidgetSizes.size(of: .extraLargePortrait, on: .phone, screen: CGSize(width: 393, height: 852))
+                == CGSize(width: 338, height: 550))
+        #expect(
+            WidgetSizes.size(of: .extraLargePortrait, on: .phone, screen: CGSize(width: 430, height: 932))
+                == CGSize(width: 364, height: 594))
+    }
+
+    @Test("The reckoning gives what the iPhone Duo's widgets were handed")
+    func tallAsHanded() {
+        // 2026-10-10: medium 402 by 190 and large 402 by 426 with a tall size
+        // of 402 by 662, and 334 by 158 and 334 by 354 with one of 334 by 550.
+        #expect(
+            WidgetSizes.tall(large: CGSize(width: 402, height: 426), medium: CGSize(width: 402, height: 190))
+                == CGSize(width: 402, height: 662))
+        #expect(
+            WidgetSizes.tall(large: CGSize(width: 334, height: 354), medium: CGSize(width: 334, height: 158))
+                == CGSize(width: 334, height: 550))
+    }
+
+    @Test("An iPad has no tall size")
+    func noTallOnAnIPad() {
+        #expect(
+            WidgetSizes.size(of: .extraLargePortrait, on: .pad, screen: CGSize(width: 820, height: 1180)) == nil)
     }
 
     @Test("A phone in Apple's table gets that row's sizes")
