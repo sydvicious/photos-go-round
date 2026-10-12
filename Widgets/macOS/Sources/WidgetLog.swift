@@ -6,12 +6,13 @@
 // 30 MB, and the spike's question is whether that stays flat as a timeline gets
 // longer. `now` is the footprint at this moment and `peak` the most this
 // process has ever held, which is the figure the ceiling is measured against.
+// The reading is `Footprint`'s, as the iOS extension's is.
 //
 //     /usr/bin/log show --info --last 1h --predicate 'subsystem == "com.sydpolk.photosgoround" AND category == "widget"'
 
-import Darwin
 import Foundation
 import OSLog
+import PhotosGoRoundAgentAPI
 import TinyCache
 
 enum WidgetLog {
@@ -43,16 +44,10 @@ enum WidgetLog {
                 + String(format: "%.2f s", counting.seconds))
     }
 
-    /// `now 11.2 MB, peak 14.0 MB`, or why it could not be read.
+    /// `memory now 11.2 MB, peak 14.0 MB`, with what is left of the limit
+    /// after it where the kernel tells of one.
     private static func memory() -> String {
-        var usage = rusage_info_v4()
-        let result = withUnsafeMutablePointer(to: &usage) {
-            $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) {
-                proc_pid_rusage(getpid(), RUSAGE_INFO_V4, $0)
-            }
-        }
-        guard result == 0 else { return "memory unread, errno \(errno)" }
-        return "now \(megabytes(usage.ri_phys_footprint)), peak \(megabytes(usage.ri_lifetime_max_phys_footprint))"
+        Footprint.now().map(Footprint.againstLimit) ?? "memory unread"
     }
 
     private static func megabytes(_ bytes: UInt64) -> String {

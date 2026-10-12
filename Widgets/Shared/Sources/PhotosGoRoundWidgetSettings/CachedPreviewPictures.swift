@@ -17,6 +17,7 @@ public struct CachedPreviewPictures: PreviewPictures {
     private let directory: URL
     private let library: any PhotoLibraryPictures
     private let bookmarks: BookmarkedSources?
+    private let onFetch: (@Sendable (PictureResizer.Resize) -> Void)?
 
     /// - Parameters:
     ///   - directory: Somewhere of the app's own to keep the pictures and the
@@ -25,19 +26,23 @@ public struct CachedPreviewPictures: PreviewPictures {
     ///     over one of its own.
     ///   - bookmarks: What files and folders are opened through, where the
     ///     Files browser chose them. Without it they are read by their paths.
+    ///   - onFetch: Told what each fetch read and wrote, for whoever is
+    ///     measuring. Called on the thread that fetched.
     public init(
         directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
-        bookmarks: BookmarkedSources? = nil
+        bookmarks: BookmarkedSources? = nil,
+        onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil
     ) {
         self.directory = directory
         self.library = library
         self.bookmarks = bookmarks
+        self.onFetch = onFetch
     }
 
     public func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
-            source: source(for: sources), fitting: box, fillLimit: 1)
+            source: source(for: sources), fitting: box, fillLimit: 1, onFetch: onFetch)
         // Whoever asked shows "No Photos found" for an error and for nothing
         // alike, so which it was is said here. Nothing found is an empty
         // album as often as a fault, and is asked again every few seconds, so
@@ -83,7 +88,7 @@ public struct CachedPreviewPictures: PreviewPictures {
     public func makeReady(from sources: [SourceSpec], fitting box: CGSize) throws {
         let cache = TinyCache(
             directory: folder(for: sources, fitting: box),
-            source: source(for: sources), fitting: box, fillLimit: 1)
+            source: source(for: sources), fitting: box, fillLimit: 1, onFetch: onFetch)
         do {
             try cache.fill(to: 1)
         } catch let late as TimedOut {
@@ -99,7 +104,8 @@ public struct CachedPreviewPictures: PreviewPictures {
         let folder = folder(for: sources, fitting: box)
         for spec in sources {
             guard let source = spec.firstPicture(in: library, through: bookmarks) else { continue }
-            let cache = TinyCache(directory: folder, source: source, fitting: box, fillLimit: 1)
+            let cache = TinyCache(
+                directory: folder, source: source, fitting: box, fillLimit: 1, onFetch: onFetch)
             do {
                 if let file = try cache.take(upTo: 1, from: .now, every: 1).first?.file {
                     return file

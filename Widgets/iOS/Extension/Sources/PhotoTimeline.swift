@@ -92,7 +92,8 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(Log.widgetsTag, privacy: .public) timeline answered, \
             \(String(describing: context.family), privacy: .public), \
             \(Self.describe(face), privacy: .public), after \
-            \(Int(Date.now.timeIntervalSince(now).rounded())) seconds
+            \(Int(Date.now.timeIntervalSince(now).rounded())) seconds, \
+            \(Wake.memory(), privacy: .public)
             """)
 
         // One more for next time, without this one waiting for it. If the
@@ -168,6 +169,7 @@ private struct Wake: Sendable {
         RecordedWidgetSizes(suiteName: group)
             .record(context.displaySize, forFamily: String(describing: context.family))
 
+        let family = String(describing: context.family)
         let scale = context.environmentVariants.displayScale?.max() ?? 3
         box = CGSize(
             width: context.displaySize.width * scale, height: context.displaySize.height * scale)
@@ -178,7 +180,26 @@ private struct Wake: Sendable {
             // So the gallery can show a size that has no picture yet one of
             // another size's.
             among: Self.caches,
-            bookmarks: Self.bookmarks)
+            bookmarks: Self.bookmarks,
+            onFetch: { Self.fetched($0, for: family) })
+    }
+
+    /// What the extension holds, against the limit it is held to: about
+    /// 30 MB, which a phone enforces and a simulator is not expected to.
+    /// `Plans/PGR Widgets - iOS.md`, Phase 5.
+    static func memory() -> String {
+        Footprint.now().map(Footprint.againstLimit) ?? "memory unread"
+    }
+
+    /// One line for each fetch, with the memory as it ends: a fetch is where
+    /// the extension holds most, and the kernel's peak says how much that
+    /// was. The original's size is there so a high peak names its picture.
+    private static func fetched(_ resize: PictureResizer.Resize, for family: String) {
+        Log.widget.notice(
+            """
+            \(Log.widgetsTag, privacy: .public) fetched, \(family, privacy: .public), \
+            \(resize.said, privacy: .public), \(memory(), privacy: .public)
+            """)
     }
 
     /// What a file or folder the person chose in the app is opened through:

@@ -33,14 +33,14 @@ left of it. The to-dos are Claude's unless they say otherwise.
   2026-10-11: "it has been working great". So the first wake and the iCloud fetches hold up
   there, and what is left is:
   - A reading of the extension's memory on the phone, where the 30 MB ceiling is expected to
-    be enforced. Nothing has been killed; no figure has been read.
-  - Whether a widget can query Photos while the phone is locked, which is what CarPlay and
-    StandBy need. And whether a widget is woken at all then: Syd's theory, 2026-10-11, after a
-    log of 21 minutes with no wake in it, is that "widgets don't update when the screen is
-    locked", and that "watch, car play, etc., will fire even if the phone is locked. It probably
-    depends on the surface the widget is actually on". With auto-lock off, the next log had a
-    burst of wakes every two and a half minutes, which fits.
+    be enforced. The extension says what it holds on its `timeline answered` and `fetched`
+    lines (*Reading the logs*, *The memory on a line*); the figures are to be read from the
+    log of Syd's phone. Nothing has been killed; no figure has been read.
   - Shrinking a very large picture without the whole of it in memory.
+
+  What a widget can do while the phone is locked is not this phase's. Syd, 2026-10-11: "I don't
+  think we need to worry about what happens when the phone is locked until we start putting
+  widgets in weird places". It is in `TODO.md`, with the places that need it.
 - **Phase 6** — The first-time launch wizard. Syd, 2026-10-10: "we need a full-blown first-time
   launch wizard". Moved before the Store on 2026-10-11.
   - The "How to add a widget" page is part of it.
@@ -438,7 +438,18 @@ we can test everythingmelse including files and folders and simple photo library
   fetched.
 - **Also only on a phone**, by their nature and not by this rule: the extension's memory against
   the 30 MB ceiling, which a simulator is not expected to enforce, and what a widget can do while
-  the phone is locked. Both are to-dos under the iOS phase of `Plans/Photos-Go-Round Widgets.md`.
+  the phone is locked. The memory is a to-do under Phase 5; the locked phone is in `TODO.md`.
+- **The memory reading has a phone of its own, and an iPad first.** Syd, 2026-10-11: "gonna
+  leave it running on my iPad", and then that he will make his mother-in-law's phone, which she
+  no longer really uses, a developer phone, for the memory test "tomorrow or the night after".
+  An iPad's limit may not be a phone's; the `left of` on each line says what each is held to.
+  The iPad's first night is with the coins folder alone, its files copied onto the iPad
+  itself, so nothing waits on iCloud.
+  That phone is signed into his wife's account, whose Photos library is the one they share.
+  The coins folder, which has the truly large picture, is to be the main source, with small
+  albums and an iCloud Drive folder beside it. Every picture has an equal chance, so the large
+  one comes up about once in as many picks as there are pictures chosen; a `fetched` line with
+  its size, 33280x20395, is how the log says it did.
 - **Whether a widget can open a folder the app chose is the phone's to answer too.** From
   memory, not checked: a simulator does not enforce the sandbox, so a yes there does not say
   what a phone will do. Files and folders are otherwise tested on a simulator, as Syd said.
@@ -1130,8 +1141,8 @@ From memory, not checked: the Mac has no limited answer, so there it is full or 
 the widget reads the status and never asks. On the Mac the widget extension shares what the app
 was granted (`Plans/Photos-Go-Round Widgets.md`, *Next: the app's sources, then Photos*). On the
 simulators, 2026-10-10, the widgets showed photographs under the app's permission the same way.
-A phone, and a locked phone, are still to be seen; the locked phone is a to-do in the widgets
-plan.
+On Syd's phone they have shown photographs the same way since (*Phases*, Phase 5). A locked phone
+is still to be seen, and is a to-do in `TODO.md`.
 
 ## One fetch at a time
 
@@ -1724,9 +1735,14 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
 - `timeline asked, systemLarge, 350x365 points, 2 sources, every 300 seconds` — the extension,
   once for each reload of a widget, with the size the system handed it and what the widget is
   set to.
-- `timeline answered, systemLarge, picture …, after 2 seconds` — the extension, when a wake has
-  its face, with how long it took. A `timeline asked` with none after it is a wake the system
+- `timeline answered, systemLarge, picture …, after 2 seconds, memory now 11.5 MB, peak 14.0 MB,
+  18.5 MB left of 30.0 MB` — the extension, when a wake has its face, with how long it took and
+  what the extension holds. A `timeline asked` with none after it is a wake the system
   stopped, or one still waiting on a source.
+- `fetched, systemLarge, photos 4032x3024 → 1092x819, 212 KB, memory now …` — the extension,
+  once for each picture it fetches, the wake's own and the one made ready for next time: what
+  was read, what was written, and the memory as the fetch ends. A file's line has its size on
+  disk too: `public.tiff 6000x4500, 54.1 MB → …`.
 - `asked iCloud for 3 of 3 files that are not on the device` — the app or the extension, on a
   pick from a folder that has files iCloud Drive has not fetched. `; the first refusal: …`
   after it when asking was refused.
@@ -1762,6 +1778,25 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   opening, failed. Asked again at the next count or pick.
 - `no bookmark could be left for Coins, so it was not added: …` — the app, when something chosen
   in the Files browser could not be bookmarked.
+
+### The memory on a line
+
+Phase 5's reading. Syd, 2026-10-11, chose log lines in the extension over Xcode's gauge on a
+tethered phone: the widget runs for hours with nobody watching, and the log is how its wakes
+are read already.
+
+- **`now`** is the footprint, which is what the kernel charges against a limit.
+- **`peak`** is the kernel's own mark of the most the process has ever held, so a fetch's worst
+  moment is in it though no line was written then. It is the process's: a new extension
+  process starts again, and the log's process column tells one from the next.
+- **`left of`** is what the kernel says is left before the limit, and the limit is that and
+  `now` together. So the ceiling is read and not assumed to be 30 MB.
+- **Without `left of`, the kernel gave no limit.** From Apple's header, not tried: its answer
+  is zero for a process that "is not an app". Whether a phone answers a widget extension is
+  for the first log to say, and a simulator is not expected to enforce a limit at all.
+
+All of it is `Footprint` in the shared package, which the agent, the screensaver and the Mac's
+widget log their memory through.
 
 ## Identity
 

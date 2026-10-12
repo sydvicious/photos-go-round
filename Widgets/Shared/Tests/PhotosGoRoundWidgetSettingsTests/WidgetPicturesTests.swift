@@ -169,6 +169,28 @@ struct WidgetPicturesTests {
         #expect(library.timesAsked == 2)
     }
 
+    @Test("Whoever is measuring is told what each fetch read and wrote: the wake's own, and the one made ahead")
+    func tellsOfEachFetch() throws {
+        let cache = try ScratchFolder()
+        let fetched = Mutex<[PictureResizer.Resize]>([])
+        let widget = WidgetPictures(
+            directory: cache.url, library: ScriptedLibrary([]),
+            onFetch: { resize in fetched.withLock { $0.append(resize) } })
+
+        #expect(isPicture(widget.turn(from: [album], fitting: box, at: start)))
+        #expect(fetched.withLock { $0.count } == 1)
+
+        widget.makeReady(from: [album], fitting: box, at: start)
+        let all = fetched.withLock { $0 }
+        #expect(all.count == 2)
+        #expect(all.map(\.originalWidth) == [4032, 4032])
+        #expect(all.map(\.writtenWidth) == [40, 40])
+
+        // The one made ahead is what the next wake shows, with nothing fetched.
+        #expect(isPicture(widget.turn(from: [album], fitting: box, at: start + 300)))
+        #expect(fetched.withLock { $0.count } == 2)
+    }
+
     // MARK: -
 
     func folder(_ scratch: ScratchFolder) -> SourceSpec {

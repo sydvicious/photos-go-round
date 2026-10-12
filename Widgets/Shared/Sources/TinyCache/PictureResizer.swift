@@ -28,6 +28,17 @@ public struct PictureResizer: Sendable {
         public let writtenWidth: Int
         public let writtenHeight: Int
         public let writtenBytes: Int
+
+        /// `public.tiff 6000x4500, 54.1 MB → 438x328, 41 KB`, for a log. The
+        /// original's size in pixels is what a full decode of it costs, at
+        /// four bytes each. A photograph from Photos has no bytes to say:
+        /// `photos 4032x3024 → 1092x819, 212 KB`.
+        public var said: String {
+            let bytes =
+                originalBytes > 0 ? String(format: ", %.1f MB", Double(originalBytes) / 1_048_576) : ""
+            return "\(originalType) \(originalWidth)x\(originalHeight)\(bytes) → "
+                + "\(writtenWidth)x\(writtenHeight), \(writtenBytes / 1024) KB"
+        }
     }
 
     public init() {}

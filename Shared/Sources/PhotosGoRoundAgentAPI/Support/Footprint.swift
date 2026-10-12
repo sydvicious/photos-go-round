@@ -27,11 +27,24 @@ public enum Footprint {
         /// Resident size, the `ps` figure, kept for comparison with the samples
         /// taken by hand before this existed.
         public let resident: Int64
+        /// The most the kernel has ever charged this process: its own mark,
+        /// which misses nothing, where `Footprint.peak` is the highest of the
+        /// readings taken here.
+        public let lifetimePeak: Int64?
+        /// How much more the process may hold before the kernel ends it. Nil
+        /// where the kernel tells of no limit.
+        public let left: Int64?
 
-        public init(footprint: Int64, resident: Int64) {
+        public init(footprint: Int64, resident: Int64, lifetimePeak: Int64? = nil, left: Int64? = nil) {
             self.footprint = footprint
             self.resident = resident
+            self.lifetimePeak = lifetimePeak
+            self.left = left
         }
+
+        /// The limit the process is held to: what it holds and what is left,
+        /// together.
+        public var limit: Int64? { left.map { footprint + $0 } }
     }
 
     /// How often each service says what it is holding. Syd, 2026-09-18: "what
@@ -79,8 +92,13 @@ public enum Footprint {
             }
         }
         guard outcome == KERN_SUCCESS else { return nil }
+        // The kernel's zero for what is left is its answer for a process with
+        // no limit, as well as for one past its limit, which would not be
+        // here to ask.
         let reading = Reading(
-            footprint: Int64(info.phys_footprint), resident: Int64(info.resident_size))
+            footprint: Int64(info.phys_footprint), resident: Int64(info.resident_size),
+            lifetimePeak: info.ledger_phys_footprint_peak,
+            left: info.limit_bytes_remaining > 0 ? Int64(clamping: info.limit_bytes_remaining) : nil)
         // Every reading updates the high-water mark, whoever took it.
         var seen = highest.load(ordering: .relaxed)
         while reading.footprint > seen {
@@ -99,6 +117,25 @@ public enum Footprint {
     public static func line(_ reading: Reading, up uptime: Duration) -> String {
         "MEMORY: footprint \(bytes(reading.footprint)) · resident \(bytes(reading.resident))"
             + " · up \(spoken(uptime))"
+    }
+
+    /// `memory now 11.2 MB, peak 14.0 MB, 18.8 MB left of 30.0 MB`
+    ///
+    /// For a process held to a limit, which a widget extension is: about 30 MB.
+    /// The limit is read and not assumed. To a tenth of a megabyte, since at
+    /// that size the tenths are what change. `Plans/PGR Widgets - iOS.md`,
+    /// *Reading the logs*.
+    public static func againstLimit(_ reading: Reading) -> String {
+        var said = "memory now \(megabytes(reading.footprint))"
+        if let most = reading.lifetimePeak { said += ", peak \(megabytes(most))" }
+        if let left = reading.left, let limit = reading.limit {
+            said += ", \(megabytes(left)) left of \(megabytes(limit))"
+        }
+        return said
+    }
+
+    private static func megabytes(_ count: Int64) -> String {
+        String(format: "%.1f MB", Double(count) / 1_048_576)
     }
 
     static func bytes(_ count: Int64) -> String {

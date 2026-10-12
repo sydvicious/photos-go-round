@@ -65,6 +65,25 @@ struct PictureResizerTests {
         #expect(resize.writtenBytes > 0)
     }
 
+    @Test("A resize is said in a line: what was read, with its bytes, and what was written")
+    func saidForAFile() {
+        let resize = PictureResizer.Resize(
+            originalType: "public.tiff", originalWidth: 6000, originalHeight: 4500,
+            originalBytes: 54 * 1_048_576 + 104_858, writtenWidth: 438, writtenHeight: 328,
+            writtenBytes: 41 * 1024 + 100)
+
+        #expect(resize.said == "public.tiff 6000x4500, 54.1 MB → 438x328, 41 KB")
+    }
+
+    @Test("A photograph Photos handed over has no bytes of its own to say")
+    func saidForAPhotograph() {
+        let resize = PictureResizer.Resize(
+            originalType: "photos", originalWidth: 4032, originalHeight: 3024, originalBytes: 0,
+            writtenWidth: 1092, writtenHeight: 819, writtenBytes: 212 * 1024)
+
+        #expect(resize.said == "photos 4032x3024 → 1092x819, 212 KB")
+    }
+
     @Test("A file that is not a picture is an error, and nothing is written")
     func notAPicture() throws {
         let scratch = try ScratchFolder()
