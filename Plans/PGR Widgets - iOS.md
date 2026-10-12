@@ -27,11 +27,8 @@ left of it. The to-dos are Claude's unless they say otherwise.
   Phase 1: Syd, 2026-10-11. *When a source goes wrong*.
   - The alert, and the picker again, when a source is wrong at opening; and the removal if it is
     not put right.
-- **Phase 4** — Files and folders, with adding and removing. Next, before Phase 3: Syd,
-  2026-10-11, "I think we need to do files and folders next, because it colors how we deal with
-  connections to sources not working". Earlier that day it was not the priority and might not
-  be done: "I could remove them and ship now". *The files and folders*.
-  - On Syd's phone, and his to run: an iCloud Drive folder after a restart.
+- **Phase 4** — Files and folders, with adding and removing. Complete; Syd, 2026-10-11. *The
+  files and folders*.
 - **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
   to-dos under *iOS and iPadOS* in `Plans/Photos-Go-Round Widgets.md`, which is closed; the rest
   of that plan's are in `TODO.md`. The widgets have run
@@ -1085,8 +1082,8 @@ underneath.
 file added, the extension's next wake logged `opened Coins through its bookmark, and it can be
 read: 4 things in it`, and the same for the file. The app, quit and launched again, opened both
 the same way. A widget drawing a folder's picture was not looked at. The phone's answer is the
-one that counts, and is a to-do under Phase 4: the same line from the extension's process, or
-`did not open` or `cannot be read` in its place.
+one that counts, and it follows: the same line from the extension's process, or `did not open`
+or `cannot be read` in its place.
 
 **On Syd's phone the app shows files from iCloud Drive, and a widget does not.** Syd,
 2026-10-11: "This is working well. And on my device, it's working with files from my iCloud
@@ -1119,8 +1116,9 @@ could be found. The extension now logs what each wake came to.
 **Then the widgets showed iCloud Drive's pictures.** Syd, 2026-10-11, with the downloads taken
 off the folder first, and the phone's own folder taken out of the list: "previews are woking",
 and of the widgets, "and I am seeing pictures from iCloud". So "No Photos found" was left over,
-and a widget reads an iCloud Drive folder through the app's bookmark. Not tried: that folder
-after a restart of the phone. The log collected then, 14:21 to 14:31, holds no line from the
+and a widget reads an iCloud Drive folder through the app's bookmark. After a restart of the
+phone too: Syd, later that day, of the restart that was left to try, "I did the restart, and
+things are fine". The log collected then, 14:21 to 14:31, holds no line from the
 extension, so no wake fell inside it.
 
 **And a widget added after that said "No Photos found".** Syd, the same day: "I just added
@@ -1176,6 +1174,12 @@ it has been gone through and has none to give. It looks again at its own time, l
 2026-10-11, "the widget looks again when the system pings it", choosing that over the quarter of
 an hour it was. And the system may not ask even then: the phone's log for 15:01 to 15:23 that
 day, with the app killed and the screen locking, holds no wake of any widget.
+
+**A folder in Dropbox shows nothing.** Syd, 2026-10-11, on his iPad: "I added a folder in my
+Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to
+ask Dropbox to download files for us". Not looked into: whether it is the app or the widgets,
+and what the log says. What is asked for files not on the device is asked of iCloud Drive, and
+Dropbox is another provider. "Fully support Dropbox" is in `TODO.md`.
 
 **If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
 have to download files at new sizes, it sounds like we have to reproduce the caching that we do

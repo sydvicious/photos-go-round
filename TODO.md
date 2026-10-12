@@ -371,3 +371,7 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 - **Whether a folder bookmark lasts**: after a restart, after the app is rebuilt, and after the folder moves. The plain bookmark opened with "stale" true. Closed plan, *The bookmark test worked*.
 - **TinyCache has no size ceiling.** Only the fill limit is enforced; space for 30 at the extra-large size measured about 12 MB at the largest, fitted. Closed plan, *What it leaves out*.
 - **Whether Notification Center on the Mac offers either extra-large size.** Closed plan, *Control Center and Notification Center on the Mac*.
+
+## Fully support Dropbox
+
+Syd, 2026-10-11: "I added a folder in my Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to ask Dropbox to download files for us". `Plans/PGR Widgets - iOS.md`, *The files and folders*.
