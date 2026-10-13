@@ -32,11 +32,28 @@ left of it. The to-dos are Claude's unless they say otherwise.
   on Syd's phone, on his iCloud library with 8,000-plus favorites, for 13 hours and more by
   2026-10-11: "it has been working great". So the first wake and the iCloud fetches hold up
   there, and what is left is:
-  - A reading of the extension's memory on the phone, where the 30 MB ceiling is expected to
-    be enforced. The extension says what it holds on its `timeline answered` and `fetched`
-    lines (*Reading the logs*, *The memory on a line*); the figures are to be read from the
-    log of Syd's phone. Nothing has been killed; no figure has been read.
-  - Shrinking a very large picture without the whole of it in memory.
+  - **A JPEG whose sides do not divide by the fraction it is decoded at is decoded whole, and
+    ends the extension.** Two photographs did it overnight on the iPad, and on a Mac each
+    adds 44 to 48 MB in bands where a like one adds 3 MB. The guard reckons them at 12 MB and
+    lets them through. Not fixed. A test with a JPEG of 2922 by 3660 pixels, made for the
+    tests and failing, is the first step. *The iPad overnight*.
+  - **The icon takes the extension to 25 MB.** Its picture is 1024 pixels square at 16 bits a
+    channel, decoded whole to make a copy for a placeholder at the large sizes. What to do is
+    Syd's to say, since the full-size picture was his call: a smaller picture for the widgets
+    is Claude's suggestion. *The iPad overnight*.
+  - When both are done: take the `drawing` and `placeholder` lines out, and put `snapshot`
+    back to an info line.
+  - Try the guard and its note on a device, with folders of each kind of file: Syd, 2026-10-12,
+    "I can build folders with all of those types of files". Every figure the guard goes by is
+    a Mac's, and nothing larger than 24 million pixels was measured for PNG or TIFF, or 49
+    million for HEIC. The guard has refused nothing on a device yet. *The guard*.
+  - The note and the triangle beside a source have not been seen running, only built with a
+    preview.
+  - Whether to learn from an extension being ended, by noting which file was being shrunk
+    and passing it over afterwards. Not decided. The two photographs above are what it would
+    have caught: each ended the extension once in the night, and would again whenever it was
+    picked. *The guard*.
+  - The same memory reading on a phone. Only the iPad's has been taken.
 
   What a widget can do while the phone is locked is not this phase's. Syd, 2026-10-11: "I don't
   think we need to worry about what happens when the phone is locked until we start putting
@@ -394,6 +411,18 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   anywhere, the plain icon.** Syd, 2026-10-10. *Targets and release*.
 - **The app tells the widgets to look again when a person leaves it**, so a change of sources
   shows without waiting for a widget's next turn.
+- **A picture of more than a million pixels is shrunk a band at a time, unless it is a HEIC.**
+  A widget is ended at 30 MB, and in one piece the largest coin scan took far more. Syd,
+  2026-10-12. *A very large picture, in bands*.
+- **A picture reckoned to need more memory than the widget has left is passed over for
+  another.** Syd, 2026-10-12: "any picture that fails the guard is skipped". *The guard*.
+- **The preview passes over what a widget would, and puts the note up when it does.** Syd,
+  2026-10-12: "the preview should use the exact same methodology as the widgets". *The guard*.
+- **A source that has had a picture passed over has a warning triangle beside its name.** Syd,
+  2026-10-12. *The guard*.
+- **When that has happened, the app says so at the foot of its window, until that source goes
+  away.** "Some of the Photos in this set are not displayable in widgets." Syd,
+  2026-10-12. *The guard*.
 
 *The wizard*
 
@@ -444,7 +473,8 @@ we can test everythingmelse including files and folders and simple photo library
   no longer really uses, a developer phone, for the memory test "tomorrow or the night after".
   An iPad's limit may not be a phone's; the `left of` on each line says what each is held to.
   The iPad's first night is with the coins folder alone, its files copied onto the iPad
-  itself, so nothing waits on iCloud.
+  itself, so nothing waits on iCloud. Syd, 2026-10-12: "the iPad widgets froze when I set them
+  up", and "many hours later they are still frozen". *What the iPad's first night showed*.
   That phone is signed into his wife's account, whose Photos library is the one they share.
   The coins folder, which has the truly large picture, is to be the main source, with small
   albums and an iCloud Drive folder beside it. Every picture has an equal chance, so the large
@@ -1721,6 +1751,32 @@ in the console's filter. The extension is a process of its own and its lines do 
 is attached to it (Debug, Attach to Process). Console.app shows both, for a simulator or a
 connected phone.
 
+**From a terminal, for a phone or an iPad.** With the device unlocked and on a cable, and its
+identifier from `xcrun devicectl list devices`:
+
+```bash
+sudo log collect --device-udid "<UDID>" --last 1d --output "$HOME/Desktop/ipad.logarchive"
+```
+
+and then, by the project's subsystem, which is far quicker than searching every line's text in
+an archive of most of a gigabyte:
+
+```bash
+/usr/bin/log show "$HOME/Desktop/ipad.logarchive" --info --style compact --predicate 'subsystem == "com.sydpolk.photosgoround"'
+```
+
+- **It needs the cable.** Xcode reaches a paired device over Wi-Fi and builds and runs on it;
+  `log collect` does not, and says `Device not configured (6)`. 2026-10-13.
+- **After a migration to a new Mac, or a new system, the Mac may be refusing the device.**
+  System Settings › Privacy & Security › Allow accessories to connect. Set to ask, it asked,
+  and the collection then worked. The sign was an iPad that did not charge and was not in the
+  Finder.
+- **A device keeps only some hours of lines**, three one day and twelve another. A
+  process's last line carries the most it has ever held, so that figure outlasts the rest.
+- **How a process ended** is in the system's own lines, not ours: search the archive for
+  `Process exited` with the extension's bundle identifier. Ended for memory, it reads
+  `domain:jetsam(1) code:per-process-limit(7)`.
+
 **From a terminal, for a simulator.** `booted` is enough when one simulator is running; otherwise
 its name or identifier, from `xcrun simctl list devices`:
 
@@ -1743,6 +1799,14 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   once for each picture it fetches, the wake's own and the one made ready for next time: what
   was read, what was written, and the memory as the fetch ends. A file's line has its size on
   disk too: `public.tiff 6000x4500, 54.1 MB → …`.
+- `shrinking public.jpeg 3264x2448 to 1008x756, in bands at 1/2, reckoned at 12 MB, memory now
+  …` — the app or the extension, before each picture from a file is shrunk: its kind and size,
+  the size wanted, the way, and what the guard reckons it needs. The last of these with no
+  `fetched` after it, in a process that was ended, is the picture that was being shrunk.
+- `passed over a picture too large to shrink: public.png 12000x9000 needs about 56 MB, memory
+  now …; no wake could show it` — the extension, when *The guard* refuses a picture, with the
+  kind and size of the picture and never its name. Without the last words it was refused only
+  for now.
 - `asked iCloud for 3 of 3 files that are not on the device` — the app or the extension, on a
   pick from a folder that has files iCloud Drive has not fetched. `; the first refusal: …`
   after it when asking was refused.
@@ -1752,9 +1816,13 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
 - `a file gave no picture: download status …; reading it, …` — the app or the extension, for a
   file with a picture's name that would not decode: whether iCloud has it on the device, and
   what reading its first bytes gave. The file is not named.
-- `snapshot, systemLarge, 350x365 points, picture …` — the extension, each time the gallery asks
-  for a preview, with the face it was given: a picture and whether its file was still there, or
-  the plain icon, or scanning. *Info.*
+- `snapshot, systemLarge, 350x365 points, picture …, memory now …` — the extension, each time
+  the gallery asks for a preview, with the face it was given: a picture and whether its file
+  was still there, or the plain icon, or scanning. A notice while the memory is measured,
+  since a device does not keep an info line; *Info* otherwise.
+- `placeholder, systemLarge, memory now …` and `drawing, systemLarge, picture …, memory now …` —
+  the extension, when the system asks for a placeholder, and each time it has a face drawn.
+  There only while the memory is measured: Phase 5.
 - `sizes the widgets were handed: …` — the app, the first time it looks and whenever they have
   changed: every size recorded for each family. It is how a new device's sizes are read.
   *Info.*
@@ -1797,6 +1865,238 @@ are read already.
 
 All of it is `Footprint` in the shared package, which the agent, the screensaver and the Mac's
 widget log their memory through.
+
+### What the iPad's first night showed
+
+Syd's M4 iPad Pro, 2026-10-12, with one source: a folder of 32 coin scans, on the iPad itself.
+Four widgets, one of each size. He found them frozen. The log was collected with
+`sudo log collect --device-udid … --last 1d` and read by the project's subsystem, which is
+far quicker than searching every line's text.
+
+- **The limit is 30.0 MB, and it is a hard one.** Every line's `left of` gave 30.0 MB, and the
+  system's own line for each process says `Memory Limits: active 30 inactive 30`.
+- **Every extension process the log shows start was ended for memory, two to seven seconds
+  after it started.** Five are in what was read, at 05:18, 10:19 and 11:26, each with
+  `Process exited: … domain:jetsam(1) code:per-process-limit(7)`. The sixth started six seconds
+  before the lines stop.
+- **Each was ended in the middle of a fetch.** Its last line is a `timeline asked` with no
+  `fetched` after it. A `fetched` line is written when a fetch ends, so the picture that did it
+  is never named.
+- **What it could fetch.** A 5960x7160 JPEG took the peak to 21.1 MB and a 6288x6032 one to
+  18.9 MB; a process that has fetched nothing holds about 4 MB. *Claude's estimate from those
+  two, not measured: a JPEG past about 65 million pixels crosses the limit.* The folder has
+  scans of 170 million and more.
+- **One picture ends every widget's wake.** The wakes of all the sizes are one process, doing
+  one piece of work at a time, so a fetch that ends the process takes with it whatever was
+  waiting behind it. The next process picks at random again, with nothing to say which file did
+  it.
+- **Thirteen wakes in six hours, seven answered.** Nothing was asked between 05:18 and 10:19,
+  or between 10:19 and 11:26. Whether the system asks less of an extension that keeps being
+  ended, or the idle iPad's screen was off, is not in what was read.
+- **Nothing before 05:18 is in what was read**, so the evening the widgets were set up is not
+  accounted for.
+
+### A very large picture, in bands
+
+Syd, 2026-10-12, offered a guard first and the large pictures after: "Do the giants now."
+
+**A picture of more than a million pixels is shrunk a band at a time, unless it is a HEIC.**
+`PictureResizer`. It is decoded at an eighth, a quarter or a half of its size, whichever is
+the smallest that is no smaller than what is wanted, and a strip of that a couple of megabytes
+deep is cut, drawn at the widget's size, and let go before the next. A smaller picture, and a
+HEIC of any size, is shrunk in one piece as it always was.
+
+**What each kind adds, in megabytes, for an iPad's extra large widget.** A Mac, 2026-10-12,
+each in a process of its own, with pictures made for the tests:
+
+| | In one piece | In bands |
+|---|---|---|
+| JPEG, 12 million pixels | 24 | 4 |
+| JPEG, 24 million | 16 | 5 |
+| JPEG, 49 million | 6 | 4 |
+| JPEG, progressive, 108 million | 17 | 9 |
+| HEIC, 12 million | 10 | 38 |
+| HEIC, 24 million | 12 | 23 |
+| HEIC, 49 million | 10 | 19 |
+| PNG, 12 million | 24 | 22 |
+| PNG, 24 million | 20 | 18 |
+| TIFF, 12 million | 17 | 14 |
+| TIFF, 24 million | 12 | 10 |
+
+- **An ordinary JPEG was the nearest to the limit.** Twelve million pixels is a phone's
+  photograph, and in one piece it added 24 MB for the largest widget: it is decoded at a half
+  when a quarter would be too small, and held twice.
+- **A HEIC is worse in bands**, so it is left alone. In one piece it is about the same at
+  every size.
+- **A PNG or a TIFF gains little.** What either costs past 24 million pixels is not known,
+  and is what the guard is for.
+
+- **Why the old way could not hold.** One call made the whole small picture. Measured on a Mac
+  with pictures made for the tests, it held about two copies of the eighth-size picture and,
+  it seems, the file's own bytes: 20 MB for a hundred million pixels in a small file, 86 MB for
+  679 million.
+- **Asked for the whole picture, ImageIO reads the whole file.** Drawing the eighth-size
+  picture in one piece added 296 MB for 679 million pixels in a file of 223 MB. Cut into
+  strips, the same picture added 10 MB. So the strips are what matters, and the fraction
+  alone does nothing.
+- **The real largest scan**, 33280 by 20395 and 66.5 MB on disk, on a Mac: 11.4 MB added for
+  an iPad's extra large widget in 1.4 seconds, and 8.4 MB for a small one. An extension holds
+  4 to 7 MB before it starts. Looked at afterwards: the right way up, and no seam.
+- **A band is cut a little deep and drawn inside its own edges**, which is what keeps a seam
+  from showing where two meet.
+- **A picture stored on its side or mirrored** is turned as it is drawn. The old call did that
+  itself; the tests hold the two ways to the same answer for all eight orientations.
+- **On the iPad, with the coins alone**, Syd, 2026-10-12: "the widgets are all showing coins
+  now, which is better". Its log has not been read, so the peaks there are not known; the
+  measurements above are a Mac's.
+- **A progressive JPEG shrinks in bands too**: 9 MB for 108 million pixels. Claude had
+  expected it could not.
+
+**Syd's ladder, and why it cannot be climbed by trying.** Syd, 2026-10-12: "if you can recover
+from an attempt, I would try full, then 80%, then 40%, then 20%, then give up and move on to
+the next picture". An attempt cannot be recovered from: going over the limit is not an error
+the extension is handed, the system ends the process with no warning. So the choice has to be
+made before decoding, from the picture's size and what the kernel says is left, both of which
+are read already. ImageIO's fractions are a half, a quarter and an eighth. For a JPEG the
+bands make the ladder unnecessary. For a picture that still would not fit, "give up and move on
+to the next picture" is *The guard*, below.
+
+### What the iPad showed with bands
+
+Syd's M4 iPad Pro, 2026-10-12, 12:03 to 12:41, the coins alone, on the build that shrank in
+bands from sixteen million pixels and had no guard.
+
+- **Every large scan was shrunk.** One extension process lived 37 minutes and made 37
+  fetches, among them both scans of about 679 million pixels and many of 300 million and
+  more. The system asked every five minutes, as set, and 36 of its 37 wakes were answered.
+- **The most it held was 26.3 MB**, and 23.5 to 23.7 MB with only scans shrunk in bands. The
+  26.3 came after a JPEG of 11 million pixels, shrunk in one piece for the large widget.
+- **It was ended for memory twice all the same**, at 12:41:21 and, its successor, seven
+  seconds later, each at the start of a fetch for the extra large widget. *Claude's reading,
+  not proved:* an ordinary JPEG of 8 to 12 million pixels, of which the folder has four,
+  shrunk in one piece at a half of its size. On a Mac that added 24 MB. The successor had
+  23.2 MB left. The build since shrinks those in bands, for about 4 MB.
+- **What it holds between fetches crept up**: 4.6 MB at the start, 11.8 MB after the first
+  scan shrunk for the extra large widget, 14.6 MB at the end. A fetch after that added less,
+  so some of it is kept and used again, not lost. What keeps it is not known.
+- **A Mac's figures run low for the iPad.** The first scan shrunk for the extra large widget
+  took the process from 6.1 MB to a peak of 23.5 MB, 17 MB more, where the Mac's was 11 MB.
+
+### The iPad with bands from a million pixels
+
+Syd's M4 iPad Pro, 2026-10-12, 12:58 to 13:51, the coins alone, on the build with bands from
+a million pixels, the guard, and the line written before each shrink.
+
+- **Nothing was ended.** One extension process ran the 53 minutes and was still running: 56
+  wakes, 56 answered, 56 pictures shrunk, four to a burst every five minutes.
+- **Every JPEG of more than a million pixels went in bands**, 52 of them, the largest scans
+  for the extra large widget among them. Four of 640 pixels across went in one piece.
+- **The guard refused nothing**: every picture was a JPEG, reckoned at 12 MB, and there was
+  never less than 14.6 MB left.
+- **The peak was 24.1 MB, and no shrink made it.** It was reached between 12:58:48 and
+  12:59:20, and the line written before the next shrink already carries it. In the 50 minutes
+  of shrinking after, at rest on 12 to 15 MB, it never rose: so no shrink added more than
+  about 9 to 12 MB.
+- **What it rests at went up in two steps, and no shrink made those either**: 6.8 MB to
+  12.3 MB in the same half minute as the peak, and to 15 MB between 13:41 and 13:46. The app
+  had been open from 12:58:40 to 12:59:15, and leaving it tells the widgets to look again.
+- **Both steps fell where the extension wrote nothing**, for 31 seconds and for five
+  minutes. What it does without writing: it answers for a placeholder, which had no line, and
+  for a snapshot, whose line is an info one that the iPad did not keep, and it draws the
+  faces. *Claude's guess: the drawing, either of a photograph at the extra large widget's
+  size or of the icon, whose picture is 1024 pixels square before it is made smaller.*
+
+### The iPad overnight
+
+Syd's M4 iPad Pro, 2026-10-12 23:26 to 2026-10-13 11:16, on the build with the guard, the
+note, and the lines for a placeholder, a snapshot and each drawing of a face. Two sources by
+the end: the coins folder and one photograph. This time the iPad had kept twelve hours of
+lines.
+
+- **The widgets ran all night.** 327 wakes, 325 answered, about 24 an hour, which is four
+  widgets every five minutes.
+- **What the extension rests at does not keep climbing.** It sat at 9 MB for most of the
+  night, went as high as 16 MB, and came back. The steps of the day before were the icon,
+  below, and not something lost at each fetch.
+- **Two processes were ended for memory, at 04:10 and 08:33, each with one picture half
+  shrunk and about 21 MB left.** The line written before each shrink named them: JPEGs of
+  2680 by 3345 and 2922 by 3660 pixels, to be shrunk in bands at a quarter. Both are
+  photographs from an iPhone, cropped, baseline, in Display P3. The widgets carried on in a
+  new process each time.
+- **On a Mac the same two files add 44 MB and 48 MB in bands**, each in a process of its own,
+  where a photograph of 4032 by 3024 from the same set adds 3 MB. That is the whole picture
+  decoded at its full size, four bytes a pixel. *Claude's reading, not proved: neither
+  picture's sides divide by four, 3345 being odd and 2922 twice an odd number, and ImageIO
+  then gives the full-size picture for the fraction asked, as its header says it may, and
+  decodes all of it for the first strip.* What is to be found out is whether a smaller
+  fraction that does divide is honoured, or the strips alone without any fraction.
+- **The guard let both through**, having reckoned each at 12 MB as it does every JPEG in
+  bands. So a JPEG is not always 12 MB, and the reckoning has to know which are not.
+- **The icon is what took the extension to 25 MB with no picture being shrunk.** At 11:06,
+  after a new build was installed, the system asked for a placeholder at each size. Between
+  the drawing of the large one and the next line, 183 thousandths of a second, the extension
+  went from 8 MB to a peak of 25.1 MB and was left resting on 12.5 MB. The small and medium
+  ones had added about a megabyte. A placeholder's face is the icon, greyed over.
+- **Why the icon costs that.** `PhotosGoRoundIcon.png` is 1024 pixels square, 16 bits a
+  channel with alpha, in Display P3: 8 MB decoded, before the copy at the size wanted is made
+  from it, and a large widget on the iPad wants 768 pixels. A copy of each size asked for is
+  then kept for the life of the process. On a phone, at three pixels a point, a large widget
+  would want all 1024. Syd, 2026-10-10, asked for the full-size picture, because the only
+  icon an app can load of its own was too small; that was for how it looks, and what it costs
+  an extension was not known then.
+
+### The guard
+
+Syd, 2026-10-12: "I do think we need a guard, and any picture that fails the guard is skipped.
+And if the guard is ever triggered, we should add a note at the bottom of the apps windows that
+says that some of the pictures in your choices may not be able to appear in widgets." Asked
+nothing, he added how long the note stays: "until that source goes away".
+
+**Before a picture is decoded, what shrinking it is reckoned to need is held against what the
+kernel says the extension has left.** `PictureResizer`. More than is left, and it is not
+started on: the source passes it over and tries another, as it does a file that is not a
+picture. Where the kernel tells of no limit, as on a Mac and in the app, nothing is refused.
+
+- **What a shrink is reckoned to need**, each the most measured in the table above and a
+  little over: 12 MB for a JPEG in bands, whatever its size; 14 MB for a HEIC; for a PNG, a
+  TIFF or any other kind, the picture at the fraction it is decoded at, four bytes a pixel,
+  and 14 MB. A test holds each kind to its figure.
+- **Refused for now, or for good.** A picture that would fit in an extension holding nothing
+  else, taken as 6 MB, is only passed over this time: the process is holding what an earlier
+  fetch left. One that would not fit even then can be shown by no wake, and that is what is
+  recorded.
+- **The record is of the source, not the file**, in the App Group's preferences, where the
+  extension writes and the app reads. `SkippedPictures`.
+- **The note**, at the foot of the app's window, with a warning triangle: "Some of the Photos
+  in this set are not displayable in widgets." The words are Syd's, 2026-10-12, in place of
+  the ones he first gave. It is looked for each time
+  the app is opened or brought forward, and goes when the source it was recorded for is
+  removed, which forgets the record too.
+- **The app's preview refuses what a widget would.** Syd, 2026-10-12: "the preview should use
+  the exact same methodology as the widgets, rather than just drawing the picture directly",
+  and "that way if the preview stumbles across an image that can cause a problem, it can put
+  in the warning text". The preview already picked, shrank and drew as a widget does; what
+  differed was the guard, which had nothing to refuse in an app with gigabytes. So the
+  preview's pictures are judged by a widget's limit, 30 MB with 6 MB taken as held: one no
+  widget could shrink is passed over there too and recorded as a widget would record it, and
+  the screen looks for the record each time the preview's picture changes, so the note
+  comes up then.
+- **A warning triangle beside each source it happened in.** Syd, 2026-10-12: "we should put a
+  triangle with an exclamation point icon next to the sources with offending images", and
+  "that same icon should lead the text we put up. Kind of like a footnote". So the triangle
+  after a source's name is the mark, and the note at the foot, led by the same triangle, is
+  what the mark means. In the colour of the words around it: "I don't think it should be red.
+  This is not fatal", and "It's just information".
+- **Only a file's picture is ever refused.** Photos hands a photograph over at the size asked
+  for.
+- **What it does not catch.** A picture that takes far more than it is reckoned at ends the
+  extension as before, since the reckoning is all there is to go by. Noting which file was
+  being shrunk when a process ended, and passing that file over afterwards, would catch it,
+  and is Syd's "recover from an attempt" done across two processes. Not built, and it would
+  have to tell a process ended for memory from one the system ended for its own reasons.
+- **Not tried on a device.** The figures are a Mac's. A PNG of twelve million pixels is
+  reckoned at 25 MB for an iPad's largest widget, which is all a fresh extension has left, so
+  it may be passed over there more often than not.
 
 ## Identity
 

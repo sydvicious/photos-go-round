@@ -207,8 +207,17 @@ let package = Package(
         ),
         .testTarget(
             name: "TinyCacheTests",
-            dependencies: ["TinyCache"],
+            dependencies: ["PhotosGoRoundAgentAPI", "TinyCache"],
             path: "Widgets/Shared/Tests/TinyCacheTests",
+            swiftSettings: everyTarget
+        ),
+        // A process of its own: these watch what the whole process holds
+        // while a picture is shrunk, and the other tests of `TinyCache` make
+        // pictures of their own at the same time.
+        .testTarget(
+            name: "TinyCacheMemoryTests",
+            dependencies: ["PhotosGoRoundAgentAPI", "TinyCache"],
+            path: "Widgets/Shared/Tests/TinyCacheMemoryTests",
             swiftSettings: everyTarget
         ),
         .testTarget(

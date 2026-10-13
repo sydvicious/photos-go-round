@@ -86,16 +86,24 @@ public final class SettingsModel {
         /// How many pictures the source holds, once it has been counted. None
         /// is a count like any other: an empty album is not wrong.
         public let count: Int?
+        /// Whether a picture in the source has been passed over as too large
+        /// for a widget to shrink. The row carries a warning triangle. Syd,
+        /// 2026-10-12: "a triangle with an exclamation point icon next to
+        /// the sources with offending images".
+        public let somePicturesSkipped: Bool
 
         public var id: String { source.locator }
         /// Whether a folder's pictures include those in the folders inside
         /// it. Nil for anything that is not a folder, which has no such box.
         public var includesSubfolders: Bool? { kind == .folder ? source.recursive : nil }
 
-        init(_ source: SourceSpec, trouble: Trouble? = nil, count: Int? = nil) {
+        init(
+            _ source: SourceSpec, trouble: Trouble? = nil, count: Int? = nil, somePicturesSkipped: Bool = false
+        ) {
             self.source = source
             self.trouble = trouble
             self.count = count
+            self.somePicturesSkipped = somePicturesSkipped
             switch source.kind {
             case .photosSelection:
                 kind = .selectedPhotos
@@ -234,10 +242,21 @@ public final class SettingsModel {
     /// and its widgets to open it through.
     private let bookmarks: BookmarkedSources?
 
+    /// Which sources a widget has passed a picture over in, as the widgets
+    /// record it.
+    private let skipped: SkippedPictures?
+    /// Whether a widget has passed over a picture in a source that is still
+    /// chosen, for being too large to shrink in the memory a widget is held
+    /// to. The screen says so in a note, until that source goes away. Syd,
+    /// 2026-10-12.
+    public private(set) var somePicturesSkipped = false
+
     public init(
         sources: ChosenSources, library: any PhotoLibrary, preview: PreviewModel,
-        counts: any SourceCounts = NoSourceCounts(), bookmarks: BookmarkedSources? = nil
+        counts: any SourceCounts = NoSourceCounts(), bookmarks: BookmarkedSources? = nil,
+        skipped: SkippedPictures? = nil
     ) {
+        self.skipped = skipped
         self.bookmarks = bookmarks
         self.counts = counts
         self.sources = sources
@@ -443,10 +462,28 @@ public final class SettingsModel {
             } else {
                 sources.collections.map { Row($0, trouble: trouble(of: $0), count: counted[$0.locator]) }
             }
-        filesAndFolders = sources.filesAndFolders.map {
-            Row($0, trouble: failed[$0.locator], count: counted[$0.locator])
-        }
+        // Only a file's picture is ever passed over: Photos hands a
+        // photograph over at the size asked for. A source that is gone from
+        // the list takes its record with it.
+        skipped?.keep(only: sources.filesAndFolders)
+        lookForSkipped()
         preview.show(sources.shown)
+    }
+
+    /// Reads again whether a picture has been passed over in a source that
+    /// is still chosen. The preview passes over what a widget would, so the
+    /// screen looks each time the preview's picture changes.
+    public func lookForSkipped() {
+        let rows = sources.filesAndFolders.map {
+            Row(
+                $0, trouble: failed[$0.locator], count: counted[$0.locator],
+                somePicturesSkipped: skipped?.holds($0) ?? false)
+        }
+        // Looked for each time the preview's picture changes, and nearly
+        // always with nothing new to find.
+        if rows != filesAndFolders { filesAndFolders = rows }
+        let some = rows.contains(where: \.somePicturesSkipped)
+        if some != somePicturesSkipped { somePicturesSkipped = some }
     }
 
     /// Done in the collections sheet.

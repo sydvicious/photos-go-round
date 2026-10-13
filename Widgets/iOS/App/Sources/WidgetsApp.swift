@@ -29,7 +29,10 @@ struct WidgetsApp: App {
         // The same thing counts for the rows and picks for the preview, so
         // a source is counted once.
         counts: Self.pictures,
-        bookmarks: Self.bookmarks)
+        bookmarks: Self.bookmarks,
+        // What the widgets have passed over, for the note at the foot.
+        skipped: SkippedPictures(
+            suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String))
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -90,7 +93,20 @@ struct WidgetsApp: App {
         _ = await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: controller)
     }
 
-    private static let pictures = CachedPreviewPictures(directory: previewCache, bookmarks: bookmarks)
+    /// Where the preview's pictures come from, and what the rows are counted
+    /// by.
+    ///
+    /// **As a widget would.** Syd, 2026-10-12: "the preview should use the
+    /// exact same methodology as the widgets". The app has gigabytes where a
+    /// widget has 30 MB, so its pictures are judged by a widget's limit: one
+    /// no widget could shrink is passed over here too, and recorded for the
+    /// note at the foot, as a widget would record it.
+    private static let pictures = CachedPreviewPictures(
+        directory: previewCache, bookmarks: bookmarks, resizer: .asAWidget,
+        onSkip: { source in
+            SkippedPictures(suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
+                .record(source)
+        })
 
     /// What the files and folders chosen in the Files browser are opened
     /// through, by this app and by its widgets. One for the life of the app:

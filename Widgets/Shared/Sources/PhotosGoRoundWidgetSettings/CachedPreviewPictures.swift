@@ -18,6 +18,8 @@ public struct CachedPreviewPictures: PreviewPictures {
     private let library: any PhotoLibraryPictures
     private let bookmarks: BookmarkedSources?
     private let onFetch: (@Sendable (PictureResizer.Resize) -> Void)?
+    private let resizer: PictureResizer
+    private let onSkip: (@Sendable (SourceSpec) -> Void)?
 
     /// - Parameters:
     ///   - directory: Somewhere of the app's own to keep the pictures and the
@@ -28,15 +30,30 @@ public struct CachedPreviewPictures: PreviewPictures {
     ///     Files browser chose them. Without it they are read by their paths.
     ///   - onFetch: Told what each fetch read and wrote, for whoever is
     ///     measuring. Called on the thread that fetched.
+    ///   - resizer: What shrinks a file's picture. A test hands over one
+    ///     with a memory limit of its own.
+    ///   - onSkip: Told which source a picture was in when it is passed over
+    ///     because no wake could shrink it inside an extension's memory.
     public init(
         directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
         bookmarks: BookmarkedSources? = nil,
-        onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil
+        onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil,
+        resizer: PictureResizer = PictureResizer(),
+        onSkip: (@Sendable (SourceSpec) -> Void)? = nil
     ) {
         self.directory = directory
         self.library = library
         self.bookmarks = bookmarks
         self.onFetch = onFetch
+        self.resizer = resizer
+        self.onSkip = onSkip
+    }
+
+    /// What a source is handed to say that one of its pictures was passed
+    /// over.
+    private func skipped(in spec: SourceSpec) -> (@Sendable () -> Void)? {
+        guard let onSkip else { return nil }
+        return { onSkip(spec) }
     }
 
     public func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
@@ -103,7 +120,10 @@ public struct CachedPreviewPictures: PreviewPictures {
     public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
         let folder = folder(for: sources, fitting: box)
         for spec in sources {
-            guard let source = spec.firstPicture(in: library, through: bookmarks) else { continue }
+            guard
+                let source = spec.firstPicture(
+                    in: library, through: bookmarks, resizer: resizer, skipped: skipped(in: spec))
+            else { continue }
             let cache = TinyCache(
                 directory: folder, source: source, fitting: box, fillLimit: 1, onFetch: onFetch)
             do {
@@ -145,7 +165,9 @@ public struct CachedPreviewPictures: PreviewPictures {
     /// it is in, as in a widget.
     private func source(for specs: [SourceSpec]) -> any PictureSource {
         SeveralSources(
-            specs.compactMap { $0.counted(in: library, through: bookmarks) },
+            specs.compactMap {
+                $0.counted(in: library, through: bookmarks, resizer: resizer, skipped: skipped(in: $0))
+            },
             remembering: RememberedCounts(file: directory.appending(path: "counts.json")))
         // The same file a row's count is written to.
     }

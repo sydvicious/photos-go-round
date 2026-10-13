@@ -72,6 +72,12 @@ public struct SettingsView: View {
                 }
             }
             .background(Self.backdrop)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if model.somePicturesSkipped { skippedNote }
+            }
+            // The preview passes over what a widget would, and a picture
+            // passed over is followed by the one shown in its place.
+            .onChange(of: model.preview.content) { model.lookForSkipped() }
             .toolbar {
                 // Both groups at the trailing edge, the sizes first. Syd,
                 // 2026-10-10: "I want the size controls on the right as well".
@@ -267,6 +273,29 @@ public struct SettingsView: View {
     /// What is chosen, under the preview or beside it. Any row leaves by a
     /// swipe, and a collection also by being unticked in the sheet. Syd,
     /// 2026-10-11: "you can remove any source line with a swipe".
+    /// At the foot of the window while a widget has passed over a picture in
+    /// a source that is still chosen: one too large to shrink in the memory
+    /// a widget is held to. Syd, 2026-10-12: "a note at the bottom of the
+    /// apps windows that says that some of the pictures in your choices may
+    /// not be able to appear in widgets", there "until that source goes
+    /// away". With a warning triangle, so that it is not told from the rest
+    /// of the screen by its colour.
+    private var skippedNote: some View {
+        Label {
+            // The words are Syd's, 2026-10-12, in place of the first ones.
+            Text("Some of the Photos in this set are not displayable in widgets.")
+        } icon: {
+            // The same triangle as on the rows it is about.
+            SourceRow.skippedMark
+        }
+        .font(.footnote)
+        .foregroundStyle(Self.words)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 10)
+        .background(.bar)
+    }
+
     private var lists: some View {
         List {
             Section {
@@ -467,6 +496,13 @@ struct SourceRow: View {
         HStack {
             Label(name, systemImage: symbol)
                 .foregroundStyle(colour)
+            // Beside the name of a source with a picture too large for a
+            // widget to shrink. Syd, 2026-10-12.
+            if row.somePicturesSkipped {
+                Self.skippedMark
+                    .foregroundStyle(colour)
+                    .accessibilityLabel("Some of the Photos in this set are not displayable in widgets")
+            }
             Spacer()
             // At the right of the row, as in the collections sheet.
             if let count = row.count {
@@ -499,6 +535,13 @@ struct SourceRow: View {
                 }
             }
         }
+    }
+
+    /// A triangle with an exclamation point, in the colour of the words
+    /// around it. Syd, 2026-10-12: "I don't think it should be red. This is
+    /// not fatal", and "It's just information". The shape is what says it.
+    static var skippedMark: some View {
+        Image(systemName: "exclamationmark.triangle")
     }
 
     private static func box(ticked: Bool) -> some View {
@@ -540,16 +583,21 @@ struct SourceRow: View {
         static func preview(
             _ sources: [SourceSpec], library: SampleLibrary = SampleLibrary(access: .authorized),
             counts: [String: Int] = [:], failing: [String: any Error] = [:],
-            pictures: any PreviewPictures = NoPictures()
+            pictures: any PreviewPictures = NoPictures(), skipping: [SourceSpec] = []
         ) -> SettingsModel {
             let folder = URL.temporaryDirectory.appending(path: "pgr-preview-\(UUID().uuidString)")
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let preferences = Preferences(
                 suiteName: folder.appending(path: "sources").path(percentEncoded: false))
             preferences.setSources(sources)
+            // What a widget would have recorded, for the note at the foot.
+            let skipped = SkippedPictures(
+                suiteName: folder.appending(path: "skipped").path(percentEncoded: false))
+            skipping.forEach(skipped.record)
             return SettingsModel(
                 sources: ChosenSources(preferences: preferences), library: library,
-                preview: .sample(pictures), counts: SampleCounts(counts, failing: failing))
+                preview: .sample(pictures), counts: SampleCounts(counts, failing: failing),
+                skipped: skipped)
         }
     }
 
@@ -581,6 +629,14 @@ struct SourceRow: View {
                 "/pictures/moon.jpeg": 1,
             ],
             pictures: SamplePictures()))
+    }
+
+    #Preview("Some pictures passed over") {
+        SettingsView(
+            model: .preview(
+                [.folder("/pictures/Raw Coin Images"), .folder("/pictures/Holidays")],
+                counts: ["/pictures/Raw Coin Images": 32, "/pictures/Holidays": 412],
+                skipping: [.folder("/pictures/Raw Coin Images")]))
     }
 
     #Preview("Nothing chosen") {

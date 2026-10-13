@@ -46,14 +46,21 @@ public struct WidgetPictures: Sendable {
     ///     bookmarks the app left. Without it they are read by their paths.
     ///   - onFetch: Told what each fetch read and wrote, for whoever is
     ///     measuring. Called on the thread that fetched.
+    ///   - resizer: What shrinks a file's picture. A test hands over one
+    ///     with a memory limit of its own.
+    ///   - onSkip: Told which source a picture was in when it is passed over
+    ///     because no wake could shrink it inside an extension's memory.
     public init(
         directory: URL, among root: URL? = nil,
         library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
         bookmarks: BookmarkedSources? = nil,
-        onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil
+        onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil,
+        resizer: PictureResizer = PictureResizer(),
+        onSkip: (@Sendable (SourceSpec) -> Void)? = nil
     ) {
         pictures = CachedPreviewPictures(
-            directory: directory, library: library, bookmarks: bookmarks, onFetch: onFetch)
+            directory: directory, library: library, bookmarks: bookmarks, onFetch: onFetch,
+            resizer: resizer, onSkip: onSkip)
         self.root = root
         asking = directory.appending(path: "asking.json")
     }

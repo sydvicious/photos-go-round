@@ -34,7 +34,14 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     private static let wakes = SerialWork(label: "com.sydpolk.photosgoround.widgets.wakes")
 
     func placeholder(in context: Context) -> PhotoEntry {
-        PhotoEntry(date: .now, face: .scanning)
+        // Said while the extension's memory is being measured: on an iPad,
+        // 2026-10-12, it went to 24 MB while no timeline was being made.
+        Log.widget.notice(
+            """
+            \(Log.widgetsTag, privacy: .public) placeholder, \
+            \(String(describing: context.family), privacy: .public), \(Wake.memory(), privacy: .public)
+            """)
+        return PhotoEntry(date: .now, face: .scanning)
     }
 
     func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {
@@ -42,15 +49,26 @@ struct PhotoTimeline: AppIntentTimelineProvider {
         let face = wake.pictures.last(
             from: wake.sources, fitting: wake.box, inGallery: context.isPreview)
         // What the gallery was given for each size, and whether the picture
-        // it names is still there to draw.
-        Log.widget.info(
+        // it names is still there to draw. A notice, and with the memory,
+        // while that is being measured: a phone does not keep an info line.
+        Log.widget.notice(
             """
             \(Log.widgetsTag, privacy: .public) snapshot, \
             \(String(describing: context.family), privacy: .public), \
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
-            \(Self.describe(face), privacy: .public)
+            \(Self.describe(face), privacy: .public), \(Wake.memory(), privacy: .public)
             """)
         return PhotoEntry(date: .now, face: face)
+    }
+
+    /// Said each time the system has a face drawn, with the memory as the
+    /// drawing starts. Whatever line comes next says what the drawing left.
+    static func noteDrawing(_ face: WidgetFace.Content, for family: WidgetKit.WidgetFamily) {
+        Log.widget.notice(
+            """
+            \(Log.widgetsTag, privacy: .public) drawing, \(String(describing: family), privacy: .public), \
+            \(describe(face), privacy: .public), \(Wake.memory(), privacy: .public)
+            """)
     }
 
     /// A face in a few words, for the log.
@@ -181,7 +199,9 @@ private struct Wake: Sendable {
             // another size's.
             among: Self.caches,
             bookmarks: Self.bookmarks,
-            onFetch: { Self.fetched($0, for: family) })
+            onFetch: { Self.fetched($0, for: family) },
+            // For the app's note that some pictures may not appear in widgets.
+            onSkip: { SkippedPictures(suiteName: group).record($0) })
     }
 
     /// What the extension holds, against the limit it is held to: about

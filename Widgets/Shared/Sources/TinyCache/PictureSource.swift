@@ -71,10 +71,21 @@ public struct FolderSource: CountedSource {
     /// Which files are on the device, and asking for the ones that are not.
     private let device: DeviceFiles
 
-    public init(folder: URL, recursive: Bool = true, device: DeviceFiles = .system) {
+    private let resizer: PictureResizer
+
+    /// Told of a picture that was passed over because no wake could shrink it
+    /// inside the memory an extension is held to.
+    private let skipped: (@Sendable (URL) -> Void)?
+
+    public init(
+        folder: URL, recursive: Bool = true, device: DeviceFiles = .system,
+        resizer: PictureResizer = PictureResizer(), skipped: (@Sendable (URL) -> Void)? = nil
+    ) {
         self.folder = folder
         self.recursive = recursive
         self.device = device
+        self.resizer = resizer
+        self.skipped = skipped
     }
 
     /// A file that gives no picture is passed over for another, a few times,
@@ -91,9 +102,12 @@ public struct FolderSource: CountedSource {
         let (originals, held) = try pick(Self.attempts)
         for original in originals {
             do {
-                return (try PictureResizer().write(original, fitting: box, to: destination), held)
+                return (try resizer.write(original, fitting: box, to: destination), held)
             } catch PictureResizer.Failure.notAPicture {
                 noteNoPicture(from: original)
+                continue
+            } catch PictureResizer.Failure.tooLarge(_, let ever) {
+                if ever { skipped?(original) }
                 continue
             }
         }
@@ -123,10 +137,13 @@ public struct FolderSource: CountedSource {
             for case let file as URL in files
             where Self.isPicture(file) && device.isOnDevice(file) == onDevice {
                 do {
-                    let resize = try PictureResizer().write(file, fitting: box, to: destination)
+                    let resize = try resizer.write(file, fitting: box, to: destination)
                     Self.noteGoingThrough(passedOver, found: true)
                     return resize
                 } catch PictureResizer.Failure.notAPicture {
+                    passedOver += 1
+                } catch PictureResizer.Failure.tooLarge(_, let ever) {
+                    if ever { skipped?(file) }
                     passedOver += 1
                 }
             }
@@ -248,9 +265,20 @@ public struct FileSource: CountedSource {
     /// Whether the file is on the device, and asking for it when it is not.
     private let device: DeviceFiles
 
-    public init(file: URL, device: DeviceFiles = .system) {
+    private let resizer: PictureResizer
+
+    /// Told when the file was passed over because no wake could shrink it
+    /// inside the memory an extension is held to.
+    private let skipped: (@Sendable (URL) -> Void)?
+
+    public init(
+        file: URL, device: DeviceFiles = .system, resizer: PictureResizer = PictureResizer(),
+        skipped: (@Sendable (URL) -> Void)? = nil
+    ) {
         self.file = file
         self.device = device
+        self.resizer = resizer
+        self.skipped = skipped
     }
 
     /// A file that will not decode has nothing to show, as a folder of such
@@ -263,9 +291,12 @@ public struct FileSource: CountedSource {
         _ = try file.checkResourceIsReachable()
         if !device.isOnDevice(file) { device.fetch([file]) }
         do {
-            return try PictureResizer().write(file, fitting: box, to: destination)
+            return try resizer.write(file, fitting: box, to: destination)
         } catch PictureResizer.Failure.notAPicture {
             noteNoPicture(from: file)
+            return nil
+        } catch PictureResizer.Failure.tooLarge(_, let ever) {
+            if ever { skipped?(file) }
             return nil
         }
     }

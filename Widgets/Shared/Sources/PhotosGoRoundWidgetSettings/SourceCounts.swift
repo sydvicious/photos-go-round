@@ -48,12 +48,13 @@ extension SourceSpec {
     /// over one that does not answer.
     func firstPicture(
         in library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
-        through bookmarks: BookmarkedSources? = nil
+        through bookmarks: BookmarkedSources? = nil,
+        resizer: PictureResizer = PictureResizer(), skipped: (@Sendable () -> Void)? = nil
     ) -> (any PictureSource)? {
         switch kind {
         case .photosCollection: PhotosSource(collection: locator, library: library, pick: .first)
         case .photosSelection: SelectedPhotosSource(library: library, pick: .first)
-        default: counted(in: library, through: bookmarks)
+        default: counted(in: library, through: bookmarks, resizer: resizer, skipped: skipped)
         }
     }
 
@@ -65,17 +66,27 @@ extension SourceSpec {
     /// never by its path.** On a phone the path is refused anyway. In a
     /// simulator it is not, and reading by it there would say a widget can
     /// open what on a phone it cannot.
+    ///
+    /// - Parameters:
+    ///   - resizer: What shrinks a file's picture. A test hands over one
+    ///     with a memory limit of its own.
+    ///   - skipped: Told when a picture in a file or folder is passed over
+    ///     because no wake could shrink it inside an extension's memory.
     func counted(
         in library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
-        through bookmarks: BookmarkedSources? = nil
+        through bookmarks: BookmarkedSources? = nil,
+        resizer: PictureResizer = PictureResizer(), skipped: (@Sendable () -> Void)? = nil
     ) -> (any CountedSource)? {
+        // Which file it was is not passed on: the note is about the source.
+        var ofAFile: (@Sendable (URL) -> Void)?
+        if let skipped { ofAFile = { _ in skipped() } }
         switch kind {
         case .folder:
             guard let folder = location(through: bookmarks) else { return UnopenedSource(self) }
-            return FolderSource(folder: folder, recursive: recursive)
+            return FolderSource(folder: folder, recursive: recursive, resizer: resizer, skipped: ofAFile)
         case .file:
             guard let file = location(through: bookmarks) else { return UnopenedSource(self) }
-            return FileSource(file: file)
+            return FileSource(file: file, resizer: resizer, skipped: ofAFile)
         case .photosCollection:
             return PhotosSource(collection: locator, library: library)
         case .photosSelection:

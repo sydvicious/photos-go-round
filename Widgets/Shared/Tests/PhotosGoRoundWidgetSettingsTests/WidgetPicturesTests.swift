@@ -191,6 +191,27 @@ struct WidgetPicturesTests {
         #expect(fetched.withLock { $0.count } == 2)
     }
 
+    @Test("A picture no wake could shrink is passed over, and whoever is listening is told which source it was in")
+    func tellsOfASkip() throws {
+        let pictures = try ScratchFolder()
+        let cache = try ScratchFolder()
+        try pictures.picture("large.png", width: 4000, height: 3000)
+        let megabyte: Int64 = 1_048_576
+        let skipped = Mutex<[SourceSpec]>([])
+        let widget = WidgetPictures(
+            directory: cache.url,
+            // An extension holding 6 MB of a limit of 22.
+            resizer: PictureResizer(memory: {
+                Footprint.Reading(footprint: 6 * megabyte, resident: 6 * megabyte, left: 16 * megabyte)
+            }),
+            onSkip: { source in skipped.withLock { $0.append(source) } })
+
+        let face = widget.turn(from: [folder(pictures)], fitting: CGSize(width: 1590, height: 756))
+
+        #expect(face == .noPhotos)
+        #expect(Set(skipped.withLock { $0 }.map(\.locator)) == [folder(pictures).locator])
+    }
+
     // MARK: -
 
     func folder(_ scratch: ScratchFolder) -> SourceSpec {

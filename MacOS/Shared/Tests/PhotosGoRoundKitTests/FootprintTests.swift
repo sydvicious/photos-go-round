@@ -94,13 +94,16 @@ struct FootprintTests {
         #expect(Footprint.againstLimit(reading) == "memory now 11.0 MB, peak 14.0 MB")
     }
 
+    /// A quarter of a gigabyte, and half of it looked for: the other tests
+    /// in this process take and let go of memory while this one runs, and
+    /// with 32 MB held that was enough to hide it once.
     @Test("A reading goes up by what the process takes hold of")
     func theReadingCountsWhatIsHeld() throws {
         let before = try #require(Footprint.now())
-        let held = Held(megabytes: 32)
+        let held = Held(megabytes: 256)
         let during = try #require(Footprint.now())
 
-        #expect(during.footprint >= before.footprint + 16 * Self.megabyte)
+        #expect(during.footprint >= before.footprint + 128 * Self.megabyte)
         withExtendedLifetime(held) {}
     }
 
