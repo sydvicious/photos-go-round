@@ -35,6 +35,10 @@ struct ShrinkingMemoryTests {
     @Test(
         "No kind of picture takes more memory to shrink than it is reckoned to need",
         arguments: [
+            // Decoded at its own size, a strip at a time: an eighth would be
+            // too small for the widget. First, because a case run after
+            // another reads low.
+            Kind(name: "jpg", width: 6000, height: 4500),
             Kind(name: "jpg", width: 4000, height: 3000),
             Kind(name: "jpg", width: 12000, height: 9000),
             Kind(name: "jpg", width: 12000, height: 9000, progressive: true),
@@ -60,7 +64,8 @@ struct ShrinkingMemoryTests {
         let reckoned = resizer.needs(
             type: resize.originalType, storedWidth: Double(kind.width), storedHeight: Double(kind.height),
             fraction: PictureResizer.fraction(
-                of: Double(max(kind.width, kind.height)), for: max(resize.writtenWidth, resize.writtenHeight)))
+                of: Double(max(kind.width, kind.height)), for: max(resize.writtenWidth, resize.writtenHeight),
+                type: resize.originalType))
         #expect(
             rise <= reckoned,
             "it added \(rise / Self.megabyte) MB and is reckoned at \(reckoned / Self.megabyte) MB")

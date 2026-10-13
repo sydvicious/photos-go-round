@@ -217,9 +217,24 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         return try picture(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box)
     }
 
+    /// `asking Photos for a 3000x2002 photograph at 1014x1062`.
+    static func asking(width: Int, height: Int, fitting box: CGSize) -> String {
+        "asking Photos for a \(width)x\(height) photograph at \(Int(box.width))x\(Int(box.height))"
+    }
+
     /// The request, with a time limit on it: Photos can leave one unanswered
     /// for good. `TimeLimit`.
     private func picture(of asset: PHAsset, fitting box: CGSize) throws -> LibraryPicture? {
+        // Said before it starts, with the memory: a fetch's own line is
+        // written when it ends, and in a simulator, 2026-10-13, an extension
+        // went from 15.9 MB to 26.2 MB somewhere before the first of these
+        // ended.
+        let asking = Self.asking(width: asset.pixelWidth, height: asset.pixelHeight, fitting: box)
+        Log.widget.notice(
+            """
+            \(Log.widgetsTag, privacy: .public) \(asking, privacy: .public)\
+            \(Footprint.now().map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
+            """)
         do {
             return try TimeLimit.run(within: limit) { Self.request(asset, fitting: box) }
         } catch let late as TimedOut {

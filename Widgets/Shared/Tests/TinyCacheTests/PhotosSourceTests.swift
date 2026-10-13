@@ -108,4 +108,14 @@ struct PhotosSourceTests {
             PhotosSource(collection: "album", library: library).countName
                 != PhotosSource(collection: "other", library: library).countName)
     }
+
+    /// A fetch's own line is written when it ends. This one says what was
+    /// about to be asked of Photos, so that whatever the memory does next
+    /// has a name. `Plans/PGR Widgets - iOS.md`, *The icon, made for widgets*.
+    @Test("What is about to be asked of Photos is said in a line: the photograph's size and the size wanted")
+    func saidBeforeAsking() {
+        #expect(
+            SystemPhotoLibraryPictures.asking(width: 3000, height: 2002, fitting: CGSize(width: 1014, height: 1062))
+                == "asking Photos for a 3000x2002 photograph at 1014x1062")
+    }
 }

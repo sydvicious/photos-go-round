@@ -105,52 +105,71 @@ public struct WidgetFace: View {
 }
 
 extension WidgetFace {
-    /// The app icon, at full size, carried with this view.
+    /// The app icon, carried with this view at four sizes.
     ///
     /// **A picture of the icon, because nothing else is big enough.** Syd,
     /// 2026-10-10: "include a full resolution picture of the app icon in the
     /// bundle, and use it". The only icon an iOS app can load of its own is
     /// the 120-pixel one the Home Screen uses, and a widget extension has
-    /// none. This one is 1024 pixels, exported from `Artwork/PhotosGoRound.icon`
-    /// by Icon Composer's own tool. Run from the repository root whenever the
+    /// none.
+    ///
+    /// **Made for widgets.** Syd, 2026-10-13: "Make a version of the icon
+    /// optimized for widgets". A widget extension is ended at 30 MB, and its
+    /// placeholder is this icon. It was one picture of 1024 pixels at 16 bits
+    /// a channel: 8 MB decoded, and a copy at the size wanted was made from
+    /// it. That took an extension to 25 MB on an iPad, and to 39.9 MB in a
+    /// simulator at a phone's sizes. Now it is four pictures at eight bits a
+    /// channel, and the one drawn from is read as it is: 4 MB for the
+    /// largest, and no second copy. `Plans/PGR Widgets - iOS.md`, *The icon,
+    /// made for widgets*.
+    ///
+    /// **Each is Icon Composer's own drawing at that size.** Run whenever the
     /// icon changes:
     ///
-    ///     "$(xcode-select -p)/../Applications/Icon Composer.app/Contents/Executables/ictool" \
-    ///         "Artwork/PhotosGoRound.icon" --export-image \
-    ///         --output-file "Widgets/Shared/Sources/PhotosGoRoundWidgetFace/Resources/PhotosGoRoundIcon.png" \
-    ///         --platform iOS --rendition Default --width 1024 --height 1024 --scale 1
+    ///     ./Scripts/make-widget-icons.sh
     ///
-    /// **Drawn from a copy no bigger than it is shown.** In the widget
+    /// **Drawn from a picture no bigger than it need be.** In the widget
     /// gallery on 2026-10-10, on an iPad mini and an iPhone Duo, every preview
-    /// showing this icon at its full 1024 pixels was blank, and the one
-    /// showing a photograph at the widget's own size was not. With the
-    /// copy, they all drew. Claude's reading of why, from memory and not
-    /// from a log: the system leaves a widget blank when its pictures come to
-    /// more pixels than it allows. A widget extension is also held to a few
-    /// tens of megabytes, and the full picture is four of them.
+    /// showing the icon at its full 1024 pixels was blank, and the one
+    /// showing a photograph at the widget's own size was not. Drawn from a
+    /// smaller copy, they all drew.
     @MainActor static func icon(side: CGFloat, scale: CGFloat) -> Image? {
-        // In steps of 64 pixels, so a few sizes are made and kept, not one
-        // for every size a window is dragged through.
-        let wanted = (max(side, 1) * max(scale, 1) / 64).rounded(.up) * 64
-        let pixels = Int(min(max(wanted, 64), 1024))
+        let pixels = iconPixels(for: max(side, 1) * max(scale, 1))
         if let made = icons[pixels] { return made }
-        guard let file = Bundle.module.url(forResource: "PhotosGoRoundIcon", withExtension: "png"),
-            let source = CGImageSourceCreateWithURL(file as CFURL, nil),
-            let small = CGImageSourceCreateThumbnailAtIndex(
-                source, 0,
-                [
-                    kCGImageSourceCreateThumbnailFromImageAlways: true,
-                    kCGImageSourceShouldCacheImmediately: true,
-                    kCGImageSourceThumbnailMaxPixelSize: pixels,
-                ] as CFDictionary)
-        else { return nil }
-        let image = Image(decorative: small, scale: 1)
+        guard let read = iconImage(pixels: pixels) else { return nil }
+        let image = Image(decorative: read, scale: 1)
         icons[pixels] = image
         return image
     }
 
-    /// The icon at each size it has been asked for.
+    /// The icon at each size it has been drawn from: four at most.
     @MainActor private static var icons: [Int: Image] = [:]
+
+    // The four below are not the view's: a picture is read off the main
+    // actor as well as on it.
+
+    /// The sizes the icon is kept at, in pixels a side.
+    /// `Scripts/make-widget-icons.sh` has the same list.
+    nonisolated static let iconSizes = [256, 512, 768, 1024]
+
+    /// The size to draw from for an icon wanted at so many pixels a side:
+    /// the smallest that is no smaller, and the largest when none is.
+    nonisolated static func iconPixels(for wanted: CGFloat) -> Int {
+        iconSizes.first { CGFloat($0) >= wanted } ?? iconSizes[iconSizes.count - 1]
+    }
+
+    nonisolated static func iconFile(pixels: Int) -> URL? {
+        Bundle.module.url(forResource: "PhotosGoRoundIcon-\(pixels)", withExtension: "png")
+    }
+
+    /// The icon's picture at one of its sizes, decoded as it is.
+    nonisolated static func iconImage(pixels: Int) -> CGImage? {
+        guard let file = iconFile(pixels: pixels),
+            let source = CGImageSourceCreateWithURL(file as CFURL, nil)
+        else { return nil }
+        return CGImageSourceCreateImageAtIndex(
+            source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+    }
 }
 
 /// One photograph, read once and kept. The file may be cleared away while it
@@ -194,7 +213,7 @@ private struct FittedPicture: View {
 
     #Preview("Scanning, over a photograph") {
         // The icon's own picture stands in for a photograph.
-        if let file = Bundle.module.url(forResource: "PhotosGoRoundIcon", withExtension: "png") {
+        if let file = WidgetFace.iconFile(pixels: 1024) {
             WidgetFace(.scanningOver(file))
                 .frame(width: 338, height: 158)
         }

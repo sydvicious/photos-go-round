@@ -115,8 +115,22 @@ public struct PictureResizer: Sendable {
     /// The fraction a picture is decoded at where its format allows: an
     /// eighth, a quarter or a half, whichever is the smallest that leaves it
     /// no smaller than what is wanted, and 1 when none does.
-    static func fraction(of longestSide: Double, for wanted: Int) -> Int {
-        [8, 4, 2].first { longestSide / Double($0) >= Double(wanted) } ?? 1
+    ///
+    /// **A JPEG is decoded at an eighth or at its own size, and never at a
+    /// half or a quarter.** ImageIO may give a larger picture than the
+    /// fraction asked for, and for some JPEGs it decodes at full size and
+    /// makes the result smaller afterwards, so a strip costs sixteen times
+    /// what it was cut to cost. Two photographs from an iPhone did that at a
+    /// quarter and ended an extension on an iPad, 2026-10-12: 48 MB on a
+    /// Mac, where the same file rewritten without loss by `jpegtran` took
+    /// 3 MB. What it is about those files is not known; nothing in their
+    /// size, tables or markers tells them from one that is given its
+    /// fraction. At an eighth the same file is decoded at an eighth. At its
+    /// own size there is no fraction to be refused, and a strip is what it
+    /// was cut to be.
+    static func fraction(of longestSide: Double, for wanted: Int, type: String) -> Int {
+        let fractions = type == "public.jpeg" ? [8] : [8, 4, 2]
+        return fractions.first { longestSide / Double($0) >= Double(wanted) } ?? 1
     }
 
     /// What an extension holds with nothing to do, of the 30 MB it is held
@@ -128,7 +142,10 @@ public struct PictureResizer: Sendable {
     /// process of its own, and a little over:
     ///
     /// - **A JPEG in bands**, baseline or progressive: 4 to 11 MB, up to 679
-    ///   million pixels. It does not grow with the picture.
+    ///   million pixels, and 13 MB for a photograph decoded at its own size
+    ///   for a picture 1590 pixels square, which is more than any widget
+    ///   asks for. It does not grow with the picture; what it grows with is
+    ///   the picture written, which the largest widget keeps under 8 MB.
     /// - **A HEIC in one piece**: 10 to 12 MB, up to 49 million pixels.
     /// - **A PNG or a TIFF in bands**: 10 to 22 MB at 12 and 24 million
     ///   pixels, and 24 MB for the PNG in one piece: the picture at the
@@ -143,7 +160,7 @@ public struct PictureResizer: Sendable {
         guard Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove) else {
             return decoded * 2 + 4 * megabyte
         }
-        if type == "public.jpeg" { return 12 * megabyte }
+        if type == "public.jpeg" { return 14 * megabyte }
         return decoded / Int64(fraction * fraction) + 14 * megabyte
     }
 
@@ -178,7 +195,7 @@ public struct PictureResizer: Sendable {
         let type = (CGImageSourceGetType(source) as String?) ?? ""
         // Decoded at an eighth, a quarter or a half where the format allows:
         // the smallest that is still no smaller than what is wanted.
-        let fraction = Self.fraction(of: max(width, height), for: longestSide)
+        let fraction = Self.fraction(of: max(width, height), for: longestSide, type: type)
         let reading = memory()
         let needed = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
         try refuseIfTooLarge(

@@ -216,7 +216,7 @@ let package = Package(
         // pictures of their own at the same time.
         .testTarget(
             name: "TinyCacheMemoryTests",
-            dependencies: ["PhotosGoRoundAgentAPI", "TinyCache"],
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundWidgetFace", "TinyCache"],
             path: "Widgets/Shared/Tests/TinyCacheMemoryTests",
             swiftSettings: everyTarget
         ),

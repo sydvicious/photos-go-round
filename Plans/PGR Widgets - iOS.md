@@ -32,15 +32,17 @@ left of it. The to-dos are Claude's unless they say otherwise.
   on Syd's phone, on his iCloud library with 8,000-plus favorites, for 13 hours and more by
   2026-10-11: "it has been working great". So the first wake and the iCloud fetches hold up
   there, and what is left is:
-  - **A JPEG whose sides do not divide by the fraction it is decoded at is decoded whole, and
-    ends the extension.** Two photographs did it overnight on the iPad, and on a Mac each
-    adds 44 to 48 MB in bands where a like one adds 3 MB. The guard reckons them at 12 MB and
-    lets them through. Not fixed. A test with a JPEG of 2922 by 3660 pixels, made for the
-    tests and failing, is the first step. *The iPad overnight*.
-  - **The icon takes the extension to 25 MB.** Its picture is 1024 pixels square at 16 bits a
-    channel, decoded whole to make a copy for a placeholder at the large sizes. What to do is
-    Syd's to say, since the full-size picture was his call: a smaller picture for the widgets
-    is Claude's suggestion. *The iPad overnight*.
+  - See on the iPad that the two photographs which ended the extension overnight no longer
+    do. A JPEG is decoded at an eighth or at its own size now, never a half or a quarter; on
+    a Mac each of the two adds 7 MB where it added 44 to 48. What it is about those files is
+    not known, so no test has one like them. *A JPEG at a half or a quarter*.
+  - See on a device what the icon made for widgets takes. In a simulator at a phone's sizes
+    the icon now leaves the extension on 11.9 MB with a peak of 15.9 MB, where it had been
+    23.9 MB and 39.9 MB. *The icon, made for widgets*.
+  - A fetch from Photos for the tall extra large widget takes an extension resting on 15 MB
+    to 23 to 26 MB, in a simulator at a phone's sizes. Whether that is near enough to 30 MB to
+    want trimming is Syd's to say; a phone's own reading is the item below. *The icon, made
+    for widgets*.
   - When both are done: take the `drawing` and `placeholder` lines out, and put `snapshot`
     back to an info line.
   - Try the guard and its note on a device, with folders of each kind of file: Syd, 2026-10-12,
@@ -414,6 +416,13 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **A picture of more than a million pixels is shrunk a band at a time, unless it is a HEIC.**
   A widget is ended at 30 MB, and in one piece the largest coin scan took far more. Syd,
   2026-10-12. *A very large picture, in bands*.
+- **A JPEG is decoded at an eighth or at its own size, never a half or a quarter.** At those
+  two, some photographs are decoded whole behind a picture of the size asked for, and two
+  ended a widget that way. *A JPEG at a half or a quarter*.
+- **The icon is carried at four sizes, eight bits a channel, and drawn from the smallest
+  that will do.** One picture of 1024 pixels at 16 bits took a widget most of the way to its
+  30 MB. Syd, 2026-10-13: "Make a version of the icon optimized for widgets". *The icon, made
+  for widgets*.
 - **A picture reckoned to need more memory than the widget has left is passed over for
   another.** Syd, 2026-10-12: "any picture that fails the guard is skipped". *The guard*.
 - **The preview passes over what a widget would, and puts the note up when it does.** Syd,
@@ -1799,10 +1808,13 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   once for each picture it fetches, the wake's own and the one made ready for next time: what
   was read, what was written, and the memory as the fetch ends. A file's line has its size on
   disk too: `public.tiff 6000x4500, 54.1 MB → …`.
-- `shrinking public.jpeg 3264x2448 to 1008x756, in bands at 1/2, reckoned at 12 MB, memory now
+- `shrinking public.jpeg 3264x2448 to 1008x756, in bands at full size, reckoned at 14 MB, memory now
   …` — the app or the extension, before each picture from a file is shrunk: its kind and size,
   the size wanted, the way, and what the guard reckons it needs. The last of these with no
   `fetched` after it, in a process that was ended, is the picture that was being shrunk.
+- `asking Photos for a 3000x2002 photograph at 1014x1062, memory now …` — the app or the
+  extension, before each photograph is asked of Photos: its size, and the size wanted. What a
+  `shrinking` line is to a file.
 - `passed over a picture too large to shrink: public.png 12000x9000 needs about 56 MB, memory
   now …; no wake could show it` — the extension, when *The guard* refuses a picture, with the
   kind and size of the picture and never its name. Without the last words it was refused only
@@ -2028,8 +2040,8 @@ lines.
   decoded at its full size, four bytes a pixel. *Claude's reading, not proved: neither
   picture's sides divide by four, 3345 being odd and 2922 twice an odd number, and ImageIO
   then gives the full-size picture for the fraction asked, as its header says it may, and
-  decodes all of it for the first strip.* What is to be found out is whether a smaller
-  fraction that does divide is honoured, or the strips alone without any fraction.
+  decodes all of it for the first strip.* **That reading was wrong**: a picture of the same
+  size made another way takes 3 MB. *A JPEG at a half or a quarter*.
 - **The guard let both through**, having reckoned each at 12 MB as it does every JPEG in
   bands. So a JPEG is not always 12 MB, and the reckoning has to know which are not.
 - **The icon is what took the extension to 25 MB with no picture being shrunk.** At 11:06,
@@ -2044,6 +2056,112 @@ lines.
   would want all 1024. Syd, 2026-10-10, asked for the full-size picture, because the only
   icon an app can load of its own was too small; that was for how it looks, and what it costs
   an extension was not known then.
+- **On a phone's sizes it goes past the limit.** An iPhone 17 Pro simulator, 2026-10-13, with
+  no widget placed: the placeholder for the medium widget took the extension from 8.2 MB to
+  15.8 MB with a peak of 19.0 MB, and the one for the tall extra large widget from 15.8 MB to
+  23.9 MB with a peak of 39.9 MB. A simulator does not enforce the 30 MB; a phone would end
+  the extension there.
+- **The same simulator's preview was frozen, and that was Photos.** From 12:04 to 12:12 every
+  request the app made for a photograph of 3000x2002 was given up on at 15 seconds. Nineteen
+  simulators had been booted in the twenty minutes before, on Syd's new Mac, and their
+  processes were using twelve of its eighteen processors, with 62 of 64 GB of memory in use.
+  With the Mac quiet again, its load about 10 where it had been 950, the preview worked.
+  Syd, 2026-10-13: "the preview is working now; every thing looks good".
+
+### A JPEG at a half or a quarter
+
+The two photographs that ended an extension on the iPad overnight, looked into on a Mac on
+2026-10-13, each shrink in a process of its own. Both are on the Mac, in the coins folder.
+
+**A JPEG is decoded at an eighth where that leaves it large enough, and at its own size where
+it does not. Never at a half or a quarter.** `PictureResizer.fraction`. Any other kind still
+takes the smallest of the three that is enough.
+
+- **What the one of 2922 by 3660 added, by the fraction asked for**, before the change:
+
+  | Wanted | Fraction | Added |
+  |---|---|---|
+  | 340 pixels | an eighth | 9 MB |
+  | 756 | a quarter | 48 MB |
+  | 1200 | a half | 31 MB |
+  | 2000 | none | 17 MB, of which 13 MB is the picture written |
+
+  At a quarter and a half the strip is decoded at the picture's full size and made smaller
+  afterwards, so it costs sixteen times, or four times, what it was cut to cost. At an eighth
+  it is decoded at an eighth. ImageIO's header says a fraction may not be given; it does not
+  say the cost is then hidden behind a picture of the size asked for.
+- **After the change**: 7 MB at 756 pixels, 9 MB at 1200, 12 MB at 1590, and for the other
+  photograph 7 MB and 13 MB. A photograph of 4032 by 3024 from the same set, which had taken
+  3 MB at a quarter, takes 5 MB at its own size.
+- **What it is about those two files is not known.** None of these is it, each tried by
+  taking it away or by making a like file without it:
+  - their size: a picture of 2922 by 3660 made for the tests takes 3 MB at a quarter;
+  - the second picture inside each, a half-size one of one channel that an iPhone adds;
+  - the table of restart offsets, the Photoshop segment, and the EXIF and XMP;
+  - colour at every pixel, a restart at every row, quantization tables of all ones, and the
+    Huffman tables, all of which a file that behaves has too.
+- **Rewritten without loss by `jpegtran`, the same picture takes 3 MB at a quarter**, with
+  the same tables and the same picture data, byte for byte in length. So it is in how the
+  file's first few segments are laid out, and that was not run down.
+- **So no test has a file that does it.** The tests hold the rule, that a JPEG's fraction is
+  an eighth or none, and that a JPEG decoded at its own size stays inside what it is reckoned
+  to need. The two photographs were measured by hand, with a test written for the purpose
+  and taken out again.
+- **The first reading was wrong.** *The iPad overnight* has it as the sides not dividing by
+  four.
+- **A JPEG is reckoned at 14 MB now, not 12.** Decoded at its own size it costs the picture
+  written and about 5 MB: 13 MB for a picture 1590 pixels square, which no widget asks for.
+- **Slower, and not measured on a device.** A photograph of twelve million pixels is decoded
+  whole now, a strip at a time, where a half or a quarter of it was. On a Mac that is not
+  seen in the tests' times.
+
+### The icon, made for widgets
+
+Syd, 2026-10-13: "Make a version of the icon optimized for widgets".
+
+**The icon is four pictures, of 256, 512, 768 and 1024 pixels a side, at eight bits a channel,
+and a face is drawn from the smallest that is no smaller than it needs.** `WidgetFace`. The
+picture is read as it is: there is no larger one decoded first, and no copy made from it.
+
+- **What it was.** One picture of 1024 pixels at 16 bits a channel: 8 MB decoded, eight bytes
+  a pixel, and then a copy at the size wanted, at 16 bits too. For an iPad's large widget
+  that is 8 MB and 4.7 MB before anything is drawn. *The iPad overnight*.
+- **What it is.** Four bytes a pixel and one picture: 4 MB for the largest, 2.4 MB for the
+  768 an iPad's large widget draws from, 1 MB and a quarter of one for the others. A test
+  holds reading the largest to under 6 MB.
+- **Still in Display P3, with clear corners.** Only the depth changed.
+- **Each size is Icon Composer's own drawing at that size**, not one picture made smaller.
+  `Scripts/make-widget-icons.sh` makes all four, to be run whenever the icon changes; Icon
+  Composer exports at 16 bits, and `Scripts/eight-bit-png.swift` writes each again at eight,
+  which `sips` will not do.
+- **The picture of each size drawn from is still kept for the life of the process.** At most
+  four, and on any one device the two or three its widgets need.
+- **The app's preview draws from the same four**, since the face is one view for both.
+- **In a simulator, the same day, on the iPhone 17 Pro that had shown 39.9 MB.** The gallery
+  asked for a snapshot at every size, with nothing chosen, which is the plain icon. The
+  extension went from 8.4 MB to 11.9 MB, with a peak of 15.9 MB once the 1024-pixel picture had
+  been read for the large widget. With the old picture the same sizes had left it on 23.9 MB
+  with a peak of 39.9 MB. Those were placeholders, the icon greyed over, so the two are the
+  same picture and not quite the same face.
+- **The 26.2 MB that followed was the first fetch from Photos, not the drawing.** Found on
+  *Claude iPhone*, iOS 27, 2026-10-13, with the line now written before each photograph is
+  asked of Photos, and one tall extra large widget on Favorites:
+
+  | When | Held | Peak |
+  |---|---|---|
+  | Before any snapshot | 8.5 MB | 8.5 MB |
+  | After the icon at every size | 12.0 MB | 16.0 MB |
+  | 15 seconds on, as Photos is asked for 4288x2848 at 1049x1697 | 14.6 MB | 16.0 MB |
+  | That fetch done, 94 thousandths of a second later | 15.5 MB | 23.0 MB |
+  | The fetch made ready for next time, done | 15.7 MB | 23.0 MB |
+
+  So the system drawing what it had been handed moved the peak not at all, and the first
+  fetch added about 8 MB at its most. On Syd's simulator it had been 10 MB, for a photograph
+  of 3000x2002. The second fetch added less than the first.
+- **Of the 15 MB it rests on by then**, 8.5 MB is the extension before it has done anything,
+  3.5 MB came with the icons, which are kept, and the rest came in the 15 seconds before the
+  fetch, with nothing written to say what.
+- **Not seen on a device.**
 
 ### The guard
 
@@ -2058,7 +2176,7 @@ started on: the source passes it over and tries another, as it does a file that 
 picture. Where the kernel tells of no limit, as on a Mac and in the app, nothing is refused.
 
 - **What a shrink is reckoned to need**, each the most measured in the table above and a
-  little over: 12 MB for a JPEG in bands, whatever its size; 14 MB for a HEIC; for a PNG, a
+  little over: 14 MB for a JPEG in bands, whatever its size; 14 MB for a HEIC; for a PNG, a
   TIFF or any other kind, the picture at the fraction it is decoded at, four bytes a pixel,
   and 14 MB. A test holds each kind to its figure.
 - **Refused for now, or for good.** A picture that would fit in an extension holding nothing

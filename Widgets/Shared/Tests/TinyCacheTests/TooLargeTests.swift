@@ -32,8 +32,8 @@ struct TooLargeTests {
         let small = resizer.needs(type: "public.jpeg", storedWidth: 4000, storedHeight: 3000, fraction: 2)
         let largest = resizer.needs(type: "public.jpeg", storedWidth: 33280, storedHeight: 20395, fraction: 8)
 
-        #expect(small == 12 * Self.megabyte)
-        #expect(largest == 12 * Self.megabyte)
+        #expect(small == 14 * Self.megabyte)
+        #expect(largest == 14 * Self.megabyte)
     }
 
     @Test("A PNG or a TIFF needs the picture at the fraction it is decoded at, and a little more again than a JPEG")
@@ -64,6 +64,34 @@ struct TooLargeTests {
         #expect(PictureResizer.shrinksInBands("public.jpeg", pixels: 12_000_000, above: 1_000_000))
         #expect(PictureResizer.shrinksInBands("public.png", pixels: 1_000_001, above: 1_000_000))
         #expect(!PictureResizer.shrinksInBands("public.jpeg", pixels: 800_000, above: 1_000_000))
+    }
+
+    // MARK: The fraction a picture is decoded at
+
+    /// Two photographs from an iPhone ended an extension on an iPad in the
+    /// night of 2026-10-12. Asked for at a quarter, each was decoded at its
+    /// full size and made smaller afterwards: 48 MB for a strip that should
+    /// have been two. At an eighth the same file is decoded at an eighth, and
+    /// at its own size there is nothing to go wrong. `Plans/PGR Widgets -
+    /// iOS.md`, *A JPEG at a half or a quarter*.
+    @Test("A JPEG is decoded at an eighth where that is enough, and at its own size where it is not: never a half or a quarter")
+    func aJPEGAtAnEighthOrWhole() {
+        // The largest coin scan, for an iPad's extra large widget.
+        #expect(PictureResizer.fraction(of: 33280, for: 1234, type: "public.jpeg") == 8)
+        // Exactly enough at an eighth.
+        #expect(PictureResizer.fraction(of: 8000, for: 1000, type: "public.jpeg") == 8)
+        // The photograph that ended the extension: a quarter would have done.
+        #expect(PictureResizer.fraction(of: 3660, for: 756, type: "public.jpeg") == 1)
+        // A phone's ordinary photograph: a half would have done.
+        #expect(PictureResizer.fraction(of: 4032, for: 1008, type: "public.jpeg") == 1)
+    }
+
+    @Test("Any other kind is decoded at the smallest of an eighth, a quarter and a half that is enough")
+    func otherKindsAtAnyFraction() {
+        #expect(PictureResizer.fraction(of: 4000, for: 1008, type: "public.png") == 2)
+        #expect(PictureResizer.fraction(of: 6000, for: 1134, type: "public.tiff") == 4)
+        #expect(PictureResizer.fraction(of: 16000, for: 1134, type: "public.png") == 8)
+        #expect(PictureResizer.fraction(of: 1500, for: 1008, type: "public.png") == 1)
     }
 
     // MARK: Said before it starts
