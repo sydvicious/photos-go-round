@@ -218,6 +218,9 @@ let package = Package(
             name: "TinyCacheMemoryTests",
             dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundWidgetFace", "TinyCache"],
             path: "Widgets/Shared/Tests/TinyCacheMemoryTests",
+            // Two real photographs, as they are: what they do to ImageIO is
+            // in their bytes, and a copy made any other way does not do it.
+            resources: [.copy("Photographs")],
             swiftSettings: everyTarget
         ),
         .testTarget(

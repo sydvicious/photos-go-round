@@ -70,4 +70,41 @@ struct ShrinkingMemoryTests {
             rise <= reckoned,
             "it added \(rise / Self.megabyte) MB and is reckoned at \(reckoned / Self.megabyte) MB")
     }
+
+    /// **The two photographs that ended an extension on an iPad, 2026-10-12.**
+    /// From an iPhone, cropped there, each asked for at a quarter of its size:
+    /// ImageIO decoded the strip at full size and made it smaller afterwards,
+    /// 48 MB where 3 MB was meant. A JPEG is decoded at an eighth or at its
+    /// own size since. `Plans/PGR Widgets - iOS.md`, *A JPEG at a half or a
+    /// quarter*.
+    ///
+    /// **They are the photographs themselves**, because nothing made for a
+    /// test does it: the same picture written again without loss takes
+    /// 3 MB. Syd, 2026-10-13: "you can just copy the pictures you just
+    /// optimized for into the test repo and right tests with them". Their
+    /// EXIF, XMP and Photoshop segments and the second picture an iPhone
+    /// adds are taken out, which changes nothing of what they do: where they
+    /// were taken was in the first, and this repository is public.
+    @Test(
+        "Each photograph that ended an extension is shrunk inside what a JPEG is reckoned to need",
+        arguments: ["iphone-cropped-2922x3660", "iphone-cropped-2680x3345"])
+    func thePhotographsThatEndedAnExtension(_ name: String) throws {
+        let original = try #require(
+            Bundle.module.url(forResource: name, withExtension: "jpeg", subdirectory: "Photographs"))
+        let scratch = try ScratchFolder()
+        let resized = scratch.url.appending(path: "resized.jpg")
+        let resizer = PictureResizer()
+
+        let (resize, rise) = try MemoryRise.during {
+            try resizer.write(original, fitting: box, to: resized)
+        }
+
+        #expect(resize.writtenHeight == 756)
+        let reckoned = resizer.needs(
+            type: resize.originalType, storedWidth: Double(resize.originalWidth),
+            storedHeight: Double(resize.originalHeight), fraction: 1)
+        #expect(
+            rise <= reckoned,
+            "it added \(rise / Self.megabyte) MB and is reckoned at \(reckoned / Self.megabyte) MB")
+    }
 }

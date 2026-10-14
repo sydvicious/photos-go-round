@@ -35,7 +35,7 @@ left of it. The to-dos are Claude's unless they say otherwise.
   - See on the iPad that the two photographs which ended the extension overnight no longer
     do. A JPEG is decoded at an eighth or at its own size now, never a half or a quarter; on
     a Mac each of the two adds 7 MB where it added 44 to 48. What it is about those files is
-    not known, so no test has one like them. *A JPEG at a half or a quarter*.
+    not known; the two themselves are in the tests. *A JPEG at a half or a quarter*.
   - See on a device what the icon made for widgets takes. In a simulator at a phone's sizes
     the icon now leaves the extension on 11.9 MB with a peak of 15.9 MB, where it had been
     23.9 MB and 39.9 MB. *The icon, made for widgets*.
@@ -2068,6 +2068,23 @@ lines.
   With the Mac quiet again, its load about 10 where it had been 950, the preview worked.
   Syd, 2026-10-13: "the preview is working now; every thing looks good".
 
+### The iPad on the build with the JPEG rule
+
+Syd's M4 iPad Pro, 2026-10-13 18:40 to 2026-10-14 01:09, the coins folder, on the build with a
+JPEG decoded at an eighth or at its own size, the widgets' icons, and the line before each
+fetch from Photos. Collected while it was still running.
+
+- **Nothing was ended.** One extension process ran the six and a half hours: 196 wakes, 196
+  answered, 196 pictures shrunk, among them both largest scans ten times and eleven.
+- **The most it held was 21.9 MB**, and between wakes it rested on 9 to 13 MB.
+- **The guard refused nothing.**
+- **Neither of the two photographs that had ended the extension came up.** The folder and
+  the folders in it hold well over a hundred pictures, and 196 picks missed both, which
+  happens about one time in fourteen. So the iPad has not shown them shrunk; the tests and
+  the Mac have.
+- **No placeholder or snapshot was asked for**, so the icon made for widgets was not drawn
+  on a device in this run either.
+
 ### A JPEG at a half or a quarter
 
 The two photographs that ended an extension on the iPad overnight, looked into on a Mac on
@@ -2103,10 +2120,16 @@ takes the smallest of the three that is enough.
 - **Rewritten without loss by `jpegtran`, the same picture takes 3 MB at a quarter**, with
   the same tables and the same picture data, byte for byte in length. So it is in how the
   file's first few segments are laid out, and that was not run down.
-- **So no test has a file that does it.** The tests hold the rule, that a JPEG's fraction is
-  an eighth or none, and that a JPEG decoded at its own size stays inside what it is reckoned
-  to need. The two photographs were measured by hand, with a test written for the purpose
-  and taken out again.
+- **The two photographs themselves are in the tests.** Syd, 2026-10-13: "you can just copy the
+  pictures you just optimized for into the test repo and right tests with them".
+  `Widgets/Shared/Tests/TinyCacheMemoryTests/Photographs`, 4.7 MB and 6.0 MB. The test shrinks
+  each for an iPad's extra large widget and holds it to what a JPEG is reckoned to need. With
+  the old rule put back it fails, at 41 MB against 14.
+- **Their location is not in them.** Each carried where it was taken, and the repository is
+  public. The EXIF and XMP, the Photoshop segment and the second picture were taken out before
+  they were copied, which leaves what they do unchanged.
+- **Only the first of the two fails under the old rule in one run.** A case run after another
+  reads low, as in the rest of that test target: the process keeps what the first took.
 - **The first reading was wrong.** *The iPad overnight* has it as the sides not dividing by
   four.
 - **A JPEG is reckoned at 14 MB now, not 12.** Decoded at its own size it costs the picture
