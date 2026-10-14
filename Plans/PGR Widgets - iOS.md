@@ -51,10 +51,10 @@ left of it. The to-dos are Claude's unless they say otherwise.
     million for HEIC. The guard has refused nothing on a device yet. *The guard*.
   - The note and the triangle beside a source have not been seen running, only built with a
     preview.
-  - Whether to learn from an extension being ended, by noting which file was being shrunk
-    and passing it over afterwards. Not decided. The two photographs above are what it would
-    have caught: each ended the extension once in the night, and would again whenever it was
-    picked. *The guard*.
+  - If a log ever shows an extension ended for memory again: have it learn from that, by
+    noting which file was being shrunk and passing it over once that has happened twice.
+    Not built until then. Syd, 2026-10-14, agreeing: nothing had been ended since a JPEG was
+    decoded at an eighth or its own size. *The guard*.
   - The same memory reading on a phone. Only the iPad's has been taken.
 
   What a widget can do while the phone is locked is not this phase's. Syd, 2026-10-11: "I don't
