@@ -191,6 +191,47 @@ struct WidgetPicturesTests {
         #expect(fetched.withLock { $0.count } == 2)
     }
 
+    /// Room for a fetch from Photos comes and goes with what the extension
+    /// holds, so a widget that has none for one now goes on showing what it
+    /// has, and tries again at its next wake.
+    @Test("When a photograph will not fit for now, the picture showing stays, with nothing over it")
+    func noRoomForNow() throws {
+        let cache = try ScratchFolder()
+        let megabyte: Int64 = 1_048_576
+        let held = Mutex<Int64>(6)
+        let widget = WidgetPictures(
+            directory: cache.url, library: ScriptedLibrary([]),
+            resizer: PictureResizer(memory: {
+                let now = held.withLock { $0 }
+                return Footprint.Reading(footprint: now * megabyte, resident: now * megabyte, left: (30 - now) * megabyte)
+            }))
+        let extraLarge = CGSize(width: 1590, height: 757)
+
+        let shown = widget.turn(from: [album], fitting: extraLarge, at: start)
+        // 2 MB left: not enough for even a small picture.
+        held.withLock { $0 = 28 }
+        let next = widget.turn(from: [album], fitting: extraLarge, at: start + 300)
+
+        #expect(isPicture(shown))
+        #expect(isPicture(next))
+        #expect(file(next) == file(shown))
+        // Not a wait, as when Photos does not answer: the next wake asks.
+        #expect(widget.wait(at: start + 300) == nil)
+    }
+
+    @Test("With nothing shown yet and no room for a photograph, it says it is scanning")
+    func noRoomAndNothingShown() throws {
+        let cache = try ScratchFolder()
+        let megabyte: Int64 = 1_048_576
+        let widget = WidgetPictures(
+            directory: cache.url, library: ScriptedLibrary([]),
+            resizer: PictureResizer(memory: {
+                Footprint.Reading(footprint: 28 * megabyte, resident: 28 * megabyte, left: 2 * megabyte)
+            }))
+
+        #expect(widget.turn(from: [album], fitting: CGSize(width: 1590, height: 757), at: start) == .scanning)
+    }
+
     @Test("A picture no wake could shrink is passed over, and whoever is listening is told which source it was in")
     func tellsOfASkip() throws {
         let pictures = try ScratchFolder()

@@ -11,8 +11,8 @@ private final class MadeUpRows {
     let total: Int
     var offset = 0
 
-    init(width: Int, height: Int) {
-        rowBytes = width * 3
+    init(width: Int, height: Int, channels: Int = 3) {
+        rowBytes = width * channels
         total = rowBytes * height
     }
 
@@ -47,9 +47,11 @@ private final class MadeUpRows {
 extension ScratchFolder {
     /// Writes a JPEG of the given size at `path` inside the folder, without
     /// the picture ever being in memory whole: its rows are made up as the
-    /// encoder asks for them.
+    /// encoder asks for them. Grey is one channel, as a scanner writes it.
     @discardableResult
-    func largePicture(_ path: String, width: Int, height: Int, progressive: Bool = false) throws -> URL {
+    func largePicture(
+        _ path: String, width: Int, height: Int, progressive: Bool = false, grey: Bool = false
+    ) throws -> URL {
         let file = url.appending(path: path)
         var callbacks = CGDataProviderSequentialCallbacks(
             version: 0,
@@ -68,13 +70,14 @@ extension ScratchFolder {
             releaseInfo: { info in
                 Unmanaged<MadeUpRows>.fromOpaque(info!).release()
             })
-        let rows = MadeUpRows(width: width, height: height)
+        let rows = MadeUpRows(width: width, height: height, channels: grey ? 1 : 3)
         guard
             let provider = CGDataProvider(
                 sequentialInfo: Unmanaged.passRetained(rows).toOpaque(), callbacks: &callbacks),
             let image = CGImage(
-                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 24,
-                bytesPerRow: rows.rowBytes, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                width: width, height: height, bitsPerComponent: 8, bitsPerPixel: grey ? 8 : 24,
+                bytesPerRow: rows.rowBytes,
+                space: grey ? CGColorSpaceCreateDeviceGray() : CGColorSpace(name: CGColorSpace.sRGB)!,
                 bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
                 provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent),
             let type = UTType(filenameExtension: file.pathExtension),

@@ -447,42 +447,52 @@ public final class SettingsModel {
 
     /// Reads both lists again from what is stored.
     public func reload() {
-        // While the selection is a source it is the only row: the collections
-        // chosen with full access are kept, and cannot be read. Once the
-        // person has taken it out it is no row at all, and it is still held,
-        // switched off, whatever access becomes; so with it held that way
-        // the collections show only when access is known not to be limited.
-        let selection = ChosenSources.selectedPhotos
-        let limited = photosAccess == nil || photosAccess == .limited
-        collections =
-            if sources.showsSelectedPhotos {
-                [Row(selection, count: counted[selection.locator])]
-            } else if sources.holdsSelectedPhotos && limited {
-                []
-            } else {
-                sources.collections.map { Row($0, trouble: trouble(of: $0), count: counted[$0.locator]) }
-            }
-        // Only a file's picture is ever passed over: Photos hands a
-        // photograph over at the size asked for. A source that is gone from
-        // the list takes its record with it.
-        skipped?.keep(only: sources.filesAndFolders)
+        // A source that is gone from the list takes its record with it.
+        skipped?.keep(only: sources.filesAndFolders + sources.collections + [ChosenSources.selectedPhotos])
         lookForSkipped()
         preview.show(sources.shown)
     }
 
+    /// The collections' rows. While the selection is a source it is the only
+    /// row: the collections chosen with full access are kept, and cannot be
+    /// read. Once the person has taken it out it is no row at all, and it is
+    /// still held, switched off, whatever access becomes; so with it held
+    /// that way the collections show only when access is known not to be
+    /// limited.
+    private func collectionRows() -> [Row] {
+        let selection = ChosenSources.selectedPhotos
+        let limited = photosAccess == nil || photosAccess == .limited
+        return if sources.showsSelectedPhotos {
+            [Row(selection, count: counted[selection.locator], somePicturesSkipped: wasSkipped(selection))]
+        } else if sources.holdsSelectedPhotos && limited {
+            []
+        } else {
+            sources.collections.map {
+                Row($0, trouble: trouble(of: $0), count: counted[$0.locator], somePicturesSkipped: wasSkipped($0))
+            }
+        }
+    }
+
+    private func wasSkipped(_ source: SourceSpec) -> Bool {
+        skipped?.holds(source) ?? false
+    }
+
     /// Reads again whether a picture has been passed over in a source that
-    /// is still chosen. The preview passes over what a widget would, so the
-    /// screen looks each time the preview's picture changes.
+    /// is still chosen, a file's or a photograph from Photos. The preview
+    /// passes over what a widget would, so the screen looks each time the
+    /// preview's picture changes.
     public func lookForSkipped() {
-        let rows = sources.filesAndFolders.map {
+        let collections = collectionRows()
+        let files = sources.filesAndFolders.map {
             Row(
                 $0, trouble: failed[$0.locator], count: counted[$0.locator],
-                somePicturesSkipped: skipped?.holds($0) ?? false)
+                somePicturesSkipped: wasSkipped($0))
         }
         // Looked for each time the preview's picture changes, and nearly
         // always with nothing new to find.
-        if rows != filesAndFolders { filesAndFolders = rows }
-        let some = rows.contains(where: \.somePicturesSkipped)
+        if collections != self.collections { self.collections = collections }
+        if files != filesAndFolders { filesAndFolders = files }
+        let some = (collections + files).contains(where: \.somePicturesSkipped)
         if some != somePicturesSkipped { somePicturesSkipped = some }
     }
 

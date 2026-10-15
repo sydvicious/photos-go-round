@@ -87,6 +87,11 @@ public struct WidgetPictures: Sendable {
             backoff.timedOut(at: now())
             backoff.write(to: asking)
             return held(for: sources, fitting: box)
+        } catch PictureResizer.Failure.tooLarge {
+            // No room just now for what a fetch would take: the picture
+            // showing stays as it is, and the next wake asks again. Nothing
+            // is wrong, so nothing is put over it.
+            return pictures.last(for: sources, fitting: box).map { .picture($0) } ?? .scanning
         } catch {
             return Self.face(for: error)
         }

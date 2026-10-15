@@ -22,7 +22,10 @@ struct ShrinkingMemoryTests {
     struct Kind: CustomTestStringConvertible, Sendable {
         let name: String, width: Int, height: Int
         var progressive = false
-        var testDescription: String { "\(width)x\(height) \(name)\(progressive ? ", progressive" : "")" }
+        var grey = false
+        var testDescription: String {
+            "\(width)x\(height) \(name)\(progressive ? ", progressive" : "")\(grey ? ", grey" : "")"
+        }
     }
 
     /// **What the guard goes by.** A picture is started on when what it is
@@ -44,6 +47,10 @@ struct ShrinkingMemoryTests {
             Kind(name: "jpg", width: 12000, height: 9000, progressive: true),
             // The largest of the coin scans.
             Kind(name: "jpg", width: 33280, height: 20395),
+            // A scan in grey, one channel, the size of those that ended an
+            // iPad's extension, 2026-10-14. `Plans/PGR Widgets - iOS.md`, *A
+            // scan at full colour*.
+            Kind(name: "jpg", width: 9920, height: 12925, grey: true),
             Kind(name: "heic", width: 8064, height: 6048),
             Kind(name: "png", width: 4000, height: 3000),
             Kind(name: "tiff", width: 4000, height: 3000),
@@ -51,7 +58,8 @@ struct ShrinkingMemoryTests {
     func everyKind(_ kind: Kind) throws {
         let scratch = try ScratchFolder()
         let original = try scratch.largePicture(
-            "large.\(kind.name)", width: kind.width, height: kind.height, progressive: kind.progressive)
+            "large.\(kind.name)", width: kind.width, height: kind.height, progressive: kind.progressive,
+            grey: kind.grey)
         let resized = scratch.url.appending(path: "resized.jpg")
         let resizer = PictureResizer()
 

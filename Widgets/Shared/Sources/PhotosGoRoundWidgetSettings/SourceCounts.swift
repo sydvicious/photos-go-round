@@ -52,8 +52,10 @@ extension SourceSpec {
         resizer: PictureResizer = PictureResizer(), skipped: (@Sendable () -> Void)? = nil
     ) -> (any PictureSource)? {
         switch kind {
-        case .photosCollection: PhotosSource(collection: locator, library: library, pick: .first)
-        case .photosSelection: SelectedPhotosSource(library: library, pick: .first)
+        case .photosCollection:
+            PhotosSource(collection: locator, library: library, pick: .first, resizer: resizer, skipped: skipped)
+        case .photosSelection:
+            SelectedPhotosSource(library: library, pick: .first, resizer: resizer, skipped: skipped)
         default: counted(in: library, through: bookmarks, resizer: resizer, skipped: skipped)
         }
     }
@@ -70,7 +72,7 @@ extension SourceSpec {
     /// - Parameters:
     ///   - resizer: What shrinks a file's picture. A test hands over one
     ///     with a memory limit of its own.
-    ///   - skipped: Told when a picture in a file or folder is passed over
+    ///   - skipped: Told when a picture in a file, a folder or Photos is passed over
     ///     because no wake could shrink it inside an extension's memory.
     func counted(
         in library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
@@ -88,9 +90,9 @@ extension SourceSpec {
             guard let file = location(through: bookmarks) else { return UnopenedSource(self) }
             return FileSource(file: file, resizer: resizer, skipped: ofAFile)
         case .photosCollection:
-            return PhotosSource(collection: locator, library: library)
+            return PhotosSource(collection: locator, library: library, resizer: resizer, skipped: skipped)
         case .photosSelection:
-            return SelectedPhotosSource(library: library)
+            return SelectedPhotosSource(library: library, resizer: resizer, skipped: skipped)
         default:
             return nil
         }

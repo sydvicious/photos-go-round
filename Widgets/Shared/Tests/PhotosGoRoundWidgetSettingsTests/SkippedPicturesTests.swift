@@ -105,6 +105,19 @@ struct SkippedNoteTests {
         #expect(model.filesAndFolders.filter(\.somePicturesSkipped).map(\.source.locator) == [scans.locator])
     }
 
+    @Test("A collection that has had a photograph passed over is marked too, and the note is up")
+    func aCollectionIsMarked() {
+        let album = SourceSpec(
+            kind: .photosCollection, locator: "A1", description: SourceDescription(title: "Iceland", collectionKind: "album"))
+        preferences.setSources([album, coins])
+        skipped.record(album)
+
+        let model = model
+
+        #expect(model.collections.filter(\.somePicturesSkipped).map(\.source.locator) == ["A1"])
+        #expect(model.somePicturesSkipped)
+    }
+
     @Test("It is found when the app is brought forward again")
     func foundOnStarting() async {
         preferences.setSources([coins])
