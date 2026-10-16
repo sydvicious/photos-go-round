@@ -13,6 +13,48 @@ Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist
 - [ ] **A finished DMG.** *A finished DMG*, below.
 - [ ] **The proof-of-concept widget is out of `Photos-Go-Round.app`.** It comes out when there is a menubar app to carry it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 
+## The iOS app
+
+Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16: Syd, 2026-10-10,
+"takes the iOS to-dos once this is in `main`". A section named in italics is that plan's.
+
+- **Include the app package on the release DMG for now, until there is TestFlight or the App
+  Store.** Syd, 2026-10-10. The image is built by `Scripts/release-build.sh`, which knows nothing
+  of the iOS app yet; `Plans/Release DMG.md`.
+- **The sheet reads the whole library again every second while it counts.** Each read is a
+  round trip to Photos for every collection. The Mac's picker asks its agent every three seconds.
+  Look at whether that makes the sheet slow on a real library.
+- **Two full test runs each failed one unrelated suite, while the Mac was overloaded.** Seven tests in
+  the agent's `PhotosEndpointTests` ("Key 'authorization' not found"), then one in
+  `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
+  that fail when the Mac is busy are still worth a look. A third: the agent's
+  `ConsoleMirrorTests`, "A change keeps its mark and its suffix", with the load average over 700.
+- **Particular photographs can be picked only with limited access, or by making an album in
+  Photos.** Syd, 2026-10-11: "it's a hole in the entire design". With full access there is no
+  way to say "these photographs". And what Photos gives back after limited access, then none,
+  then full is not known. *Photos access*, *How the selection is kept*.
+- **Add a button for an individual photo picker.** Syd, 2026-10-11. It is what closes the hole
+  above.
+- **Learn which pictures a widget cannot show, from what it records.** Syd, 2026-10-14: "store
+  the file we want to display in a widget, and store the fact that is completed. The app can
+  collect all of that data. We can then do heuristics on how often a given photo succeeds, and
+  over time, make a determination that if the photo does not succeed in the p90 interval, we
+  flag it as trouble some and stop serving it and put up the warning." And: "by store the file,
+  I mean 'store a reference'". The p90 is of each picture's own attempts: one is troublesome
+  when it completes in fewer than nine of ten. Syd, the same day. And in the widget: "if we
+  can figure out in the widget that a picture is troublesome, we give up unless there are no
+  other pictures are available. or we display the app icon." Undecided, in his words: "whether
+  to try the picture anyway, or never try troublesome pictures, and just display the app".
+- **The collections sheet opens with every folder collapsed, and sorts by name alone.** Syd,
+  2026-10-16: "Start with all of the folders in Collections collapsed, and sort them by name
+  first, not whether they are folders or files first". *The collections*.
+- **Take out the widget extension's `drawing` and `placeholder` log lines, and put `snapshot`
+  back to an info line.** They were kept for Phase 5's readings on a phone, which Syd dropped
+  when he closed the phase, 2026-10-16: "not going to get overnight results on the phone for
+  a long time. I suggest we call that closed."
+- **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
+  narrowest window the two groups may not fit again. Not tried.
+
 ## Passed over on 2026-09-16 — to fix, not to keep
 
 Syd, 2026-09-16: "i have no deadlines, and I hate tech debt surprises. I won't remember any issues you mention and bypass, so let's not bypass them." Every issue Claude mentioned during the agent performance work and did not fix is here. **Delete each one when it is fixed** — Syd, 2026-09-19: "cleaning it up every once in a while keeps me sane." Git has what was removed.

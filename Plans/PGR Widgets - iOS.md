@@ -34,45 +34,8 @@ left of it. The to-dos are Claude's unless they say otherwise.
 
 # TODO
 
-The iOS app's to-dos are kept here while the work is on its branch. `TODO.md` at the top level is
-the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
-
-- **Include the app package on the release DMG for now, until there is TestFlight or the App
-  Store.** Syd, 2026-10-10. The image is built by `Scripts/release-build.sh`, which knows nothing
-  of the iOS app yet; `Plans/Release DMG.md`.
-- **The sheet reads the whole library again every second while it counts.** Each read is a
-  round trip to Photos for every collection. The Mac's picker asks its agent every three seconds.
-  Look at whether that makes the sheet slow on a real library.
-- **Two full test runs each failed one unrelated suite, while the Mac was overloaded.** Seven tests in
-  the agent's `PhotosEndpointTests` ("Key 'authorization' not found"), then one in
-  `FirstPictureTests`. Each passed when run again, and nothing in that code had changed. Tests
-  that fail when the Mac is busy are still worth a look. A third: the agent's
-  `ConsoleMirrorTests`, "A change keeps its mark and its suffix", with the load average over 700.
-- **Particular photographs can be picked only with limited access, or by making an album in
-  Photos.** Syd, 2026-10-11: "it's a hole in the entire design". With full access there is no
-  way to say "these photographs". And what Photos gives back after limited access, then none,
-  then full is not known. *Photos access*, *How the selection is kept*.
-- **Add a button for an individual photo picker.** Syd, 2026-10-11. It is what closes the hole
-  above.
-- **Learn which pictures a widget cannot show, from what it records.** Syd, 2026-10-14: "store
-  the file we want to display in a widget, and store the fact that is completed. The app can
-  collect all of that data. We can then do heuristics on how often a given photo succeeds, and
-  over time, make a determination that if the photo does not succeed in the p90 interval, we
-  flag it as trouble some and stop serving it and put up the warning." And: "by store the file,
-  I mean 'store a reference'". The p90 is of each picture's own attempts: one is troublesome
-  when it completes in fewer than nine of ten. Syd, the same day. And in the widget: "if we
-  can figure out in the widget that a picture is troublesome, we give up unless there are no
-  other pictures are available. or we display the app icon." Undecided, in his words: "whether
-  to try the picture anyway, or never try troublesome pictures, and just display the app".
-- **The collections sheet opens with every folder collapsed, and sorts by name alone.** Syd,
-  2026-10-16: "Start with all of the folders in Collections collapsed, and sort them by name
-  first, not whether they are folders or files first". *The collections*.
-- **Take out the widget extension's `drawing` and `placeholder` log lines, and put `snapshot`
-  back to an info line.** They were kept for Phase 5's readings on a phone, which Syd dropped
-  when he closed the phase, 2026-10-16: "not going to get overnight results on the phone for
-  a long time. I suggest we call that closed."
-- **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
-  narrowest window the two groups may not fit again. Not tried.
+The iOS app's to-dos are in `TODO.md`, *The iOS app*, since the work reached `main`, 2026-10-16.
+Syd, 2026-10-10: `TODO.md` "takes the iOS to-dos once this is in `main`".
 
 # Design Decisions
 
@@ -720,7 +683,7 @@ controls and the system's window controls were wider than that window, about 373
 system folded what did not fit into a "…" menu. Syd chose drawing them closer together, over a
 wider smallest window and over the menu. So on an iPad each group is one bar item, and the two
 smallest shapes are narrower to press than a bar button. At the largest text sizes the shapes grow
-and may not fit again; see *TODO*.
+and may not fit again; see `TODO.md`, *The iOS app*.
 
 **The screen has no title.** The bar is the controls'.
 
@@ -822,7 +785,7 @@ what is empty.
 - **A single file shows 1.** Syd, 2026-10-10.
 
 **The sheet's counts arrive behind the names.** The catalog counts each collection in the
-background, and the sheet reads it again every second until every count is in. See *TODO* for
+background, and the sheet reads it again every second until every count is in. See `TODO.md`, *The iOS app*, for
 what that may cost on a real library.
 
 **Tick boxes are where the Mac has them.** A folder has a box, which ticks or clears the albums
@@ -1137,7 +1100,7 @@ each time it comes forward. `ChosenSources.keepSelectedPhotos`.
   the app drops the source, the row goes, and nothing of the selection is left for it to show:
   the person chooses collections, or sees the app icon. Syd, 2026-10-11: "I don't know what we
   will get back from Photos". Not checked: whether the system still has the selection if access
-  is made limited again. See *TODO*.
+  is made limited again. See `TODO.md`, *The iOS app*.
 - **All of that can be done in the system's settings with the app never opened.** Syd,
   2026-10-11. The app reads the access there is when it next comes forward, and sees none of
   the steps between. The widgets are woken meanwhile and read it for themselves, with the stored
@@ -2583,7 +2546,7 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
 - Debug, Release and Claude builds carry different identifiers, as on the Mac. See *Identity*.
 - The version is the project's, in `Config/Version.xcconfig`. A release on iOS is an archive
   uploaded to App Store Connect, not a DMG, so `Scripts/release-build.sh` does not cover it;
-  until there is TestFlight or the Store the app's package goes on the DMG, see *TODO*.
+  until there is TestFlight or the Store the app's package goes on the DMG, see `TODO.md`, *The iOS app*.
 - Tested in a simulator, and on Syd's own phone for iCloud Photo Library. See *Where it is
   tested*.
 
