@@ -31,7 +31,7 @@ project it finds no test bundles:
 xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" -derivedDataPath "$HOME/.claude/build/photos-go-round/DerivedData"
 ```
 
-That covers all six package test targets. `Package Tests.xctestplan` is
+That covers all eight package test targets. `Package Tests.xctestplan` is
 what lists them.
 
 **Nothing generated goes in the repository.** Syd, 2026-09-19: "I really don't
@@ -207,5 +207,8 @@ a clean build succeeded. `Plans/Build Plan.md`.
   `com.sydpolk.photosgoround.tests` instead. Categories: `console` is everything
   the agent prints on standard output, `cache` the queue's own lines,
   `system-wallpaper` the extension, `saver` the screensaver, `widget` the widget
-  extension, `install` what the
-  app installs at launch and from its Help menu.
+  extensions and the Widgets app, `install` what the
+  app installs at launch and from its Help menu. On iOS the Widgets app and its
+  extension begin every line with `[PGR-Widgets]`, and a simulator's log is
+  read with `xcrun simctl spawn <device> log show`.
+  `Plans/PGR Widgets - iOS.md`, *Reading the logs*.

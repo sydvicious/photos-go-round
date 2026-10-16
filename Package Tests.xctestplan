@@ -32,6 +32,20 @@
     {
       "target": {
         "containerPath": "container:",
+        "identifier": "TinyCacheMemoryTests",
+        "name": "TinyCacheMemoryTests"
+      }
+    },
+    {
+      "target": {
+        "containerPath": "container:",
+        "identifier": "PhotosGoRoundWidgetSettingsTests",
+        "name": "PhotosGoRoundWidgetSettingsTests"
+      }
+    },
+    {
+      "target": {
+        "containerPath": "container:",
         "identifier": "PhotosGoRoundServerTests",
         "name": "PhotosGoRoundServerTests"
       }

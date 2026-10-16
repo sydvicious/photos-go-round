@@ -3,6 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// The first asset of a walk has a bound of its own.
 ///

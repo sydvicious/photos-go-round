@@ -38,6 +38,11 @@ let package = Package(
         // handed. See `Apple Photos Plan.md`.
         .library(name: "PhotosGoRoundAgentAPI", targets: ["PhotosGoRoundAgentAPI"]),
         .library(name: "PhotosGoRoundKit", targets: ["PhotosGoRoundKit"]),
+        // Reading a person's Photos library: its collections, what is in them,
+        // and the bytes of a photograph. Carved out of the kit on 2026-10-09 so
+        // the Widgets app can read the library without linking the database,
+        // the cache and the deck. `Plans/PGR Widgets - iOS.md`.
+        .library(name: "PhotosGoRoundPhotoLibrary", targets: ["PhotosGoRoundPhotoLibrary"]),
         // What a surface needs to show a picture: the client that asks for
         // one, and the geometry of drawing it. Separate from the kit because
         // the kit is the library half and knows nothing about being looked
@@ -50,6 +55,16 @@ let package = Package(
         // no agent and no HTTP behind them, so it depends on nothing else here.
         // `Plans/Photos-Go-Round Widgets.md`.
         .library(name: "TinyCache", targets: ["TinyCache"]),
+        // The Widgets app's settings: which sources are chosen, and the screen
+        // that chooses them. Linked by the iOS app now and by the Mac's menubar
+        // app later, which is why it is here and not in either.
+        // `Plans/PGR Widgets - iOS.md`.
+        .library(name: "PhotosGoRoundWidgetSettings", targets: ["PhotosGoRoundWidgetSettings"]),
+        // What a widget draws: a photograph fitted on black, or one of the
+        // faces it shows without one. A target of its own, depending on
+        // nothing, so a widget extension can link it without the settings and
+        // the app's preview draws exactly what a widget does.
+        .library(name: "PhotosGoRoundWidgetFace", targets: ["PhotosGoRoundWidgetFace"]),
         // A product only so the Xcode targets can link it. The two executables
         // are Xcode targets as well as package ones now, and an Xcode target
         // reaches a package's *products* — a bare target is invisible to it.
@@ -75,8 +90,14 @@ let package = Package(
             swiftSettings: everyTarget
         ),
         .target(
-            name: "PhotosGoRoundKit",
+            name: "PhotosGoRoundPhotoLibrary",
             dependencies: ["PhotosGoRoundAgentAPI"],
+            path: "Shared/Sources/PhotosGoRoundPhotoLibrary",
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "PhotosGoRoundKit",
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary"],
             path: "MacOS/Shared/Sources/PhotosGoRoundKit",
             swiftSettings: everyTarget
         ),
@@ -89,7 +110,25 @@ let package = Package(
         ),
         .target(
             name: "TinyCache",
-            path: "Shared/Sources/TinyCache",
+            // For `Log`, which every process logs through.
+            dependencies: ["PhotosGoRoundAgentAPI"],
+            path: "Widgets/Shared/Sources/TinyCache",
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "PhotosGoRoundWidgetFace",
+            path: "Widgets/Shared/Sources/PhotosGoRoundWidgetFace",
+            // The app icon at full size, for the faces without a photograph.
+            resources: [.process("Resources")],
+            swiftSettings: everyTarget
+        ),
+        .target(
+            name: "PhotosGoRoundWidgetSettings",
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetFace",
+                "TinyCache",
+            ],
+            path: "Widgets/Shared/Sources/PhotosGoRoundWidgetSettings",
             swiftSettings: everyTarget
         ),
         // Terminal output, shared by the two executables and by nothing else.
@@ -103,7 +142,9 @@ let package = Package(
         ),
         .executableTarget(
             name: "PhotosGoRoundServer",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "Console"],
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "PhotosGoRoundPhotoLibrary", "Console",
+            ],
             path: "MacOS/Agent",
             sources: ["Sources", "Dashboard/Sources", "Endpoints/Sources"],
             swiftSettings: everyTarget
@@ -154,7 +195,7 @@ let package = Package(
         ),
         .testTarget(
             name: "PhotosGoRoundKitTests",
-            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit"],
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundKit", "PhotosGoRoundPhotoLibrary"],
             path: "MacOS/Shared/Tests/PhotosGoRoundKitTests",
             swiftSettings: everyTarget
         ),
@@ -166,8 +207,29 @@ let package = Package(
         ),
         .testTarget(
             name: "TinyCacheTests",
-            dependencies: ["TinyCache"],
-            path: "Shared/Tests/TinyCacheTests",
+            dependencies: ["PhotosGoRoundAgentAPI", "TinyCache"],
+            path: "Widgets/Shared/Tests/TinyCacheTests",
+            swiftSettings: everyTarget
+        ),
+        // A process of its own: these watch what the whole process holds
+        // while a picture is shrunk, and the other tests of `TinyCache` make
+        // pictures of their own at the same time.
+        .testTarget(
+            name: "TinyCacheMemoryTests",
+            dependencies: ["PhotosGoRoundAgentAPI", "PhotosGoRoundWidgetFace", "TinyCache"],
+            path: "Widgets/Shared/Tests/TinyCacheMemoryTests",
+            // Two real photographs, as they are: what they do to ImageIO is
+            // in their bytes, and a copy made any other way does not do it.
+            resources: [.copy("Photographs")],
+            swiftSettings: everyTarget
+        ),
+        .testTarget(
+            name: "PhotosGoRoundWidgetSettingsTests",
+            dependencies: [
+                "PhotosGoRoundAgentAPI", "PhotosGoRoundPhotoLibrary", "PhotosGoRoundWidgetFace",
+                "PhotosGoRoundWidgetSettings", "TinyCache",
+            ],
+            path: "Widgets/Shared/Tests/PhotosGoRoundWidgetSettingsTests",
             swiftSettings: everyTarget
         ),
         .testTarget(

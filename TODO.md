@@ -120,9 +120,10 @@ Syd, 2026-09-16: "Is there a way to have a custom section for our screensaver?" 
 
 ## The tag line: "Your Photos, shuffled"
 
-Syd, 2026-09-16: "change the tag lines for both wallpaper and screensaver to "Your photos, shuffled"." **Capitalized 2026-09-27:** "Your Photos, shuffled".
+Syd, 2026-09-16: "change the tag lines for both wallpaper and screensaver to "Your photos, shuffled"." **Capitalized 2026-09-27:** "Your Photos, shuffled". **To be done everywhere at once, as part of the product renaming**, *The name is "PhotosGoRound" everywhere*, below: Syd, 2026-10-11.
 
 - **The wallpaper's** is the pane item's `localizedDescription` in `MacOS/Wallpaper/Sources/PaneModels.swift`, now "Photographs from your library, shuffled".
+- **The widgets'** is "Your photographs, one after another.", in `Widgets/iOS/Extension/Sources/PhotoWidget.swift` and `Widgets/macOS/Sources/PhotoWidget.swift`. Syd, 2026-10-11: "Change tag line to "Your Photos, shuffled"".
 - **The screensaver has none in its sources.** A search for the wallpaper's wording and for "your library" and "your photo" under `MacOS/` finds no description for the `.saver`; where System Settings would show one for it is not known.
 
 ## Statistics about resized copies, where they belong
@@ -344,3 +345,58 @@ Syd, 2026-10-09: "Add a line in the agent dashboard somewhere that loads by widg
 ## The wallpaper's first registration failed once
 
 2026-10-09, 0.7 (5): on the first launch after an install the app asked for the wallpaper extension to be registered and gave up thirty seconds later, "did not register … in time". `pkd` logged "Failed to find plugin with UUID" at that moment, and nowhere else that day. A relaunch registered it, and an uninstall and fresh install after that registered it on the first launch. Not understood. It came an hour after extension records had been removed by hand and NotificationCenter restarted, which may or may not matter. The app tries once per launch; if this comes back, it should try again before giving up.
+
+## The name is "PhotosGoRound" everywhere
+
+Syd, 2026-10-10: "Name of the application needs to be changed to "PhotosGoRound" everywhere since the hyphenated name does not fit on the iOS springboard, and I want consistency."
+
+Every form of the name, whatever its case, is to read `photosgoround` or `PhotosGoRound`, with no hyphen. And no instance of `photogoround`, the name without its "s", is to be left anywhere, in any case. Syd, the same day: "all forms of the name, indepedent of case, say photosgoround or PhotosGoRound with no hyphen. No instances of photogoround should be left."
+
+## Photos-Go-Round Widgets, carried out of its plan
+
+`Plans/Photos-Go-Round Widgets.md` closed on 2026-10-11: it is the Mac proof of concept's record, as `Plans/PGR Widgets - iOS.md` is the iOS app's, and Syd: "all of the TODO.md in that plan should be integrated into TODO.md. Everything else can be left there". What it still held as work to do is here; the iOS app's own to-dos stay in its plan while that is open. The decisions in the closed plan still hold.
+
+- **CarPlay, StandBy (nightstand mode), Apple Watch, and the iOS Lock Screen.** Syd, 2026-10-11, for once the iOS plan closes, so that the widgets reach every place the phone shows them. Each needs a plan of its own, and so does HomeView, below. Syd, 2026-10-11: "Watches, CarPlay, night stand mode, future home pod work, lock screen, etc., will all require their own plans". The closed plan has a phase each for CarPlay, StandBy and watchOS, and a spike for CarPlay: how a photograph looks with the widget's background removed, and how often it may change on the road, with the phone locked and unlocked. The Lock Screen's own sizes, a circle, a rectangle and a line of text, are left out there by decision of 2026-10-09, and this reopens that.
+- **What a widget can do while the phone is locked.** Whether it can query Photos then, and whether it is woken at all. It waits for the plans above, since CarPlay and StandBy are what need it. Syd, 2026-10-11: "I don't think we need to worry about what happens when the phone is locked until we start putting widgets in weird places". What his phone has shown so far: a log of 21 minutes with no wake in it, and with auto-lock off a burst of wakes every two and a half minutes. His theory is that "widgets don't update when the screen is locked", and that "watch, car play, etc., will fire even if the phone is locked. It probably depends on the surface the widget is actually on". TinyCache's files are not protected, so they can be read then.
+- **The Mac's menubar app**, Photos-Go-Round Widgets.app on the Mac App Store, is the phase after the iOS app. It carries the widget, which then comes out of Photos-Go-Round.app (*Before the first release*, above), and it writes its sources into the App Group container as the iOS app already does, since the Store does not accept the entitlement by which the Mac widget reads the app's preferences today. Its questions wait for a good version of the iOS app; `Plans/PGR Widgets - iOS.md`, *The menubar app's questions wait*. Related: *A menu-bar app for shipping*, above, which is the existing product's.
+- **HomeView**, Apple's home hub with a display, which shows the iPhone's widgets. It was expected at the "Welcome Home" event on 2026-10-13 and is reported to ship in mid-November. Nothing extra is built: the iPhone widget is the HomeView widget, as it is the CarPlay one. A spike, once there is documentation or a device: which sizes it takes, how often a picture may change there, what shows while the phone is away, and how a photograph looks on its square screen.
+  - **What Apple has published, checked 2026-10-14**, is only the [Developer Program License Agreement](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/), [updated 2026-10-13](https://developer.apple.com/news/?id=17mwd36z) with Section 6.4, *CarPlay and Apple HomeView*. 6.4.1: the developer agrees that an iOS app's widgets may appear on HomeView; its `disfavoredLocations` duty is written for CarPlay only, and nothing says whether or how a widget can be kept off HomeView. 6.4.2: a CarPlay app in a category Apple names may appear on HomeView while it runs on a paired iPhone; we have no CarPlay app. No WidgetKit documentation, `WidgetLocation`, sample or session about HomeView was found, and Apple's Newsroom page didn't show the release when fetched.
+  - **Reported before the event, not confirmed by Apple:** no App Store, only Apple's own apps, Photos among them, so the iPhone widget is our only way on; widgets come from a paired iPhone, with their data mirrored from it, in a widget gallery and a Smart Stack; everyone in the home sees them, but their content shows only while the linked iPhone is at home; a 7-inch square display, on a speaker base or on a wall. [MacRumors, 2026-08-18](https://www.macrumors.com/2026/08/18/apple-home-hub-widget-gallery/); [Cult of Mac](https://www.cultofmac.com/news/apple-homeview-two-versions-no-an-app-store).
+- **visionOS**, last, and it probably won't happen.
+- **How often a widget changes, as each widget's own setting, on the Mac too.** It is five minutes for all. The iOS plan's Phase 2 built the setting for iOS, 2026-10-11; the Mac's widget has files of its own and gets them when the menubar app carries it.
+- **The Mac widget's timeline holds an `NSLock` across its wake.** `Widgets/macOS/Sources/PhotoTimeline.swift`. Syd, 2026-09-17: "I flatout don't want NSLocks". The iOS extension's went on 2026-10-11, for `SerialWork` in `Widgets/Shared/Sources/TinyCache`, which does a wake's work one piece at a time; the Mac's is to go the same way. Syd, 2026-10-11.
+- **The widgets have a time limit and waits of their own, beside the agent's.** The agent bounds each call to Photos with `Deadline`, through `BoundedPhotoLibrary`, and rests a source that only times out with `SourceBench`: after four in a row, 60 seconds, doubling to an hour. The widgets, 2026-10-11, got `TimeLimit` and `RequestBackoff` in `Widgets/Shared/Sources`: 15 seconds on a request for one picture, then 5 seconds doubling to 30 minutes, one minute in the app's preview. They are the same two ideas built twice, because the widgets ask Photos for a picture at the widget's size through a binding of their own, synchronously, and keep a wait in a file from one wake to the next. Bring them together. Syd, 2026-10-11. `Plans/PGR Widgets - iOS.md`, *When Photos does not answer*.
+- **The Mac's widget does only half of what the iOS widgets do when Photos does not answer.** It shares the request, so since 2026-10-11 it gives up on one after 15 seconds; it then shows "Can't get a picture" with the reason and asks again at its own time. It is to do what iOS does: keep the picture already showing, with "Scanning…" over it, or the icon with it when there is none; wait before asking again, 5 seconds doubling to 30 minutes and every 30 minutes after that; and keep the wait in a file from one wake to the next. `WidgetPictures` and `RequestBackoff` in `Widgets/Shared/Sources` do it for iOS; the Mac's timeline, `Widgets/macOS/Sources/PhotoTimeline.swift`, uses neither. Syd, 2026-10-11. `Plans/PGR Widgets - iOS.md`, *When Photos does not answer*.
+- **Each widget's transitions as a setting**, chosen from whatever the system actually supports. The fade is built; which transitions a widget can really show is to be found by trying each on the desktop. Closed plan, *Running the proof of concept*, "The change between pictures".
+- **At the next Mac release, read that the installed app states the shared signing requirement.** The export signs everything again and drops it; `Scripts/sign-shared-requirement.sh` puts it back, and has run only on a `Claude` build. Closed plan, *Next: the app's sources, then Photos*.
+- **Why an occasional Photos fetch costs far more memory than its neighbours.** One 12-megapixel photograph took the Mac extension's peak from 22 to 40 MB where dozens like it moved nothing; the guess is that one fetched from iCloud arrives as its original. Closed plan, *A longer run*.
+- **Whether the system goes on honouring a one-minute reload after a widget's first days.** One night on the Mac it reloaded every 64 seconds without a break, twenty times the guide's budget. Closed plan, *Spike: a 1-minute refresh*.
+- **See a Photos collection counted again after an hour**, in the `counted` lines. Closed plan, *Seen with 0.7 (5) installed*.
+- **The uninstaller with a stale Launch Services record present**: a dry run of `uninstall.sh --variant release --widget` lists a record to forget, and the uninstall then takes the placed widgets away. The step that forgets one has found a real one only in a dry run. Closed plan, *Run for real: the placed widgets stayed*.
+- **Whether a folder bookmark lasts**: after a restart, after the app is rebuilt, and after the folder moves. The plain bookmark opened with "stale" true. Closed plan, *The bookmark test worked*.
+- **TinyCache has no size ceiling.** Only the fill limit is enforced; space for 30 at the extra-large size measured about 12 MB at the largest, fitted. Closed plan, *What it leaves out*.
+- **Whether Notification Center on the Mac offers either extra-large size.** Closed plan, *Control Center and Notification Center on the Mac*.
+
+## Fully support Dropbox
+
+Syd, 2026-10-11: "I added a folder in my Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to ask Dropbox to download files for us". `Plans/PGR Widgets - iOS.md`, *The files and folders*.
+
+## Google Photos as a source
+
+Syd, 2026-10-15: "eventually, I want to add Google Photos. That may or may not be possible."
+
+Checked 2026-10-15, in Google's developer pages (last updated 2025-08-28):
+
+- Since March 31, 2025, the Library API reads only what the app itself uploaded. The scopes
+  that read the whole library and shared albums were removed; a call that relied on them gets
+  403.
+- The Picker API is the only way into the rest of the library: the person picks items in
+  Google's own picker each time. Each item's link works for 60 minutes. Whether an album's
+  items can be picked all at once was only seen in a search summary, not on Google's page. Nothing says the app can read an album again as it changes.
+- So a Google Photos album can be a copy made when the person picks it, never a source read at
+  each wake. Syd: "Files will have to suffice": a Takeout export or a folder of saved pictures
+  is a folder source like any other.
+
+## Dropbox and other storage folders, through NSFileCoordinator
+
+Syd, 2026-10-16: a Dropbox folder chosen through Files showed nothing, in the app or the widgets: "It does not download". Only iCloud's way of asking for a file is used (`startDownloadingUbiquitousItem`). Investigate reading a file that is not on the device through `NSFileCoordinator`, which asks its provider (Dropbox, OneDrive, Box, Google Drive) to fetch it: in the app first, then whether a widget may.

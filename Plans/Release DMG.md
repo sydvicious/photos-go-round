@@ -43,6 +43,10 @@ It is the last item on the *Before the first release* checklist.
   - *Built and run 2026-09-27, from the `Release DMG` target:* `Photos-Go-Round 0.1 (1).dmg`, signed with Developer ID, notarized and stapled, accepted by Gatekeeper as "Notarized Developer ID", with the Finder layout saved in it. The first run failed on `release-build.sh`'s own signature check, which read `codesign -dv` for Authority lines that only `-dvv` prints; fixed. The window was then made narrower and taller.
 - **Phase 4: run it.** Syd builds `Release DMG`, opens the image, installs from it, and uninstalls with the uninstaller — on his Mac and on Plex.
 
+- **To do: the iOS app's package goes on the image too, for now.** Syd, 2026-10-10: "Need to
+  include the app package on the release DMG for now, until we have TestFlight/AppStore". From
+  `Plans/PGR Widgets - iOS.md`.
+
 # Design Decisions
 
 - **The service is always called "Photos-Go-Round Service" where a user reads it.** Syd, 2026-09-27: it "should always be called 'Photos-Go-Round Service'" — in the About document, the uninstaller, and the Help menu's Install and Uninstall items.

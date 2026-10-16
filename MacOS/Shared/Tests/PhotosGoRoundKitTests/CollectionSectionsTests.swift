@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// How the picker groups and orders what the library hands back.
 ///
@@ -72,11 +73,59 @@ struct CollectionSectionsTests {
     func sectionOrderIsFixed() {
         let groups = LibrarySectionGroup.grouped([
             Self.collection("Screenshots", .mediaType),
-            Self.collection("Hidden", .hidden),
+            Self.collection("Imports", .imported),
             Self.collection("Holiday", .userAlbum),
             Self.collection("Family", .sharedAlbum),
         ])
         #expect(groups.map(\.section) == [.albums, .sharing, .mediaTypes, .utilities])
+    }
+
+    @Test("Hidden is never offered: what a person hid is not put on a screen")
+    func hiddenIsNeverOffered() {
+        let groups = LibrarySectionGroup.grouped([
+            Self.collection("Hidden", .hidden),
+            Self.collection("Captured by Me", .otherSmartAlbum),
+            Self.collection("Holiday", .userAlbum),
+        ])
+        #expect(groups.flatMap(\.collections).map(\.title) == ["Holiday", "Captured by Me"])
+    }
+
+    @Test("Recently Saved is never offered, and the other unnamed smart albums still are")
+    func recentlySavedIsNeverOffered() {
+        let groups = LibrarySectionGroup.grouped([
+            Self.collection("Recently Saved", .recentlySaved),
+            Self.collection("Captured by Me", .otherSmartAlbum),
+            Self.collection("Holiday", .userAlbum),
+        ])
+        #expect(groups.flatMap(\.collections).map(\.title) == ["Holiday", "Captured by Me"])
+    }
+
+    @Test("Recently Saved is told by the number PhotoKit gives it, whatever language its name is in")
+    func recentlySavedByItsNumber() {
+        #expect(SystemPhotoLibrary.kind(ofUnnamedSmartAlbum: 1_000_000_218) == .recentlySaved)
+    }
+
+    @Test("A smart album PhotoKit does not name, other than Recently Saved, is listed as an unknown one")
+    func otherUnnamedSmartAlbums() {
+        // Captured by Me, Recovered, Dual Capture, and one never seen before.
+        for number in [1_000_000_220, 1_000_000_219, 221, 987_654] {
+            #expect(SystemPhotoLibrary.kind(ofUnnamedSmartAlbum: number) == .otherSmartAlbum)
+        }
+    }
+
+    @Test("The whole library is never offered, whatever Photos calls it")
+    func wholeLibraryIsNeverOffered() {
+        let groups = LibrarySectionGroup.grouped([
+            Self.collection("Recents", .wholeLibrary),
+            Self.collection("Captured by Me", .otherSmartAlbum),
+            Self.collection("Holiday", .userAlbum),
+        ])
+        #expect(groups.flatMap(\.collections).map(\.title) == ["Holiday", "Captured by Me"])
+    }
+
+    @Test("A library with nothing but Hidden in a section has no such section")
+    func onlyHidden() {
+        #expect(LibrarySectionGroup.grouped([Self.collection("Hidden", .hidden)]).isEmpty)
     }
 
     @Test("A section nothing falls into is omitted rather than shown empty")

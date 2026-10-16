@@ -1,5 +1,6 @@
 import Foundation
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 
 /// One photo entering or leaving the pool during a refresh, reported as it
 /// happens. The counts in `ScanResult` are what the agent acts on; this is what

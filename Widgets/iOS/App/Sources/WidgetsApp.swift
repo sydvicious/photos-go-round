@@ -1,0 +1,128 @@
+// Photos-Go-Round Widgets on iOS and iPadOS: the app that carries the widgets,
+// and where a person says which photographs they show.
+// `Plans/PGR Widgets - iOS.md`.
+
+import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
+import PhotosGoRoundWidgetSettings
+import PhotosUI
+import SwiftUI
+import TinyCache
+import WidgetKit
+
+@main
+struct WidgetsApp: App {
+    @State private var model = SettingsModel(
+        sources: ChosenSources(preferences: Self.shared),
+        // Bounded, as the agent's is: a library that has stopped answering
+        // is given up on and said to be so, where the plain one is waited on
+        // for ever. `BoundedPhotoLibrary`.
+        library: BoundedPhotoLibrary(SystemPhotoLibrary()),
+        preview: PreviewModel(
+            pictures: Self.pictures,
+            device: Self.device,
+            // Not known until there is a window; `ScreenReader` supplies it.
+            screen: nil, scale: 1,
+            // What the widgets have been handed, which the table gives way to.
+            recorded: RecordedWidgetSizes(
+                suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)),
+        // The same thing counts for the rows and picks for the preview, so
+        // a source is counted once.
+        counts: Self.pictures,
+        bookmarks: Self.bookmarks,
+        // What the widgets have passed over, for the note at the foot.
+        skipped: SkippedPictures(
+            suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String))
+
+    @Environment(\.scenePhase) private var scenePhase
+
+    var body: some Scene {
+        WindowGroup {
+            SettingsView(model: model, selectPhotos: Self.selectPhotos)
+                .background(
+                    ScreenReader { window in
+                        guard let scene = window.windowScene else { return }
+                        // A widget's size goes by the screen, not by the window
+                        // the app happens to have on an iPad.
+                        let screen = scene.screen
+                        model.preview.use(screen: screen.bounds.size, scale: screen.scale)
+                        Self.limit(scene, in: window, on: screen)
+                    })
+        }
+        // When a person leaves the app, the widgets look at what is chosen
+        // now. A widget otherwise waits for its own next change, which may
+        // be hours off.
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active {
+                WidgetCenter.shared.reloadAllTimelines()
+            }
+        }
+    }
+
+    private static let device: WidgetDevice =
+        UIDevice.current.userInterfaceIdiom == .pad ? .pad : .phone
+
+    /// Keeps an iPad's window from being dragged smaller than the screen can
+    /// be used at: a small widget shown whole, the size control, the "Photos"
+    /// heading with its button, and one row. Syd, 2026-10-10. The layout's own
+    /// figure is for what is inside the window's margins, so those are added.
+    private static func limit(_ scene: UIWindowScene, in window: UIWindow, on screen: UIScreen) {
+        guard let small = WidgetSizes.size(of: .small, on: device, screen: screen.bounds.size) else { return }
+        let inside = SettingsLayout.minimumWindow(forSmallWidget: small)
+        let margins = window.safeAreaInsets
+        scene.sizeRestrictions?.minimumSize = CGSize(
+            width: inside.width + margins.left + margins.right,
+            height: inside.height + margins.top + margins.bottom)
+    }
+
+    /// The system's picker for which photographs the app may see, with limited
+    /// access. It comes up over the window the person is in. Syd, 2026-10-09.
+    ///
+    /// **The target links PhotosUI by name** (`OTHER_LDFLAGS`). The picker is
+    /// an Objective-C category in that framework, reached by a message and
+    /// not by a symbol, so the linker saw nothing of PhotosUI in use and left
+    /// it out. It worked where something else had loaded the framework, and
+    /// on the iPhone Duo simulator, 2026-10-10, it was an unrecognized
+    /// selector.
+    private static func selectPhotos() async {
+        let windows = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+        guard let controller = (windows.first(where: \.isKeyWindow) ?? windows.first)?.rootViewController
+        else { return }
+        _ = await PHPhotoLibrary.shared().presentLimitedLibraryPicker(from: controller)
+    }
+
+    /// Where the preview's pictures come from, and what the rows are counted
+    /// by.
+    ///
+    /// **As a widget would.** Syd, 2026-10-12: "the preview should use the
+    /// exact same methodology as the widgets". The app has gigabytes where a
+    /// widget has 30 MB, so its pictures are judged by a widget's limit: one
+    /// no widget could shrink is passed over here too, and recorded for the
+    /// note at the foot, as a widget would record it.
+    private static let pictures = CachedPreviewPictures(
+        directory: previewCache, bookmarks: bookmarks, resizer: .asAWidget,
+        onSkip: { source in
+            SkippedPictures(suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
+                .record(source)
+        })
+
+    /// What the files and folders chosen in the Files browser are opened
+    /// through, by this app and by its widgets. One for the life of the app:
+    /// what it has opened stays open.
+    private static let bookmarks = BookmarkedSources.inAppGroup(
+        Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
+
+    /// Where the preview keeps its pictures: the app's own, apart from any
+    /// widget's.
+    private static var previewCache: URL {
+        URL.cachesDirectory.appending(path: "Preview", directoryHint: .isDirectory)
+    }
+
+    /// The App Group's preferences, which the widget extension reads too. The
+    /// group's name is in `Info.plist` because it differs by configuration.
+    private static var shared: Preferences {
+        Preferences(suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
+    }
+}

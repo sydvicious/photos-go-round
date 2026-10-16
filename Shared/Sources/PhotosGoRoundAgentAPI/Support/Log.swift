@@ -63,6 +63,12 @@ public enum Log {
     public static let prefs = Logger(subsystem: subsystem, category: "prefs")
     public static let saver = Logger(subsystem: subsystem, category: "saver")
     public static let widget = Logger(subsystem: subsystem, category: "widget")
+
+    /// What every line from the Widgets app and its extension begins with, on
+    /// iOS and iPadOS. Syd, 2026-10-10, asked for "a tag on the logs that I
+    /// can filter for": Xcode's console filters by the words of a line, and
+    /// the app and its extension are two processes with one tag.
+    public static let widgetsTag = "[PGR-Widgets]"
     /// What an archived app found in its wrapper at launch and did about it —
     /// a line per product whether or not it installed. `LaunchInstall`.
     public static let install = Logger(subsystem: subsystem, category: "install")

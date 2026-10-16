@@ -3,6 +3,7 @@ import Synchronization
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// A photo library that is not one.
 ///

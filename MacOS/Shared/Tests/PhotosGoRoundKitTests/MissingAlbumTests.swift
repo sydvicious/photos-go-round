@@ -3,6 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// A Photos album that stops resolving while the library stays readable.
 ///

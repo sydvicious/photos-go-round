@@ -4,6 +4,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// Serving pictures while a large Photos album is being re-read.
 ///

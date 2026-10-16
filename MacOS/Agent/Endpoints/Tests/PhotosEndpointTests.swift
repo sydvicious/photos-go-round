@@ -3,6 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 @testable import PhotosGoRoundServer
 
 /// The one route a client cannot do without: what is in the photo library.

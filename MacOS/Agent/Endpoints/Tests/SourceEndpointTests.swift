@@ -2,6 +2,7 @@ import Foundation
 import Testing
 
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 @testable import PhotosGoRoundServer
 @testable import PhotosGoRoundAgentAPI
 

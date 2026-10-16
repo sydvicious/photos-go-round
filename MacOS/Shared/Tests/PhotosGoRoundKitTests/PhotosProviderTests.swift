@@ -3,6 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 @testable import PhotosGoRoundKit
+@testable import PhotosGoRoundPhotoLibrary
 
 /// The Photos provider, exercised with no Photos library and no TCC grant.
 ///

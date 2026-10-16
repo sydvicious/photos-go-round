@@ -1,5 +1,6 @@
 import Foundation
 import PhotosGoRoundAgentAPI
+import PhotosGoRoundPhotoLibrary
 
 /// An album or smart album from the system Photos library.
 ///
