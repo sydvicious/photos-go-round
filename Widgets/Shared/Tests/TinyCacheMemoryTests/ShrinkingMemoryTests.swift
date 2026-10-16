@@ -54,6 +54,8 @@ struct ShrinkingMemoryTests {
             Kind(name: "heic", width: 8064, height: 6048),
             Kind(name: "png", width: 4000, height: 3000),
             Kind(name: "tiff", width: 4000, height: 3000),
+            // Twice the pixels of any TIFF measured before 2026-10-16.
+            Kind(name: "tiff", width: 8000, height: 6000),
         ])
     func everyKind(_ kind: Kind) throws {
         let scratch = try ScratchFolder()

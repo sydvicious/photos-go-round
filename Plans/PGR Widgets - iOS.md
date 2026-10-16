@@ -26,38 +26,6 @@ left of it. The to-dos are Claude's unless they say otherwise.
 - **Phase 3** — When a source is wrong. Complete; Syd, 2026-10-11. *When a source goes wrong*.
 - **Phase 4** — Files and folders, with adding and removing. Complete; Syd, 2026-10-11. *The
   files and folders*.
-- **Phase 5** — What can only be found out on a phone, and not in a simulator. They were the
-  to-dos under *iOS and iPadOS* in `Plans/Photos-Go-Round Widgets.md`, which is closed; the rest
-  of that plan's are in `TODO.md`. The widgets have run
-  on Syd's phone, on his iCloud library with 8,000-plus favorites, for 13 hours and more by
-  2026-10-11: "it has been working great". So the first wake and the iCloud fetches hold up
-  there, and what is left is:
-  - See on a device what the icon made for widgets takes. In a simulator at a phone's sizes
-    the icon now leaves the extension on 11.9 MB with a peak of 15.9 MB, where it had been
-    23.9 MB and 39.9 MB. *The icon, made for widgets*.
-  - A fetch from Photos for the tall extra large widget takes an extension resting on 15 MB
-    to 23 to 26 MB, in a simulator at a phone's sizes. Whether that is near enough to 30 MB to
-    want trimming is Syd's to say; a phone's own reading is the item below. *The icon, made
-    for widgets*.
-  - When both are done: take the `drawing` and `placeholder` lines out, and put `snapshot`
-    back to an info line.
-  - Try the guard and its note on a device, with folders of each kind of file: Syd, 2026-10-12,
-    "I can build folders with all of those types of files". Every figure the guard goes by is
-    a Mac's, and nothing larger than 24 million pixels was measured for PNG or TIFF, or 49
-    million for HEIC. On the iPad it has only refused for now, which shows no note. *The
-    guard*.
-  - The note and the triangle beside a source have not been seen running, only built with a
-    preview.
-  - A fetch from Photos can cost more than the guard reckons: two photographs of 28 million
-    pixels ended the iPad's extension, and the guard would let them through. *The Photos
-    guard on the devices*.
-  - Some JPEGs shrunk at an eighth cost a widget 12 to 20 MB on the devices, and none tried on
-    a Mac does. The log names each picture now; find the ones that do it, and measure them.
-    *A photograph from Photos, as a file*.
-
-  What a widget can do while the phone is locked is not this phase's. Syd, 2026-10-11: "I don't
-  think we need to worry about what happens when the phone is locked until we start putting
-  widgets in weird places". It is in `TODO.md`, with the places that need it.
 - **Phase 6** — The first-time launch wizard. Syd, 2026-10-10: "we need a full-blown first-time
   launch wizard". Moved before the Store on 2026-10-11.
   - The "How to add a widget" page is part of it.
@@ -99,6 +67,10 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
 - **The collections sheet opens with every folder collapsed, and sorts by name alone.** Syd,
   2026-10-16: "Start with all of the folders in Collections collapsed, and sort them by name
   first, not whether they are folders or files first". *The collections*.
+- **Take out the widget extension's `drawing` and `placeholder` log lines, and put `snapshot`
+  back to an info line.** They were kept for Phase 5's readings on a phone, which Syd dropped
+  when he closed the phase, 2026-10-16: "not going to get overnight results on the phone for
+  a long time. I suggest we call that closed."
 - **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
   narrowest window the two groups may not fit again. Not tried.
 
@@ -487,7 +459,8 @@ we can test everythingmelse including files and folders and simple photo library
   fetched.
 - **Also only on a phone**, by their nature and not by this rule: the extension's memory against
   the 30 MB ceiling, which a simulator is not expected to enforce, and what a widget can do while
-  the phone is locked. The memory is a to-do under Phase 5; the locked phone is in `TODO.md`.
+  the phone is locked. The memory was Phase 5's, closed 2026-10-16; the locked phone is in
+  `TODO.md`.
 - **The memory reading has a phone of its own, and an iPad first.** Syd, 2026-10-11: "gonna
   leave it running on my iPad", and then that he will make his mother-in-law's phone, which she
   no longer really uses, a developer phone, for the memory test "tomorrow or the night after".
@@ -1191,7 +1164,7 @@ From memory, not checked: the Mac has no limited answer, so there it is full or 
 the widget reads the status and never asks. On the Mac the widget extension shares what the app
 was granted (`Plans/Photos-Go-Round Widgets.md`, *Next: the app's sources, then Photos*). On the
 simulators, 2026-10-10, the widgets showed photographs under the app's permission the same way.
-On Syd's phone they have shown photographs the same way since (*Phases*, Phase 5). A locked phone
+On Syd's phone they have shown photographs the same way since. A locked phone
 is still to be seen, and is a to-do in `TODO.md`.
 
 ## One fetch at a time
@@ -1867,7 +1840,7 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   since a device does not keep an info line; *Info* otherwise.
 - `placeholder, systemLarge, memory now …` and `drawing, systemLarge, picture …, memory now …` —
   the extension, when the system asks for a placeholder, and each time it has a face drawn.
-  There only while the memory is measured: Phase 5.
+  There only while the memory was measured, for Phase 5; to come out, a to-do.
 - `sizes the widgets were handed: …` — the app, the first time it looks and whenever they have
   changed: every size recorded for each family. It is how a new device's sizes are read.
   *Info.*
@@ -1894,7 +1867,7 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
 
 ### The memory on a line
 
-Phase 5's reading. Syd, 2026-10-11, chose log lines in the extension over Xcode's gauge on a
+The memory reading of Phase 5, closed 2026-10-16. Syd, 2026-10-11, chose log lines in the extension over Xcode's gauge on a
 tethered phone: the widget runs for hours with nobody watching, and the log is how its wakes
 are read already.
 
@@ -2503,6 +2476,25 @@ picture. Where the kernel tells of no limit, as on a Mac and in the app, nothing
 - **Not tried on a device.** The figures are a Mac's. A PNG of twelve million pixels is
   reckoned at 25 MB for an iPad's largest widget, which is all a fresh extension has left, so
   it may be passed over there more often than not.
+
+**Seen on the iPad, 2026-10-16**, with a folder of one PNG screenshot of 2560 by 1440:
+
+- **The extra large widget passed it over for good**: "needs about 28 MB … no wake could show
+  it", and showed the icon with "No Photos Found". The small, medium and large widgets, which
+  decode it at a quarter or a half, reckoned 14 to 17 MB and showed it. Syd, of the icon:
+  "arguably correct behavior".
+- **The app's preview found it first**, judging as the extra large widget, and recorded it:
+  the triangle beside the folder's row and before the note, both seen. Syd: "triangle on
+  both".
+- **The preview then asked for it every five seconds while the app was open.** Since the same
+  day, nothing found is looked for again after 5 seconds, twice as long each time, a minute
+  at most, and at once for other sources or when the app comes forward. It does not stop,
+  since nothing found may be pictures still coming down from iCloud. Syd: "1".
+- **TIFF and HEIC are trusted to the unit tests**, not tried on a device. Syd, the same day:
+  "I am tired of this, so I am going to trust this code works". `TooLargeTests`: a TIFF of
+  4000 by 3000 is refused for good for the extra large widget and shrunk for the large, a
+  folder of them says which, and a HEIC is shrunk in one piece for any widget.
+  `ShrinkingMemoryTests` measures a TIFF of 8000 by 6000 on a Mac.
 
 ## Identity
 

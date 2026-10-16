@@ -274,6 +274,84 @@ struct TooLargeTests {
         #expect(try PictureResizer.asAWidget.write(original, fitting: box, to: resized).writtenHeight == 756)
     }
 
+    // MARK: Each kind, judged as a widget
+
+    /// An iPad's large widget, in pixels.
+    let large = CGSize(width: 757, height: 757)
+
+    /// A TIFF is shrunk in bands at the fraction it can be decoded at, and
+    /// needs the picture at that fraction: at the extra large widget's size
+    /// a half, 26 MB, which no wake has; at the large widget's a quarter,
+    /// 17 MB, which a wake at rest has. Syd, 2026-10-16, of PNG, TIFF and
+    /// HEIC: "add the code for TIFF and HEIC with good unit tests".
+    /// `Plans/PGR Widgets - iOS.md`, *The guard*.
+    @Test("Judging as a widget would, a TIFF too large for the extra large widget is refused for good there")
+    func aTIFFRefusedForTheExtraLarge() throws {
+        let scratch = try ScratchFolder()
+        let original = try scratch.picture("scan.tiff", width: 4000, height: 3000)
+        let resized = scratch.url.appending(path: "resized.jpg")
+
+        #expect(throws: PictureResizer.Failure.tooLarge(original, ever: true)) {
+            try PictureResizer.asAWidget.write(original, fitting: box, to: resized)
+        }
+        #expect(byteCount(of: resized) == nil)
+    }
+
+    @Test("Judging as a widget would, the same TIFF is shrunk for the large widget")
+    func aTIFFShrunkForTheLarge() throws {
+        let scratch = try ScratchFolder()
+        let original = try scratch.picture("scan.tiff", width: 4000, height: 3000)
+        let resized = scratch.url.appending(path: "resized.jpg")
+
+        let resize = try PictureResizer.asAWidget.write(original, fitting: large, to: resized)
+
+        #expect(resize.originalType == "public.tiff")
+        #expect(resize.writtenWidth == 757)
+        #expect(resize.writtenHeight == 568)
+        #expect(pixelSize(of: resized)?.width == 757)
+    }
+
+    /// A HEIC is shrunk in one piece, and needs 14 MB whatever its size, so
+    /// a widget at rest can always start on one. Measured on a Mac up to 49
+    /// million pixels.
+    @Test("Judging as a widget would, a HEIC is shrunk for the extra large widget, in one piece")
+    func aHEICShrunkForTheExtraLarge() throws {
+        let scratch = try ScratchFolder()
+        let original = try scratch.picture("photo.heic", width: 4032, height: 3024)
+        let resized = scratch.url.appending(path: "resized.jpg")
+
+        let resize = try PictureResizer.asAWidget.write(original, fitting: box, to: resized)
+
+        #expect(resize.originalType == "public.heic")
+        #expect(resize.writtenHeight == 756)
+        #expect(resize.writtenWidth == 1008)
+        #expect(pixelSize(of: resized)?.height == 756)
+    }
+
+    @Test("A HEIC is reckoned at 14 MB however large, so no widget at rest refuses one")
+    func aHEICNeverRefusedForGood() {
+        let resizer = PictureResizer()
+        let largest = resizer.needs(type: "public.heic", storedWidth: 12000, storedHeight: 9000, fraction: 8)
+
+        #expect(largest == 14 * Self.megabyte)
+        #expect(largest <= PictureResizer.widgetLimit - PictureResizer.heldIdle)
+    }
+
+    @Test("A folder of TIFFs too large for the widget passes each over for good, and says which")
+    func aFolderOfTIFFsPassesOver() throws {
+        let scratch = try ScratchFolder()
+        let first = try scratch.picture("pictures/one.tiff", width: 4000, height: 3000)
+        let second = try scratch.picture("pictures/two.tif", width: 4000, height: 3000)
+        let skipped = Collected<URL>()
+        let source = FolderSource(
+            folder: scratch.url.appending(path: "pictures"), resizer: .asAWidget,
+            skipped: { skipped.add($0) })
+
+        #expect(try source.writePicture(fitting: box, to: scratch.url.appending(path: "resized.jpg")) == nil)
+        #expect(
+            Set(skipped.values.map(\.lastPathComponent)) == [first.lastPathComponent, second.lastPathComponent])
+    }
+
     // MARK: Passing over
 
     @Test("A folder passes a refused picture over for another, and says so when no wake could show it")

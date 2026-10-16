@@ -52,7 +52,8 @@ func writePicture(to file: URL, width: Int, height: Int) throws {
     else { throw PictureNotWritten() }
     context.setFillColor(CGColor(red: 0.2, green: 0.5, blue: 0.8, alpha: 1))
     context.fill(CGRect(x: 0, y: 0, width: width, height: height))
-    let type = file.pathExtension.lowercased() == "png" ? UTType.png : UTType.jpeg
+    // By its name: a PNG, a TIFF or a HEIC where it says so, a JPEG otherwise.
+    let type = UTType(filenameExtension: file.pathExtension.lowercased()) ?? .jpeg
     guard
         let image = context.makeImage(),
         let destination = CGImageDestinationCreateWithURL(

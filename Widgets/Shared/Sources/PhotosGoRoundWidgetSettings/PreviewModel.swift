@@ -77,6 +77,15 @@ public final class PreviewModel {
     private var started = false
     /// The wait before Photos is asked again, when it has not answered.
     private var backoff = RequestBackoff(longest: RequestBackoff.longestForThePreview)
+    /// The wait before looking again, when nothing was found.
+    ///
+    /// **Nothing found is looked for again less and less often**: five
+    /// seconds, twice as long each time after, and a minute at most. A
+    /// source whose only picture no widget could show was asked for every
+    /// five seconds while the app was open, on an iPad, 2026-10-16. It does
+    /// not stop: nothing found may be pictures still coming down from
+    /// iCloud. Syd, the same day: "1".
+    private var nothingFound = RequestBackoff(longest: RequestBackoff.longestForThePreview)
     private let now: @Sendable () -> Date
     private var showing: WidgetFamily
     /// Whether the person has picked a size for themselves.
@@ -213,8 +222,9 @@ public final class PreviewModel {
         guard sources != self.sources else { return }
         self.sources = sources
         started = false
-        // Other sources have not gone unanswered.
+        // Other sources have not gone unanswered, nor found empty.
         backoff.answered()
+        nothingFound.answered()
         content = sources.isEmpty ? .nothingChosen : .scanning
     }
 
@@ -248,6 +258,7 @@ public final class PreviewModel {
                 \(listed.joined(separator: "; "), privacy: .public)
                 """)
         }
+        nothingFound.answered()
         if content == .noPhotos {
             content = .scanning
         }
@@ -322,7 +333,7 @@ public final class PreviewModel {
                 started = true
             }
         }
-        guard backoff.wait(at: now()) == nil else { return }
+        guard backoff.wait(at: now()) == nil, nothingFound.wait(at: now()) == nil else { return }
         // Off the main actor, and off the cooperative pool: fetching reads
         // PhotoKit or walks a folder, and both block.
         do {
@@ -330,12 +341,18 @@ public final class PreviewModel {
             // Chosen again while this one was being fetched: it is not theirs.
             guard asked == sources else { return }
             backoff.answered()
+            if picture == nil {
+                nothingFound.timedOut(at: now())
+            } else {
+                nothingFound.answered()
+            }
             content = picture.map { .picture($0) } ?? .noPhotos
         } catch is TimedOut {
             guard asked == sources else { return }
             heldUp()
         } catch {
             guard asked == sources else { return }
+            nothingFound.timedOut(at: now())
             content = .noPhotos
         }
     }

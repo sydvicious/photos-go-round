@@ -546,10 +546,87 @@ struct PreviewModelTests {
         #expect(preview.content == .picture(URL(filePath: "/pictures/2.jpg")))
     }
 
+    // MARK: When nothing is found
+
+    /// A source whose only picture no widget could show was asked for every
+    /// five seconds, for as long as the app was open: on an iPad, 2026-10-16.
+    /// Nothing found may also be pictures still coming down from iCloud,
+    /// which a later look finds, so it waits rather than stopping. Syd, the
+    /// same day: "1". `Plans/PGR Widgets - iOS.md`, *The guard*.
+    @Test("After finding nothing it waits before looking again, twice as long each time")
+    func nothingFoundWaits() async {
+        let clock = TestClock()
+        let pictures = ScriptedPictures([.none, .none, .none, .picture("a.jpg")])
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        func looked() -> Int { pictures.calls.filter { $0 == "next" }.count }
+
+        await preview.advance()
+        #expect(preview.content == .noPhotos)
+        #expect(looked() == 1)
+
+        clock.pass(4)
+        await preview.advance()
+        #expect(looked() == 1)
+        clock.pass(1)
+        await preview.advance()
+        #expect(looked() == 2)
+
+        clock.pass(9)
+        await preview.advance()
+        #expect(looked() == 2)
+        clock.pass(1)
+        await preview.advance()
+        #expect(looked() == 3)
+
+        clock.pass(20)
+        await preview.advance()
+        #expect(looked() == 4)
+        #expect(preview.content == picture("a.jpg"))
+    }
+
+    @Test("However long nothing has been found, it looks again after a minute")
+    func nothingFoundAMinuteAtMost() async {
+        let clock = TestClock()
+        let pictures = ScriptedPictures(Array(repeating: .none, count: 10))
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        for _ in 0..<8 {
+            await preview.advance()
+            clock.pass(30 * 60)
+        }
+        let before = pictures.calls.filter { $0 == "next" }.count
+        await preview.advance()
+
+        clock.pass(59)
+        await preview.advance()
+        #expect(pictures.calls.filter { $0 == "next" }.count == before + 1)
+
+        clock.pass(1)
+        await preview.advance()
+        #expect(pictures.calls.filter { $0 == "next" }.count == before + 2)
+    }
+
+    @Test("Other sources are looked at at once, whatever the wait for nothing found")
+    func nothingFoundOtherSources() async {
+        let clock = TestClock()
+        let pictures = ScriptedPictures([.none, .picture("b.jpg")])
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
+        preview.show([cats])
+        await preview.advance()
+        #expect(preview.content == .noPhotos)
+
+        preview.show([iceland])
+        await preview.advance()
+
+        #expect(preview.content == picture("b.jpg"))
+    }
+
     @Test("Looking again, a preview that found nothing looks afresh")
     func lookingAgain() async {
+        let clock = TestClock()
         let pictures = ScriptedPictures([.none, .picture("a.jpg")])
-        let preview = preview(pictures)
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3, now: { clock.now })
         preview.show([cats])
         await preview.advance()
         #expect(preview.content == .noPhotos)
