@@ -37,107 +37,14 @@ struct TooLargeTests {
         #expect(largest == 14 * Self.megabyte)
     }
 
-    /// A scan of 9920 by 12925 at full colour ended an iPad's extension
-    /// at an eighth, with 21.9 MB left, 2026-10-14, where a Mac takes 6 MB.
-    /// Reckoned as decoded at a quarter until a device is measured.
-    /// `Plans/PGR Widgets - iOS.md`, *A scan at full colour*.
-    @Test("A JPEG at full colour, at an eighth, needs the picture decoded at a quarter")
-    func aFullColourJPEGNeedsAQuarter() {
-        let resizer = PictureResizer()
-        let scan = resizer.needs(
-            type: "public.jpeg", storedWidth: 9920, storedHeight: 12925, fraction: 8, fullColour: true)
-        let photograph = resizer.needs(
-            type: "public.jpeg", storedWidth: 4032, storedHeight: 3024, fraction: 8, fullColour: true)
-        let atItsOwnSize = resizer.needs(
-            type: "public.jpeg", storedWidth: 2922, storedHeight: 3660, fraction: 1, fullColour: true)
-
-        #expect(scan == 9920 * 12925 * 4 / 16)
-        #expect(photograph == 14 * Self.megabyte)
-        #expect(atItsOwnSize == 14 * Self.megabyte)
-    }
-
-    @Test("So that scan is passed over for good in an iPad's widget")
-    func theScanIsPassedOver() {
-        let resizer = PictureResizer()
-        let needed = resizer.needs(
-            type: "public.jpeg", storedWidth: 9920, storedHeight: 12925, fraction: 8, fullColour: true)
-
-        #expect(needed > PictureResizer.widgetLimit - PictureResizer.heldIdle)
-    }
-
-    // MARK: Reading a JPEG's colour
-
-    /// The start of a baseline JPEG, as far as its first scan: a frame
-    /// header with three components sampled as given.
-    static func jpegHeader(sampling: [(Int, Int)], progressive: Bool = false) -> Data {
-        var bytes: [UInt8] = [0xFF, 0xD8]
-        // An APP0 of no interest, to be stepped over.
-        bytes += [0xFF, 0xE0, 0x00, 0x06, 0x4A, 0x46, 0x49, 0x46]
-        // A restart interval, to be stepped over.
-        bytes += [0xFF, 0xDD, 0x00, 0x04, 0x04, 0xD8]
-        bytes += [0xFF, progressive ? 0xC2 : 0xC0, 0x00, UInt8(8 + 3 * sampling.count), 0x08, 0x32, 0x7D, 0x26, 0xC0]
-        bytes.append(UInt8(sampling.count))
-        for (index, (across, down)) in sampling.enumerated() {
-            bytes += [UInt8(index + 1), UInt8(across << 4 | down), 0x00]
-        }
-        bytes += [0xFF, 0xDA, 0x00, 0x08, 0x01, 0x01, 0x00, 0x00, 0x3F, 0x00]
-        return Data(bytes)
-    }
-
-    static func written(_ data: Data) throws -> URL {
-        let file = FileManager.default.temporaryDirectory.appending(path: "header-\(UUID().uuidString).jpeg")
-        try data.write(to: file)
-        return file
-    }
-
-    @Test("A JPEG with every component sampled alike is at full colour")
-    func fullColourIsRead() throws {
-        let file = try Self.written(Self.jpegHeader(sampling: [(1, 1), (1, 1), (1, 1)]))
-        defer { try? FileManager.default.removeItem(at: file) }
-
-        #expect(PictureResizer.isFullColourJPEG(file))
-    }
-
-    @Test("A JPEG's sampling is said as each component's, across by down")
-    func samplingIsSaid() throws {
-        let half = try Self.written(Self.jpegHeader(sampling: [(2, 2), (1, 1), (1, 1)]))
-        let png = try Self.written(Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
-        defer {
-            try? FileManager.default.removeItem(at: half)
-            try? FileManager.default.removeItem(at: png)
-        }
-
-        #expect(PictureResizer.jpegSampling(half) == "2x2 1x1 1x1")
-        #expect(PictureResizer.jpegSampling(png) == nil)
-    }
-
-    @Test("A JPEG with its colour sampled at a half is not")
-    func subsampledColourIsRead() throws {
-        let file = try Self.written(Self.jpegHeader(sampling: [(2, 2), (1, 1), (1, 1)]))
-        defer { try? FileManager.default.removeItem(at: file) }
-
-        #expect(!PictureResizer.isFullColourJPEG(file))
-    }
-
-    @Test("A progressive JPEG's frame is read as well")
-    func progressiveIsRead() throws {
-        let file = try Self.written(Self.jpegHeader(sampling: [(1, 1), (1, 1), (1, 1)], progressive: true))
-        defer { try? FileManager.default.removeItem(at: file) }
-
-        #expect(PictureResizer.isFullColourJPEG(file))
-    }
-
-    @Test("A file that is not a JPEG is not at full colour, nor is a grey one")
-    func otherFilesAreNot() throws {
-        let png = try Self.written(Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))
-        let grey = try Self.written(Self.jpegHeader(sampling: [(1, 1)]))
-        defer {
-            try? FileManager.default.removeItem(at: png)
-            try? FileManager.default.removeItem(at: grey)
-        }
-
-        #expect(!PictureResizer.isFullColourJPEG(png))
-        #expect(!PictureResizer.isFullColourJPEG(grey))
+    /// The three colour scans of 9920 by 12925 were shrunk at an eighth on
+    /// an iPad, unguarded, 16 times, 2026-10-15: none added more than about
+    /// 6 MB. `Plans/PGR Widgets - iOS.md`, *A scan at full colour*.
+    @Test("A JPEG at full colour needs what any other JPEG does")
+    func aFullColourJPEGNeedsLittle() {
+        #expect(
+            PictureResizer().needs(type: "public.jpeg", storedWidth: 9920, storedHeight: 12925, fraction: 8)
+                == 14 * Self.megabyte)
     }
 
     @Test("A PNG or a TIFF needs the picture at the fraction it is decoded at, and a little more again than a JPEG")
@@ -179,13 +86,12 @@ struct TooLargeTests {
     /// at its own size there is nothing to go wrong. `Plans/PGR Widgets -
     /// iOS.md`, *A JPEG at a half or a quarter*.
     /// A grey scan of 9920 by 12925 ended an iPad's extension at an eighth
-    /// twice, 2026-10-14, and took 42 MB on a Mac; at its own size, a strip
-    /// at a time, 11 to 13 MB. `Plans/PGR Widgets - iOS.md`, *A scan at
-    /// full colour*.
-    @Test("A grey JPEG is decoded at its own size, however large")
-    func aGreyJPEGWhole() {
-        #expect(PictureResizer.fraction(of: 12925, for: 340, type: "public.jpeg", grey: true) == 1)
-        #expect(PictureResizer.fraction(of: 12925, for: 340, type: "public.jpeg", grey: false) == 8)
+    /// twice, 2026-10-14, drawn in one band: in two, a Mac takes less than
+    /// 14 MB for one. `Plans/PGR Widgets - iOS.md`, *The iPad overnight
+    /// with every source*.
+    @Test("A grey JPEG is decoded at an eighth, as any other JPEG is")
+    func aGreyJPEGAtAnEighth() {
+        #expect(PictureResizer.fraction(of: 12925, for: 340, type: "public.jpeg") == 8)
     }
 
     @Test("A JPEG is decoded at an eighth where that is enough, and at its own size where it is not: never a half or a quarter")
@@ -289,12 +195,30 @@ struct TooLargeTests {
         #expect(byteCount(of: resized) == nil)
     }
 
+    /// An extension holds about 12 MB at rest once it has drawn and asked
+    /// Photos, read on an iPad overnight, 2026-10-16: of 30 MB, a picture
+    /// reckoned at more than 18 MB is never shown. Syd, the same day, of
+    /// counting it so: "1". `Plans/PGR Widgets - iOS.md`, *The iPad
+    /// overnight with every source*.
+    @Test("A picture reckoned at more than 18 MB of a widget's 30 is refused for good")
+    func refusedForGoodAboveEighteen() throws {
+        let scratch = try ScratchFolder()
+        // Decoded at its own size: 6.1 MB, and 14 MB more.
+        let original = try scratch.picture("wide.png", width: 1600, height: 1000)
+        let resized = scratch.url.appending(path: "resized.jpg")
+        let resizer = PictureResizer(memory: Self.memory(held: 20, of: 30))
+
+        #expect(throws: PictureResizer.Failure.tooLarge(original, ever: true)) {
+            try resizer.write(original, fitting: box, to: resized)
+        }
+    }
+
     @Test("One that an extension holding less could shrink is refused only for now")
     func refusedForNow() throws {
         let scratch = try ScratchFolder()
         let original = try scratch.picture("large.png", width: 4000, height: 3000)
         let resized = scratch.url.appending(path: "resized.jpg")
-        let resizer = PictureResizer(memory: Self.memory(held: 24, of: 36))
+        let resizer = PictureResizer(memory: Self.memory(held: 30, of: 44))
 
         #expect(throws: PictureResizer.Failure.tooLarge(original, ever: false)) {
             try resizer.write(original, fitting: box, to: resized)
@@ -355,14 +279,19 @@ struct TooLargeTests {
     @Test("A folder passes a refused picture over for another, and says so when no wake could show it")
     func aFolderPassesOver() throws {
         let scratch = try ScratchFolder()
-        let large = try scratch.picture("large.png", width: 4000, height: 3000)
-        try scratch.picture("small.jpg", width: 800, height: 600)
+        let large = try scratch.picture("pictures/large.png", width: 4000, height: 3000)
+        try scratch.picture("pictures/small.jpg", width: 800, height: 600)
         let skipped = Collected<URL>()
         let source = FolderSource(
-            folder: scratch.url, resizer: PictureResizer(memory: Self.memory(held: 6, of: 22)),
+            folder: scratch.url.appending(path: "pictures"),
+            resizer: PictureResizer(memory: Self.memory(held: 6, of: 22)),
             skipped: { skipped.add($0) })
 
-        // The two are tried in an order that is drawn each time.
+        // The two are tried in an order that is drawn each time: the large
+        // one is missed every time once in a million runs. What is written
+        // goes outside the folder, which is walked with its subfolders; in
+        // it, each copy of the small one was one more to draw, and the large
+        // one was missed once in 21 runs.
         for turn in 0..<20 {
             let resized = scratch.url.appending(path: "out/resized-\(turn).jpg")
             try FileManager.default.createDirectory(
@@ -381,7 +310,7 @@ struct TooLargeTests {
         let skipped = Collected<URL>()
         let source = FolderSource(
             folder: scratch.url.appending(path: "pictures"),
-            resizer: PictureResizer(memory: Self.memory(held: 24, of: 36)),
+            resizer: PictureResizer(memory: Self.memory(held: 30, of: 44)),
             skipped: { skipped.add($0) })
 
         #expect(try source.writePicture(fitting: box, to: scratch.url.appending(path: "resized.jpg")) == nil)

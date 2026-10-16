@@ -15,6 +15,25 @@ struct BandsTests {
     /// No picture in bands.
     let whole = PictureResizer(bandsAbove: .max)
 
+    /// Drawn in one band, the whole picture is asked for at once, and an
+    /// iPad's extension took 18.8 MB for a photograph of 6016 by 4016 at an
+    /// eighth, 2026-10-16, where the rows of the same picture asked for in
+    /// several bands take a fraction of a megabyte each. On a Mac a grey
+    /// scan took 30 MB in one band and less than 14 MB in two.
+    /// `Plans/PGR Widgets - iOS.md`, *The iPad overnight with every source*.
+    @Test("A picture in bands is never drawn in one band")
+    func neverOneBand() {
+        // A grey scan of 9920 by 12925 at an eighth, 1240 bytes a row, for
+        // a small widget: a band of 2 MB is more rows than the picture has.
+        #expect(PictureResizer.bandRows(decodedRows: 1691, perRow: 1615.0 / 340, drawnHeight: 340) == 170)
+        // The photograph of 6016 by 4016 at an eighth, for a small widget.
+        #expect(PictureResizer.bandRows(decodedRows: 697, perRow: 502.0 / 227, drawnHeight: 227) == 114)
+        // A band already smaller than half the picture is left as it is.
+        #expect(PictureResizer.bandRows(decodedRows: 422, perRow: 1615.0 / 757, drawnHeight: 757) == 197)
+        // One drawn row is still a band.
+        #expect(PictureResizer.bandRows(decodedRows: 1, perRow: 10, drawnHeight: 1) == 1)
+    }
+
     @Test("In bands, a picture comes out the size it does whole")
     func theSameSize() throws {
         let scratch = try ScratchFolder()

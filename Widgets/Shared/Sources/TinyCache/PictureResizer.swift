@@ -128,21 +128,16 @@ public struct PictureResizer: Sendable {
     /// fraction. At an eighth the same file is decoded at an eighth. At its
     /// own size there is no fraction to be refused, and a strip is what it
     /// was cut to be.
-    ///
-    /// **A grey JPEG, of one channel, is decoded at its own size, however
-    /// large.** A scanner's grey scan of 9920 by 12925 ended an iPad's
-    /// extension at an eighth, twice, 2026-10-14, and took 42 MB on a Mac,
-    /// at an eighth and through ImageIO's thumbnail alike. At its own size,
-    /// a strip at a time, it takes 11 to 13 MB, in about a second.
-    static func fraction(of longestSide: Double, for wanted: Int, type: String, grey: Bool = false) -> Int {
-        if type == "public.jpeg" && grey { return 1 }
+    static func fraction(of longestSide: Double, for wanted: Int, type: String) -> Int {
         let fractions = type == "public.jpeg" ? [8] : [8, 4, 2]
         return fractions.first { longestSide / Double($0) >= Double(wanted) } ?? 1
     }
 
     /// What an extension holds with nothing to do, of the 30 MB it is held
-    /// to: 4 to 7 MB, read on an iPad, 2026-10-12.
-    static let heldIdle: Int64 = 6 * 1_048_576
+    /// to: about 12 MB once it has drawn and asked Photos, and from then on,
+    /// read on an iPad overnight, 2026-10-16. A fresh one holds 4 MB; it was
+    /// 6 MB here until that night. Syd, of counting it so: "1".
+    static let heldIdle: Int64 = 12 * 1_048_576
 
     /// About how much shrinking a picture adds to what the process holds, at
     /// its most. Each figure is the most measured on a Mac, 2026-10-12, in a
@@ -160,23 +155,17 @@ public struct PictureResizer: Sendable {
     ///   Nothing larger was tried, so this is what any other kind is
     ///   reckoned at too.
     /// - **A picture small enough to shrink in one piece**: two copies of it.
-    /// - **A JPEG at full colour, at an eighth**: the picture decoded at a
-    ///   quarter, where that is more than 14 MB. A scan of 9920 by 12925,
-    ///   every pixel's colour kept, ended an iPad's extension at an eighth
-    ///   with 21.9 MB left, 2026-10-14; on a Mac it takes 6 MB. A quarter is
-    ///   a guess at what the device does, held until it is measured there.
-    ///   `Plans/PGR Widgets - iOS.md`, *A scan at full colour*.
-    func needs(type: String, storedWidth: Double, storedHeight: Double, fraction: Int, fullColour: Bool = false) -> Int64 {
+    /// - **A JPEG at full colour** is no different: a scan of 9920 by 12925,
+    ///   every pixel's colour kept, added about 6 MB at an eighth on an iPad,
+    ///   2026-10-15. `Plans/PGR Widgets - iOS.md`, *A scan at full colour*.
+    func needs(type: String, storedWidth: Double, storedHeight: Double, fraction: Int) -> Int64 {
         let megabyte: Int64 = 1_048_576
         let decoded = Int64(storedWidth * storedHeight * 4)
         if Self.inOnePiece.contains(type) { return 14 * megabyte }
         guard Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove) else {
             return decoded * 2 + 4 * megabyte
         }
-        if type == "public.jpeg" {
-            guard fullColour && fraction == 8 else { return 14 * megabyte }
-            return max(14 * megabyte, decoded / 16)
-        }
+        if type == "public.jpeg" { return 14 * megabyte }
         return decoded / Int64(fraction * fraction) + 14 * megabyte
     }
 
@@ -219,36 +208,14 @@ public struct PictureResizer: Sendable {
         let type = (CGImageSourceGetType(source) as String?) ?? ""
         // Decoded at an eighth, a quarter or a half where the format allows:
         // the smallest that is still no smaller than what is wanted.
-        let grey = type == "public.jpeg" && Self.jpegSampling(original) == "1x1"
-        let fraction = Self.fraction(of: max(width, height), for: longestSide, type: type, grey: grey)
+        let fraction = Self.fraction(of: max(width, height), for: longestSide, type: type)
         let reading = memory()
-        let fullColour = type == "public.jpeg" && fraction == 8 && Self.isFullColourJPEG(original)
-        let needed = needs(
-            type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction,
-            fullColour: fullColour)
+        let needed = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
         let named = name ?? original.lastPathComponent
         let taken = taken ?? Self.taken(in: properties)
-        // MEASURING, TEMPORARY: a JPEG at full colour is not guarded, and
-        // its shrink says what it holds after the decode and after each
-        // band, to learn what a device takes for one. Syd, 2026-10-14: "2.
-        // I can leave this overnight". `Plans/PGR Widgets - iOS.md`, *A scan
-        // at full colour*. Take out once it has been read.
-        // Every JPEG at an eighth is measured, and every grey one; only one
-        // at full colour goes unguarded.
-        let measuring = type == "public.jpeg" && (fraction == 8 || grey) && reading?.limit != nil
-        if measuring {
-            Log.widget.notice(
-                """
-                \(Log.widgetsTag, privacy: .public) MEASURING: a JPEG at 1/\(fraction), sampled \
-                \(Self.jpegSampling(original) ?? "unread", privacy: .public), reckoned at \(needed / 1_048_576) MB\
-                \(fullColour ? ", not guarded" : "", privacy: .public)
-                """)
-        }
-        if !(measuring && fullColour) {
-            try refuseIfTooLarge(
-                original, type: type, storedWidth: storedWidth, storedHeight: storedHeight, needing: needed,
-                with: reading, named: named, taken: taken)
-        }
+        try refuseIfTooLarge(
+            original, type: type, storedWidth: storedWidth, storedHeight: storedHeight, needing: needed,
+            with: reading, named: named, taken: taken)
 
         let inBands = Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove)
         let wantedWidth = max(1, Int((width * scale).rounded()))
@@ -269,8 +236,7 @@ public struct PictureResizer: Sendable {
         let image: CGImage
         if inBands {
             let drawn = try self.inBands(
-                source, orientation: orientation, fraction: fraction, width: wantedWidth, height: wantedHeight,
-                measuring: measuring)
+                source, orientation: orientation, fraction: fraction, width: wantedWidth, height: wantedHeight)
             guard let drawn else { throw Failure.notAPicture(original) }
             image = drawn
         } else {
@@ -327,49 +293,6 @@ public struct PictureResizer: Sendable {
             \(Footprint.againstLimit(reading), privacy: .public)
             """)
         throw Failure.tooLarge(URL(string: "photos:")!, ever: false)
-    }
-
-    /// Whether `file` is a JPEG whose colour is kept at every pixel: three
-    /// components or more, each sampled alike. Read from its frame header,
-    /// which comes before its first scan; nothing of the picture is decoded.
-    /// A camera's or a phone's JPEG samples its colour at a half; a scanner's
-    /// and Photoshop's often do not.
-    static func isFullColourJPEG(_ file: URL) -> Bool {
-        guard let sampling = samplingFactors(of: file), sampling.count >= 3 else { return false }
-        return Set(sampling).count == 1
-    }
-
-    /// `2x2 1x1 1x1`: how each component of a JPEG is sampled, across by
-    /// down, from its frame header. Nil for a file that is not a JPEG.
-    static func jpegSampling(_ file: URL) -> String? {
-        samplingFactors(of: file)?.map { "\($0 >> 4)x\($0 & 0x0F)" }.joined(separator: " ")
-    }
-
-    /// Each component's sampling byte, from the frame header before the
-    /// first scan; nothing of the picture is decoded.
-    private static func samplingFactors(of file: URL) -> [UInt8]? {
-        guard let handle = try? FileHandle(forReadingFrom: file) else { return nil }
-        defer { try? handle.close() }
-        guard let data = try? handle.read(upToCount: 256 * 1024) else { return nil }
-        let bytes = [UInt8](data)
-        guard bytes.count > 4, bytes[0] == 0xFF, bytes[1] == 0xD8 else { return nil }
-        var at = 2
-        while at + 4 <= bytes.count {
-            guard bytes[at] == 0xFF else { return nil }
-            let marker = bytes[at + 1]
-            if marker == 0xFF { at += 1; continue }
-            if marker == 0x01 || (0xD0...0xD7).contains(marker) { at += 2; continue }
-            if marker == 0xDA || marker == 0xD9 { return nil }
-            let length = Int(bytes[at + 2]) << 8 | Int(bytes[at + 3])
-            let isFrame = (0xC0...0xCF).contains(marker) && ![0xC4, 0xC8, 0xCC].contains(marker)
-            if isFrame {
-                let components = at + 9 < bytes.count ? Int(bytes[at + 9]) : 0
-                guard components >= 1, at + 10 + 3 * components <= bytes.count else { return nil }
-                return (0..<components).map { bytes[at + 11 + 3 * $0] }
-            }
-            at += 2 + length
-        }
-        return nil
     }
 
     /// `shrinking public.jpeg 3264x2448 to 1008x756, in bands at 1/2, reckoned
@@ -468,14 +391,8 @@ public struct PictureResizer: Sendable {
     /// its first and last rows are made from the picture on both sides of
     /// them and no seam shows where two bands meet.
     private func inBands(
-        _ source: CGImageSource, orientation: Int, fraction: Int, width: Int, height: Int, measuring: Bool = false
+        _ source: CGImageSource, orientation: Int, fraction: Int, width: Int, height: Int
     ) throws -> CGImage? {
-        // MEASURING, TEMPORARY: see `write`.
-        func measure(_ what: String) {
-            guard measuring, let reading = memory() else { return }
-            Log.widget.notice(
-                "\(Log.widgetsTag, privacy: .public) MEASURING: \(what, privacy: .public), \(Footprint.againstLimit(reading), privacy: .public)")
-        }
         var decoding: [CFString: Any] = [kCGImageSourceShouldCache: false]
         let onItsSide = (5...8).contains(orientation)
         // The picture as it is stored, at the size it is drawn.
@@ -483,10 +400,8 @@ public struct PictureResizer: Sendable {
         let drawnHeight = Double(onItsSide ? width : height)
         if fraction > 1 { decoding[kCGImageSourceSubsampleFactor] = fraction }
         guard let picture = CGImageSourceCreateImageAtIndex(source, 0, decoding as CFDictionary) else {
-            measure("ImageIO would not decode it")
             return nil
         }
-        measure("decoded as \(picture.width)x\(picture.height), \(picture.bytesPerRow) bytes a row")
         // In the picture's own colours where they can be drawn in.
         let colours =
             picture.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil }
@@ -495,10 +410,7 @@ public struct PictureResizer: Sendable {
             let context = CGContext(
                 data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                 space: colours, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
-        else {
-            measure("no bitmap to draw it in")
-            return nil
-        }
+        else { return nil }
         context.interpolationQuality = .high
         context.concatenate(Self.upright(orientation, width: Double(width), height: Double(height)))
 
@@ -506,7 +418,7 @@ public struct PictureResizer: Sendable {
         // `bandBytes` comes to.
         let perRow = Double(picture.height) / drawnHeight
         let decodedRows = max(1, bandBytes / max(1, picture.bytesPerRow))
-        let bandRows = max(1, Int(Double(decodedRows) / perRow))
+        let bandRows = Self.bandRows(decodedRows: decodedRows, perRow: perRow, drawnHeight: drawnHeight)
         // Enough rows beyond a band's edges for the drawing of them.
         let beyond = Int(perRow.rounded(.up)) * 3 + 2
 
@@ -535,14 +447,24 @@ public struct PictureResizer: Sendable {
                 context.restoreGState()
                 return true
             }
-            guard drew else {
-                measure("could not cut rows \(first) to \(last) of \(picture.height)")
-                return nil
-            }
-            measure("drew rows \(first) to \(last) of \(picture.height)")
+            guard drew else { return nil }
             top = bottom
         }
         return context.makeImage()
+    }
+
+    /// How many drawn rows a band is: as many as `decodedRows` of the
+    /// picture come to, and never more than half the picture.
+    ///
+    /// **Never the whole picture in one band.** Drawn in one, the whole
+    /// picture is asked for at once, and ImageIO decodes it another way: an
+    /// iPad's extension took 18.8 MB for a photograph of 6016 by 4016 at an
+    /// eighth, 2026-10-16, whose rows asked for a band at a time cost a
+    /// fraction of a megabyte each, and a Mac took 30 MB for a grey scan in
+    /// one band and less than 14 MB in two. `Plans/PGR Widgets - iOS.md`,
+    /// *The iPad overnight with every source*.
+    static func bandRows(decodedRows: Int, perRow: Double, drawnHeight: Double) -> Int {
+        min(max(1, Int(Double(decodedRows) / perRow)), max(1, (Int(drawnHeight) + 1) / 2))
     }
 
     /// What turns a picture as it is stored, drawn from the bottom left, the

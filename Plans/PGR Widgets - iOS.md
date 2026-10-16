@@ -54,12 +54,6 @@ left of it. The to-dos are Claude's unless they say otherwise.
   - Some JPEGs shrunk at an eighth cost a widget 12 to 20 MB on the devices, and none tried on
     a Mac does. The log names each picture now; find the ones that do it, and measure them.
     *A photograph from Photos, as a file*.
-  - Measure the scan at full colour on the iPad itself, and set what the guard reckons for a
-    JPEG at full colour from it, or take that rule out: a quarter is a guess. See that a grey
-    scan is shrunk on the iPad at its own size. The build for it does not guard such a
-    JPEG, and writes `MEASURING:` lines for every JPEG shrunk at an eighth — its sampling,
-    after the decode, after each band, and why a shrink gave no picture; take them out once
-    they have been read. *A scan at full colour*.
 
   What a widget can do while the phone is locked is not this phase's. Syd, 2026-10-11: "I don't
   think we need to worry about what happens when the phone is locked until we start putting
@@ -102,6 +96,9 @@ the project's, and takes the iOS to-dos once this is in `main`. Syd, 2026-10-10.
   can figure out in the widget that a picture is troublesome, we give up unless there are no
   other pictures are available. or we display the app icon." Undecided, in his words: "whether
   to try the picture anyway, or never try troublesome pictures, and just display the app".
+- **The collections sheet opens with every folder collapsed, and sorts by name alone.** Syd,
+  2026-10-16: "Start with all of the folders in Collections collapsed, and sort them by name
+  first, not whether they are folders or files first". *The collections*.
 - **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
   narrowest window the two groups may not fit again. Not tried.
 
@@ -1494,6 +1491,21 @@ it was neither of the two: the extension looked for the bookmark under another n
 **It matters least here.** Syd, 2026-10-08: on an iPhone hardly anyone will use a folder, on an
 iPad slightly more will.
 
+### What Widgetsmith does instead
+
+Syd, 2026-10-15, having looked at it the night before: Widgetsmith "does not have support for
+files", and pictures chosen one by one from the library are "limited to 10", copied "to the app
+folder from Photos as you set it up".
+
+- **So files and folders are something it does not do at all.**
+- **Pictures chosen one by one are copies made once**, at setting up, rather than read from
+  Photos at each wake. Ten copies fit any memory limit.
+- **An album can be chosen instead**, Syd, the same day; how Widgetsmith deals with large
+  pictures in one is not known.
+- **Not a competitor.** Syd, the same day: "I will never compete with widgetsmith. but it's
+  good to know", and "This app is for more than just your Photos Library": files and folders
+  are sources in their own right, not an addition to Photos.
+
 ## The App Group comes first on iOS
 
 The Mac widget reads the app's sources from the app's preferences, through an entitlement the
@@ -2279,10 +2291,13 @@ takes the smallest of the three that is enough.
 
 ### A scan at full colour
 
-**A JPEG that keeps its colour at every pixel, shrunk at an eighth, is reckoned at the picture
-decoded at a quarter, where that is more than 14 MB.** `PictureResizer.needs`, and
-`isFullColourJPEG`, which reads it from the file's frame header. Syd, 2026-10-14, of guarding
-it now and measuring later: "3".
+**A JPEG at full colour is reckoned like any other, and a grey one is decoded like any
+other since 2026-10-16**: what a grey scan cost was its being drawn in one band, *The iPad
+overnight with every source*. Until then a grey JPEG was decoded at its own size, told by
+reading how a file's colour is sampled from its frame header. What ended the iPad's extension was a grey
+scan. A rule that reckoned a JPEG at full colour as decoded at a quarter was built on a
+reading of the wrong file, 2026-10-14, and taken out the next day with the measuring build's
+lines, once the iPad had shrunk the colour scans: Syd, 2026-10-15, "1".
 
 - **What ended the iPad's extension**, 2026-10-14: “1973-11-18 Xeroxed Faces 31.jpeg”, from
   Photos, a scan of 9920 by 12925 from a Brother MFC-L8850CDW, 59 MB. Shrinking it at an
@@ -2314,10 +2329,64 @@ it now and measuring later: "3".
   at an eighth, the same through ImageIO's thumbnail, and 11 to 13 MB at its own size, in
   about a second. A grey picture of that size made for the tests takes 30 MB at an eighth,
   and is one of the kinds `ShrinkingMemoryTests` holds to what a JPEG is reckoned at.
-- **The rule for full colour above is still in**, on a reading that was of the wrong file.
+- **On the iPad it holds.** 2026-10-15, on the album of the scans: one extension process
+  shrank 22 grey scans at their own size over 16 minutes, about 2 seconds each, and was not
+  ended. Each added about 6 MB, from 8.4 MB to 14.4 MB; the most the process ever held was
+  16.4 MB of its 30.
+- **A full-colour scan on the iPad takes 6 MB at most at an eighth**, 2026-10-15: the three
+  colour copies of the scans, 9920 by 12925 and 59 to 64 MB, from a folder in iCloud Drive,
+  shrunk 16 times unguarded for every size of widget. Held 10.3 MB before, 12.3 MB at most
+  after a band, and the most the process ever held stayed at 16.4 MB. Reckoned at 30 MB by the
+  rule for full colour, which is far too much; as any other JPEG, at 14 MB, it is enough.
 - **The first reading on the iPad**, 2026-10-14: “Jumpstart-5478E.jpg”, 3062 by 5663 at full
   colour, decoded at an eighth for a small widget, took about 11.5 MB at its most, while the
   picture at an eighth is 1 MB. Nothing is decoded until a band is drawn.
+
+### The iPad overnight with every source
+
+2026-10-15 to 16, 21:35 to 09:30, the build without the measuring lines, every source Syd uses
+plus the album of grey scans and the folder of colour ones.
+
+- **No extension was ended.** Four processes, each ended by the system in the ordinary way;
+  302 shrinks, 299 of them fetched.
+- **38 pictures were passed over, every one for now**, with the process holding 17 to 23 MB
+  at the moment: nothing was recorded against a source.
+- **What a process holds at rest rises, then stays**: about 4 MB at its start, 8 MB once it
+  has drawn a picture and asked Photos, and about 12 MB within half an hour, where it stays for
+  hours. Not a leak. The guard reads the real figure, so it is no danger; it is why more is
+  passed over later in a process's life. Where the last 4 MB come from is not known.
+- **So `heldIdle` is 12 MB, not 6, since 2026-10-16**: a picture reckoned at more than 18 MB
+  is refused for good, recorded against its source and marked, where it was 24 MB. Today that
+  is only a PNG or a TIFF; the preview judges by the same. Syd: "1".
+- **One shrink took more than it is reckoned at**: “DSC_3023-Edit.jpg”, 6016 by 4016, at an
+  eighth for a picture of 509 by 340, added 18.7 MB against 14, to a peak of 27.7 MB of 30.
+  Four album covers of about 3700 pixels a side added 11 to 13 MB. Their sampling is not
+  known: the line that said it went with the measuring build.
+- **On a Mac the same photograph takes 2.2 MB** for that widget, and 9 MB at most for the
+  largest. Syd exported it, 2026-10-16: a Nikon D750 photograph from Lightroom, 16.1 MB, at
+  full colour with a restart at every row.
+- **On the iPad, the rise followed the file's size**: 18.7 MB for its 16.1 MB, 13.1 MB for a
+  file of 10.9 MB, 11.3 for 9.7, 11.5 for 8.8, 4.2 for 3.9, from Photos and from folders
+  alike. Not proved: the three colour scans of 59 to 64 MB added 6 MB at most, and drawing
+  goes on in the same process while a fetch runs.
+- **It was the band, not the file.** Measured on the iPad, 2026-10-16, with an album of that
+  photograph alone: Photos writing the file added nothing, and asking for the picture at an
+  eighth nothing. Drawing its one band, all 502 rows of it, took the peak from 21.0 MB to
+  28.2 MB with 9.5 MB held: 18.7 MB. The colour scans, drawn at an eighth in four bands, took
+  under half a megabyte a band; the grey scan that ended the extension was one band too.
+- **So a picture is never drawn in one band, since the same day.**
+  `PictureResizer.bandRows`: never more than half the picture. On a Mac a grey scan of that
+  size at an eighth took 30 MB in one band and passed under 14 MB in two. On the iPad the same
+  day, the photograph at an eighth in two bands: under half a megabyte a band, and the peak did
+  not move from 14.5 MB, over a dozen fetches for every size of widget.
+- **A grey JPEG is decoded at an eighth again**, in two bands at least, since the same day:
+  the rule that decoded it at its own size is out, Syd's "2", to be seen on the iPad with the
+  album of grey scans. On a Mac the grey test of that size passes under 14 MB at an eighth.
+  On the iPad the same day: nine grey scans at an eighth in two bands, for every size of
+  widget, under 2 MB a band, the peak unmoved at 14.8 MB, about half a second each where at
+  their own size they took two.
+- **The measuring lines are out**, and with them the reading of a JPEG's sampling, which
+  nothing else used.
 
 ### The icon, made for widgets
 

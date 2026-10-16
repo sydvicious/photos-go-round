@@ -156,12 +156,6 @@ private func photograph(
         } catch PictureResizer.Failure.tooLarge(let file, let ever) {
             if ever { skipped?() } else { forNow = .tooLarge(file, ever: false) }
         } catch PictureResizer.Failure.notAPicture {
-            // MEASURING, TEMPORARY: see `PictureResizer.write`.
-            Log.widget.notice(
-                """
-                \(Log.widgetsTag, privacy: .public) MEASURING: could not shrink \
-                \(PictureResizer.naming(photograph.name, nil), privacy: .public)not a picture to ImageIO
-                """)
             continue
         }
     }

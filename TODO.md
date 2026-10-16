@@ -379,3 +379,23 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 ## Fully support Dropbox
 
 Syd, 2026-10-11: "I added a folder in my Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to ask Dropbox to download files for us". `Plans/PGR Widgets - iOS.md`, *The files and folders*.
+
+## Google Photos as a source
+
+Syd, 2026-10-15: "eventually, I want to add Google Photos. That may or may not be possible."
+
+Checked 2026-10-15, in Google's developer pages (last updated 2025-08-28):
+
+- Since March 31, 2025, the Library API reads only what the app itself uploaded. The scopes
+  that read the whole library and shared albums were removed; a call that relied on them gets
+  403.
+- The Picker API is the only way into the rest of the library: the person picks items in
+  Google's own picker each time. Each item's link works for 60 minutes. Whether an album's
+  items can be picked all at once was only seen in a search summary, not on Google's page. Nothing says the app can read an album again as it changes.
+- So a Google Photos album can be a copy made when the person picks it, never a source read at
+  each wake. Syd: "Files will have to suffice": a Takeout export or a folder of saved pictures
+  is a folder source like any other.
+
+## Dropbox and other storage folders, through NSFileCoordinator
+
+Syd, 2026-10-16: a Dropbox folder chosen through Files showed nothing, in the app or the widgets: "It does not download". Only iCloud's way of asking for a file is used (`startDownloadingUbiquitousItem`). Investigate reading a file that is not on the device through `NSFileCoordinator`, which asks its provider (Dropbox, OneDrive, Box, Google Drive) to fetch it: in the app first, then whether a widget may.
