@@ -221,3 +221,4 @@ curl -sS -H "$AUTH" -X PATCH "http://localhost:$PORT/v1/sources/<uuid>" -H 'Cont
   checking the wallpaper extension once it is installed: registration, the
   gates, the logs.
 
+
