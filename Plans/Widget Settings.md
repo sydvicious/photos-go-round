@@ -33,7 +33,7 @@ widgets working as they do today until the setting is changed.
   - The cache folders are named for the setting.
   - A control for it on the settings screen. *Where the settings go in the app*.
 - **Phase 2** — Matching the widget's shape, set in the app. *Matching the widget's shape*.
-  - What shape a widget is, from the size it is handed.
+  - What shape a widget is, from its size's name.
   - Photos: picking among the photographs of the right shape.
   - Files and folders: the same, from what a file's header says of its size.
   - With none of the right shape, any photograph.
@@ -87,14 +87,16 @@ widgets working as they do today until the setting is changed.
 
 *Matching the widget's shape*
 
-- **A widget is square, wide or tall by the size it is handed.** *Proposed:* square when its long
-  side is less than 1.25 times its short side, so the small size, and the large on a phone
-  (about 338 by 354 points), are square and the setting does nothing to them; Edit Widget and the
-  app say so. Medium and extra large are wide; extra large portrait is tall.
-- **"Roughly" is which way the photograph is longer.** *Proposed:* a wide widget shows photographs
-  at least 1.2 times as wide as they are tall, and a tall one the same the other way. Matching the
-  ratio itself would leave almost nothing: a medium widget is about 2.1 to 1, and most
-  photographs are 4 to 3 or 3 to 2.
+- **Small and Large are square, and show every photograph.** Syd, 2026-10-25: "“Large” is
+  square. All photos displayed in square widgets." The setting does nothing to them; Edit Widget
+  and the app say so.
+- **Medium and Extra Large are wide; Extra Large Portrait is tall.** By the size's name, not by
+  the points it is handed, so a Large is square on every device. Claude's reading of "“Large” is
+  square".
+- **"Roughly" is which way the photograph is longer, by 1.2 times.** A wide widget shows
+  photographs at least 1.2 times as wide as they are tall, and a tall one the same the other way.
+  Syd, 2026-10-25: "1.2 is good". Matching the ratio itself would leave almost nothing: a medium
+  widget is about 2.1 to 1, and most photographs are 4 to 3 or 3 to 2.
 - **With none of the right shape, any photograph.** A wide widget over an album of portraits
   shows them, rather than "No Photos found". *Proposed.*
 - **Counts are not changed.** A source is still weighed by all its pictures, so a source with few
@@ -144,13 +146,11 @@ widgets working as they do today until the setting is changed.
 
 *Open questions for Syd*
 
-1. **How rough is "roughly"?** Which way the photograph is longer, as proposed, or nearer the
-   widget's own ratio? Is the large size on a phone square?
-2. **The app and Edit Widget.** The app's setting for every widget, and each widget able to
+1. **The app and Edit Widget.** The app's setting for every widget, and each widget able to
    override it, starting at "As in the app"?
-3. **Where in the app**, if not a section under the lists.
-4. **With nothing of the right shape**, any photograph, or "No Photos found"?
-5. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
+2. **Where in the app**, if not a section under the lists.
+3. **With nothing of the right shape**, any photograph, or "No Photos found"?
+4. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
    it get these now, or with the menubar app? And are these for widgets alone, and not the
    screensaver or the wallpaper?
 
