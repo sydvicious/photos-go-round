@@ -178,8 +178,9 @@ widgets working as they do today until the setting is changed.
 - **The Mac gets both places, as iOS does: the app, and Edit Widget.** Syd, 2026-10-25, chose that
   over the Mac app's setting alone with the widget's own to come with the menubar app.
 - **The Mac app's setting is in its Settings window**, in a *Pictures* section above the sources,
-  as on iOS. It is stored in the Mac app's preferences, whose domain carries the build variant,
-  which is where the Mac widget already reads the sources (`Settings.sources()`). *Proposed.*
+  as on iOS. Syd, 2026-10-25, chose that over below the sources and over a tab of its own. It is
+  stored in the Mac app's preferences, whose domain carries the build variant, which is where the
+  Mac widget already reads the sources (`Settings.sources()`).
 - **The Mac widget moves from `StaticConfiguration` to `AppIntentConfiguration`**, with a settings
   type of its own whose parameters are the iOS one's. The enums are shared, in a target both
   extensions take, so their names and cases cannot drift apart. *Proposed.*
