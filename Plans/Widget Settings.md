@@ -119,8 +119,9 @@ widgets working as they do today until the setting is changed.
 - **Each setting is a menu with "As in the app" first, and it is the default.** The app cannot
   write a placed widget's settings (*Telling one widget from another*, in `PGR Widgets - iOS.md`),
   and a default made in code is asked for once for every widget. So "the same setting in both
-  places" can only be the app's setting, and a widget's own choice when it has made one.
-  *Proposed.*
+  places" can only be the app's setting, and a widget's own choice when it has made one. Syd,
+  2026-10-25, chose that over each widget's setting alone with the app's only for its preview,
+  and over the app's alone for now.
   - Fit or fill: *As in the app*, *Fit*, *Fill*.
   - The shape: *As in the app*, *Any shape*, *The widget's shape*.
 - **Their names are kept once widgets are out.** A widget whose settings type has changed stops
@@ -146,11 +147,9 @@ widgets working as they do today until the setting is changed.
 
 *Open questions for Syd*
 
-1. **The app and Edit Widget.** The app's setting for every widget, and each widget able to
-   override it, starting at "As in the app"?
-2. **Where in the app**, if not a section under the lists.
-3. **With nothing of the right shape**, any photograph, or "No Photos found"?
-4. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
+1. **Where in the app**, if not a section under the lists.
+2. **With nothing of the right shape**, any photograph, or "No Photos found"?
+3. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
    it get these now, or with the menubar app? And are these for widgets alone, and not the
    screensaver or the wallpaper?
 
