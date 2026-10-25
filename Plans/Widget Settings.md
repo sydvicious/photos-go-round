@@ -30,6 +30,7 @@ widgets working as they do today until the setting is changed.
   - `WidgetFace` draws a picture fitted or filled; the preview and the widgets follow the setting.
   - A filled picture is fetched to cover the widget and cropped to it when it is written, so the
     file is the widget's shape at its pixels. *The crop is made when the picture is written*.
+  - Cropped about the middle first; then toward faces, or else the subject. *Fit or fill*.
   - The cache folders are named for the setting.
   - A control for it on the settings screen. *Where the settings go in the app*.
 - **Phase 2** — Matching the widget's shape, set in the app. *Matching the widget's shape*.
@@ -50,6 +51,8 @@ widgets working as they do today until the setting is changed.
 # TODO
 
 - Every *proposed* decision below, for Syd.
+- Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
+  30 MB. *Fit or fill*.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
   *Picking among Photos*.
 - Find out whether `PHAsset.pixelWidth` and `pixelHeight` are the photograph as shown or as
@@ -65,7 +68,18 @@ widgets working as they do today until the setting is changed.
 - **Fit stays the default.** A photograph is fitted whole with black around it "as everywhere
   else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
   on as it was. Syd, 2026-10-25.
-- **Fill crops about the middle.** Nothing is done to find a face or a subject. *Proposed.*
+- **Fill crops toward faces, or else the subject.** Syd, 2026-10-25, chose that over cropping
+  about the middle. *Proposed* for how:
+  - **Vision is asked of the covering picture, not the original.** It is already at the widget's
+    pixels, so what Vision holds is bounded by the widget and not by the photograph.
+  - **Faces first** (`VNDetectFaceRectanglesRequest`): the crop holds as many of them as it can,
+    centred on them. **With none, the subject** (`VNGenerateAttentionBasedSaliencyImageRequest`),
+    centred on its bounds. **With neither, the middle.**
+  - **The crop is kept inside the picture**, so a face at an edge moves the crop to that edge and
+    no further.
+  - **Vision failing is the middle**, not a picture passed over.
+  - **Built after the middle.** The middle crop is tried on a phone first, and the faces and the
+    subject come next in the same phase.
 - **One view still draws both.** `WidgetFace` takes the setting, so what the preview shows is
   what a widget shows, as Syd asked on 2026-10-09.
 
