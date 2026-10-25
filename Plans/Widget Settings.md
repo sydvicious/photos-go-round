@@ -307,8 +307,10 @@ widgets working as they do today until the setting is changed.
     window is made and never stored, as its *Shuffle All* is. Syd, 2026-09-14, of the interval:
     "the app window will read the current screensaver internal when it is created, and it will
     stay there with its own copy of the setting".
-- **The pan.** A fitted photograph slides through its own black (`Pan`). A filled one has no
-  black to slide through. *Proposed:* a filled photograph sits still.
+- **The pan.** A fitted photograph was to slide through its own black (`Pan`), and a filled one
+  has no black to slide through. But nothing pans today. Syd, 2026-10-25: "There is no panning
+  right now. Or if there is, it's not working. That's a todo item". So it is in `TODO.md`, *The
+  slow pan does not run*, and what a filled photograph does waits for it.
 - **The defaults are Fit, and any shape**, so the screensaver, the wallpaper and the windows look
   as they do today until the settings are changed. *Proposed.*
 

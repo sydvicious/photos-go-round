@@ -360,6 +360,10 @@ Syd, 2026-09-26: "get rid of the disable sources option completely". Today a sou
 
 Syd, 2026-09-26: "This honestly is a surprise to me." The wallpaper extension asks the agent through its own `AgentPicture`, times itself with its own `Rotation`, and keeps its own `LastPicture`, where the window and the screensaver share `PictureClient`, `Shuffle` and `PictureMemory` — so every empty-state behaviour on the `no-photos` branch was built twice, and the second copy is untested. `Wallpaper Plan.md`, *The real extension, inside the app*, said the extension would link the display library "rather than carrying the probe's private copies of `ServicePort` and the picture request".
 
+## The slow pan does not run
+
+Syd, 2026-10-25: "There is no panning right now. Or if there is, it's not working. That's a todo item". `Pan`, in `PhotosGoRoundDisplay`, is the geometry of a fitted photograph sliding through its own black; nothing outside its own file uses it, and `PictureLayerView` lays out its frame "because the pan needs the letterbox as a number" but adds no animation. So it looks never to have been wired up, rather than broken. What a filled photograph does waits on it: `Plans/Widget Settings.md`, *The pan*.
+
 ## A "Check for Updates…" menu item
 
 Syd, 2026-09-26: add a "Check for Updates…" menu item. It depends on the whole infrastructure for shipping an app being in place first, so it waits for that.
