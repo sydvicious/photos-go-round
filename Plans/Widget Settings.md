@@ -42,7 +42,8 @@ widgets working as they do today until the setting is changed.
   - Photos: picking among the photographs of the right shape.
   - Files and folders: the same, from what a file's header says of its size.
   - With none of the right shape, any photograph.
-  - Each picture's size kept once it is learned, in the widgets' store and the agent's library.
+  - Each picture's size kept once it is learned: in each widget cache's own database, moved with
+    the caches to the App Group, and in the agent's library.
     *Picture sizes, kept*.
 - **Phase 3** — Each widget's own. *In Edit Widget*.
   - Two settings in `PhotoWidgetSettings`, each starting at "As in the app".
@@ -169,14 +170,24 @@ widgets working as they do today until the setting is changed.
   2026-10-25: "Widgets have to have their own database(s)", and then one for each widget cache,
   over one for each App Group and one for each process. So it is in the cache's folder, beside
   the pictures (`systemMedium-300-fill`), and goes when `clearAway` takes the folder away. Never
-  the agent's library, on the Mac either. What a pick reads once, that widget does not read
+  the agent's library, on the Mac either.
+  - **The widgets' caches move to the App Group's container**, out of each extension's own
+    caches, on iOS and on the Mac, so the app can write into their databases. Syd, 2026-10-25,
+    chose that over the app reloading the widgets and leaving each to learn for itself. Both
+    already have a container: the bookmarks are in it (`WidgetFolderBookmark.swift`,
+    `BookmarkedSources`). The caches left in the extensions' own folders are deleted once, by
+    the first wake after the move. What a pick reads once, that widget does not read
   again. Each picture is known by its source's name, as in the counts, and its own: a Photos
   identifier, or a file's path in its folder.
-  - **What one widget learns, another learns again.** Two sizes, or two settings, each read a
-    picture's size and find its crop for themselves; and the app having read a file in iCloud
-    Drive does not tell a widget its shape.
-  - **One writer at a time.** A cache is used by one wake at a time (`SerialWork` in the iOS
-    extension's timeline, a lock in the Mac's), so a database is never written from two places.
+  - **What one widget learns, another learns again**, unless the app has learned it: two sizes,
+    or two settings, each read a picture's size and find its crop for themselves.
+  - **What the app learns, it writes into every widget cache's database**, as well as its
+    preview's: a picture's size and its crop are the picture's, whatever the widget. So a file in
+    iCloud Drive the app has read is a known shape to a widget that cannot read it.
+  - **Two writers: the app and the wake.** A cache is used by one wake at a time (`SerialWork` in
+    the iOS extension's timeline, a lock in the Mac's), but the app may write while a wake does,
+    so each database is opened to wait its turn, and what the app writes is only ever a size or
+    a crop, never a picture.
   - **SQLite,** since a library holds tens of thousands of pictures, which a JSON file like
     `counts.json` would be read whole for. Syd, 2026-10-25, chose that over a JSON file.
     The agent's `Database` is in `PhotosGoRoundKit`, on the Mac alone; whether it moves to the
@@ -193,7 +204,7 @@ widgets working as they do today until the setting is changed.
   investigate using local LLM to find faces or subject". Vision is the plan until then.
 - **Not in a widget.** An extension is held to 30 MB, which no model of that kind fits in. It
   would run in the app, or the Mac's agent, ahead of a widget, and the region it finds would be
-  kept with the picture's size for the widget to read.
+  written with the picture's size into the widget caches' databases, or the agent's library.
 - **What to compare, against Vision:** how well it frames, how long it takes, the memory, and the
   battery. What on-device models there are to try, and whether Apple's own takes pictures on
   iOS 27, is not known.
@@ -226,7 +237,7 @@ widgets working as they do today until the setting is changed.
 *When the app gives up focus*
 
 - **When the app gives up focus, the widgets are reloaded and what the app has learned is
-  written to the widgets' store.** Syd, 2026-10-25: "We may need to update when app surrenders
+  written to every widget cache's database.** Syd, 2026-10-25: "We may need to update when app surrenders
   focus", and then both, adding "Have to worry about this on Duo and iPad as well". On the Mac
   it is as well as the reload at once.
 - **Giving up focus is not leaving the screen.** On an iPad the app can be in Split View or
