@@ -1,13 +1,13 @@
 # Summary
 
-Two new settings for the widgets. **How a photograph sits in a widget:** fitted whole with black
-around it, as today, or filling the widget with its edges cropped. **Whether a widget that is not
+Two new settings for the iOS and Mac widgets. **How a photograph sits in a widget:** *Fit*, whole
+with black around it, as today, or *Fill*, with its edges cropped toward faces or the subject. **Whether a widget that is not
 square shows only photographs of roughly its shape:** landscape ones in a wide widget, portrait
 ones in a tall one. Each is set in the app, for every widget, and in a widget's own Edit Widget
 panel, where it starts at "As in the app". Syd, 2026-10-25.
 
-**An outline.** Nothing here is built. Where a decision is marked *proposed*, it is Claude's
-reading and waits for Syd.
+**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or
+agreed by him; what is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -50,7 +50,6 @@ widgets working as they do today until the setting is changed.
 
 # TODO
 
-- Every *proposed* decision below, for Syd.
 - Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
   30 MB. *Fit or fill*.
 - Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
@@ -71,7 +70,7 @@ widgets working as they do today until the setting is changed.
   else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
   on as it was. Syd, 2026-10-25.
 - **Fill crops toward faces, or else the subject.** Syd, 2026-10-25, chose that over cropping
-  about the middle. *Proposed* for how:
+  about the middle. How, as below, Syd agreed the same day:
   - **Vision is asked of the covering picture, not the original.** It is already at the widget's
     pixels, so what Vision holds is bounded by the widget and not by the photograph.
   - **Faces first** (`VNDetectFaceRectanglesRequest`): the crop holds as many of them as it can,
