@@ -168,7 +168,9 @@ widgets working as they do today until the setting is changed.
     shared code or the store has its own is to be decided when it is built.
 - **The crop found for a picture is kept with its size.** Faces and the subject are the picture's
   and not the widget's, so a region found once, kept as fractions of the picture, serves every
-  widget, and Vision runs once for each picture. *Proposed.*
+  widget, and Vision runs once for each picture. Syd, 2026-10-25, chose that over finding it at
+  each fetch. The covering picture Vision is asked of is the whole photograph, so the fractions
+  are of the whole.
 
 *A local model for the crop*
 
