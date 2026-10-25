@@ -64,7 +64,7 @@ widgets working as they do today until the setting is changed.
   what I meant", and "Fit and fill are better terms".
 - **Fit stays the default.** A photograph is fitted whole with black around it "as everywhere
   else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
-  on as it was. *Proposed.*
+  on as it was. Syd, 2026-10-25.
 - **Fill crops about the middle.** Nothing is done to find a face or a subject. *Proposed.*
 - **One view still draws both.** `WidgetFace` takes the setting, so what the preview shows is
   what a widget shows, as Syd asked on 2026-10-09.
