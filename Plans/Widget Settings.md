@@ -40,7 +40,11 @@ widgets working as they do today until the setting is changed.
 - **Phase 3** — Each widget's own. *In Edit Widget*.
   - Two settings in `PhotoWidgetSettings`, each starting at "As in the app".
   - The widget's cache folder and the clearing away go by them.
-- **Phase 4** — The Mac's widget, if Syd wants it there before the menubar app. *Open questions*.
+- **Phase 4** — The Mac. *On the Mac*.
+  - The *Pictures* section in the Mac app's Settings window, stored where the Mac widget already
+    reads the sources.
+  - The Mac widget draws and fetches by the settings, through the same TinyCache sources.
+  - The Mac widget gets an Edit Widget panel, with the same two settings at "As in the app".
 
 # TODO
 
@@ -147,11 +151,30 @@ widgets working as they do today until the setting is changed.
   preview, the section is there too, first.
 - The switch says when it does nothing to the size the preview is showing.
 
+*On the Mac*
+
+- **The iOS and Mac widgets both, and nothing else.** Not the screensaver or the wallpaper. Syd,
+  2026-10-25, chose that over the iOS widgets alone with the Mac's to come with the menubar app,
+  and over every product that shows pictures.
+- **The Mac gets both places, as iOS does: the app, and Edit Widget.** Syd, 2026-10-25, chose that
+  over the Mac app's setting alone with the widget's own to come with the menubar app.
+- **The Mac app's setting is in its Settings window**, in a *Pictures* section above the sources,
+  as on iOS. It is stored in the Mac app's preferences, whose domain carries the build variant,
+  which is where the Mac widget already reads the sources (`Settings.sources()`). *Proposed.*
+- **The Mac widget moves from `StaticConfiguration` to `AppIntentConfiguration`**, with a settings
+  type of its own whose two parameters are the iOS one's. The two enums are shared, in a target
+  both extensions take, so their names and cases cannot drift apart. *Proposed.*
+- **Its cache is named for the settings too.** It is one folder for each size today
+  (`TinyCache/systemMedium`); it becomes one for each size and resolved settings, as on iOS.
+- **The crop and the shape are TinyCache's**, in `PhotosSource`, `FolderSource` and
+  `PictureResizer`, which the Mac widget uses directly, so the Mac does not build them twice.
+- **Building `Photos-Go-Round` registers the widget**, as `CLAUDE.md` says; a build to try the
+  panel is unregistered afterwards.
+
 *Open questions for Syd*
 
-1. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
-   it get these now, or with the menubar app? And are these for widgets alone, and not the
-   screensaver or the wallpaper?
+1. **The Mac's interval.** Whether *Change Every* comes to the Mac's Edit Widget panel with the
+   two settings, or stays at five minutes until the menubar app.
 
 # Background
 
