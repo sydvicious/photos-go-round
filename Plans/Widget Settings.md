@@ -156,7 +156,8 @@ widgets working as they do today until the setting is changed.
 - **The widgets take a change to the app's setting when the person leaves the app**, as they take
   a change of sources. Syd, 2026-10-25, chose that over reloading them at once.
   - **On the Mac, as its sources do too**, which is at once: the Mac app reloads the widgets when
-    the sources change (`WidgetFolderBookmark.swift`). Claude's reading. *Proposed.*
+    the sources change (`WidgetFolderBookmark.swift`). Syd, 2026-10-25, chose that over reloading
+    when the Settings window closes.
 - **The preview follows the app's settings.** It cannot know a placed widget's own.
 
 *Where the settings go in the app*
