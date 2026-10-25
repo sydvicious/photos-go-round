@@ -8,8 +8,8 @@ tall. For the widgets, each is set in the app, for every widget, and in a widget
 Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper, the screensaver
 and the windows: *The wallpaper, the screensaver and the windows*.
 
-**A plan.** Nothing here is built. A decision marked *proposed* is Claude's and waits for Syd;
-every other is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
+**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or agreed by him.
+What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -312,12 +312,11 @@ widgets working as they do today until the setting is changed.
   right now. Or if there is, it's not working. That's a todo item". So it is in `TODO.md`, *The
   slow pan does not run*, and what a filled photograph does waits for it.
 - **The defaults are Fit, and any shape**, so the screensaver, the wallpaper and the windows look
-  as they do today until the settings are changed. *Proposed.*
+  as they do today until the settings are changed. Syd, 2026-10-25.
 
 *Open questions for Syd*
 
-Those marked *proposed* under *The wallpaper, the screensaver and the windows*, to be asked one
-at a time.
+None left. Syd answered each, 2026-10-25.
 
 # Background
 
