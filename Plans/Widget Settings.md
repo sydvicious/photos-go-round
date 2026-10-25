@@ -165,19 +165,25 @@ widgets working as they do today until the setting is changed.
   `pixel_height`, empty until known, so no library is scanned again. A walk of Photos already
   has each asset's size, so a walk fills them for the photographs it passes. The wallpaper, the
   screensaver and the windows pick by them (*The wallpaper, the screensaver and the windows*).
-- **The widgets' store is in the App Group**, so the app and the extensions share it, on iOS and
-  on the Mac. What a pick reads once, it does not read again; and a file in iCloud Drive that the
-  app has read is a known shape to a widget that cannot read it. Each picture is known by its
-  source's name, as in the counts, and its own: a Photos identifier, or a file's path in its
-  folder.
-  - **SQLite,** since the app and an extension may write at once, and a library holds tens of
-    thousands of pictures, which a JSON file like `counts.json` would be read whole for. Syd,
-    2026-10-25, chose that over a JSON file.
+- **Each widget cache has a database of its own, and the app's preview has its own.** Syd,
+  2026-10-25: "Widgets have to have their own database(s)", and then one for each widget cache,
+  over one for each App Group and one for each process. So it is in the cache's folder, beside
+  the pictures (`systemMedium-300-fill`), and goes when `clearAway` takes the folder away. Never
+  the agent's library, on the Mac either. What a pick reads once, that widget does not read
+  again. Each picture is known by its source's name, as in the counts, and its own: a Photos
+  identifier, or a file's path in its folder.
+  - **What one widget learns, another learns again.** Two sizes, or two settings, each read a
+    picture's size and find its crop for themselves; and the app having read a file in iCloud
+    Drive does not tell a widget its shape.
+  - **One writer at a time.** A cache is used by one wake at a time (`SerialWork` in the iOS
+    extension's timeline, a lock in the Mac's), so a database is never written from two places.
+  - **SQLite,** since a library holds tens of thousands of pictures, which a JSON file like
+    `counts.json` would be read whole for. Syd, 2026-10-25, chose that over a JSON file.
     The agent's `Database` is in `PhotosGoRoundKit`, on the Mac alone; whether it moves to the
-    shared code or the store has its own is to be decided when it is built.
+    shared code or the widgets' have their own wrapper is to be decided when it is built.
 - **The crop found for a picture is kept with its size.** Faces and the subject are the picture's
-  and not the widget's, so a region found once, kept as fractions of the picture, serves every
-  widget, and Vision runs once for each picture. Syd, 2026-10-25, chose that over finding it at
+  and not the widget's, so a region found once, kept as fractions of the picture, serves that
+  cache from then on, and Vision runs once for each picture in each cache. Syd, 2026-10-25, chose that over finding it at
   each fetch. The covering picture Vision is asked of is the whole photograph, so the fractions
   are of the whole.
 
