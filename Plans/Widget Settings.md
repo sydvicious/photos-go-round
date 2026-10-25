@@ -129,7 +129,8 @@ widgets working as they do today until the setting is changed.
 - **Picking among files.** `FolderSource` already picks three at random and tries each in turn.
   It would pick more, and read each one's size from its header (`CGImageSourceCopyPropertiesAtIndex`,
   nothing decoded) before shrinking it. A file iCloud Drive has not fetched has no header to read
-  in a widget; it is taken as the wrong shape there. *Proposed.*
+  in a widget; it is taken as the right shape there, and may turn out not to be. Syd,
+  2026-10-25, chose that over taking it as the wrong shape.
 - **Which way up.** A file's size is read with its EXIF orientation, so one taken on its side is
   the shape it is shown at. Whether Photos' `pixelWidth` and `pixelHeight` already are is not
   known; *TODO*.
