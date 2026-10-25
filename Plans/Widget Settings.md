@@ -53,6 +53,8 @@ widgets working as they do today until the setting is changed.
 - Every *proposed* decision below, for Syd.
 - Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
   30 MB. *Fit or fill*.
+- Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
+  *On the Mac*.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
   *Picking among Photos*.
 - Find out whether `PHAsset.pixelWidth` and `pixelHeight` are the photograph as shown or as
@@ -183,7 +185,11 @@ widgets working as they do today until the setting is changed.
   Mac widget already reads the sources (`Settings.sources()`).
 - **The Mac widget moves from `StaticConfiguration` to `AppIntentConfiguration`**, with a settings
   type of its own whose parameters are the iOS one's. The enums are shared, in a target both
-  extensions take, so their names and cases cannot drift apart. *Proposed.*
+  extensions take, so their names, cases and wording cannot drift apart. Syd, 2026-10-25, chose
+  that over a copy in each extension.
+  - **The system must still find them.** An `AppEnum` outside the extension's own target is
+    found only when its package says so (`AppIntentsPackage`), and the extension's target extracts
+    the metadata (*The trial, and what was built*, in `PGR Widgets - iOS.md`). *TODO*.
 - **Its panel has *Change Every* as well, with the same durations as iOS.** The five minutes
   hard-coded in `Settings.interval` goes. Syd, 2026-10-25, chose that over keeping five minutes
   until the menubar app.
