@@ -161,8 +161,9 @@ widgets working as they do today until the setting is changed.
   app has read is a known shape to a widget that cannot read it. Each picture is known by its
   source's name, as in the counts, and its own: a Photos identifier, or a file's path in its
   folder.
-  - **SQLite, *proposed*,** since the app and an extension may write at once, and a library holds
-    tens of thousands of pictures, which a JSON file like `counts.json` would be read whole for.
+  - **SQLite,** since the app and an extension may write at once, and a library holds tens of
+    thousands of pictures, which a JSON file like `counts.json` would be read whole for. Syd,
+    2026-10-25, chose that over a JSON file.
     The agent's `Database` is in `PhotosGoRoundKit`, on the Mac alone; whether it moves to the
     shared code or the store has its own is to be decided when it is built.
 - **The crop found for a picture is kept with its size.** Faces and the subject are the picture's
