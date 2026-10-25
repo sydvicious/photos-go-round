@@ -98,7 +98,8 @@ widgets working as they do today until the setting is changed.
   Syd, 2026-10-25: "1.2 is good". Matching the ratio itself would leave almost nothing: a medium
   widget is about 2.1 to 1, and most photographs are 4 to 3 or 3 to 2.
 - **With none of the right shape, any photograph.** A wide widget over an album of portraits
-  shows them, rather than "No Photos found". *Proposed.*
+  shows them, rather than "No Photos found". Syd, 2026-10-25, chose that over "No Photos
+  found".
 - **Counts are not changed.** A source is still weighed by all its pictures, so a source with few
   of the right shape is asked as often and gives way to any photograph more often. Counting each
   shape would double the counting, which is already the slow part.
@@ -148,8 +149,7 @@ widgets working as they do today until the setting is changed.
 
 *Open questions for Syd*
 
-1. **With nothing of the right shape**, any photograph, or "No Photos found"?
-2. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
+1. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
    it get these now, or with the menubar app? And are these for widgets alone, and not the
    screensaver or the wallpaper?
 
