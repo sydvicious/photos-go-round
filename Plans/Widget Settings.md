@@ -277,11 +277,12 @@ widgets working as they do today until the setting is changed.
 - **They get their pictures from the agent, so the agent does the work.** Each asks
   `GET /v1/next` with its size in pixels (`PictureClient`), and the agent serves from one queue
   for every surface and shrinks the picture to fit. So the crop and the shape are the agent's,
-  and the surfaces say what they want with the size they already send. *Proposed.*
+  and the surfaces say what they want with the size they already send. Syd, 2026-10-25, chose
+  that over each surface cropping and picking for itself from a larger picture and a region.
 - **Fill is a picture made to cover, and cropped by the agent.** Asked to fill, the agent makes
   its resized copy to cover the box and crops it to the box's shape, toward faces or the subject,
   and keeps it as a resized copy of its own (`resized`, `ResizedCopies`) beside the fitted one.
-  The surface then draws it whole, as now. *Proposed.*
+  The surface then draws it whole, as now.
   - **The agent finds the crop region on the Mac, with no extension's limit.** Vision runs where
     the agent shrinks the photograph, and the region is kept with the photograph's size in its
     library, as for the widgets. The local model, if it is better, runs there too.
