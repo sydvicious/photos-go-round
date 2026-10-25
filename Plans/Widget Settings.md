@@ -298,7 +298,8 @@ widgets working as they do today until the setting is changed.
   one turned on its side is tall; a window is whatever it has been dragged to, asked again for
   each picture. Syd, 2026-10-25.
 - **Each has its own, as for every setting they have.** Syd, 2026-09-14: "the wallpaper,
-  screensaver, app window, and agents preferences should all be separate." *Proposed:*
+  screensaver, app window, and agents preferences should all be separate." Syd, 2026-10-25,
+  chose that over one setting all three follow:
   - **The screensaver and the wallpaper**: in their panels of the Settings window, under
     *Shuffle All*, stored in their own domains (`ScreensaverPreferences`,
     `WallpaperPreferences`), which the saver and the extension already read.
