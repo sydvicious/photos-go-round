@@ -97,8 +97,8 @@ widgets working as they do today until the setting is changed.
   for a long panorama: a 1:3 photograph covering a 2:1 widget is six times the widget's pixels
   before the crop. The guard that refuses a picture too large for an extension
   (`PictureResizer.refuseFromPhotosIfTooLarge`, `needsFromPhotos(fitting:)`) is asked about the
-  covering size. *Proposed:* a picture whose covering size the guard refuses is fitted instead,
-  rather than passed over.
+  covering size. A picture whose covering size the guard refuses is fitted instead, with black
+  around it, rather than passed over. Syd, 2026-10-25.
 - **The cache folders are named for it.** A picture made to fill is never shown fitted, or the
   other way round. A widget's folder becomes `systemMedium-300-fill`, and the preview's sized
   folder `1014x474-fill`. With the defaults the names stay as they are now, so the pictures
