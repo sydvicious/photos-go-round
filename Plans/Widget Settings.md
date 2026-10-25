@@ -6,8 +6,8 @@ square shows only photographs of roughly its shape:** landscape ones in a wide w
 ones in a tall one. Each is set in the app, for every widget, and in a widget's own Edit Widget
 panel, where it starts at "As in the app". Syd, 2026-10-25.
 
-**A plan.** Nothing here is built. A decision marked *proposed* is Claude's and waits for Syd;
-every other is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
+**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or agreed by him.
+What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -220,7 +220,8 @@ widgets working as they do today until the setting is changed.
   should take in an app that is on screen without the focus; what each device says in each case
   is not known. *TODO*.
 - **What the app learns is written as it is learned too**, so a widget woken while the app is in
-  front still has it. Losing focus is when whatever the app is holding is written. *Proposed.*
+  front still has it. Losing focus is when whatever the app is holding is written. Syd,
+  2026-10-25, chose that over writing only when it loses focus.
 
 *Where the settings go in the app*
 
