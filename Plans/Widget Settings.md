@@ -54,6 +54,9 @@ widgets working as they do today until the setting is changed.
 
 *Fit or fill*
 
+- **Fit is the whole photograph with black around it, and Fill is no black with the edges
+  cropped.** Those are the words for the control. Syd, 2026-10-25, of "crop vs fill": "Yes that is
+  what I meant", and "Fit and fill are better terms".
 - **Fit stays the default.** A photograph is fitted whole with black around it "as everywhere
   else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
   on as it was. *Proposed.*
@@ -141,15 +144,13 @@ widgets working as they do today until the setting is changed.
 
 *Open questions for Syd*
 
-1. **"Crop vs fill."** Read here as *fit* (whole, black around it) against *fill* (no black, edges
-   cropped). Is that right, and are those the words for the control?
-2. **How rough is "roughly"?** Which way the photograph is longer, as proposed, or nearer the
+1. **How rough is "roughly"?** Which way the photograph is longer, as proposed, or nearer the
    widget's own ratio? Is the large size on a phone square?
-3. **The app and Edit Widget.** The app's setting for every widget, and each widget able to
+2. **The app and Edit Widget.** The app's setting for every widget, and each widget able to
    override it, starting at "As in the app"?
-4. **Where in the app**, if not a section under the lists.
-5. **With nothing of the right shape**, any photograph, or "No Photos found"?
-6. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
+3. **Where in the app**, if not a section under the lists.
+4. **With nothing of the right shape**, any photograph, or "No Photos found"?
+5. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
    it get these now, or with the menubar app? And are these for widgets alone, and not the
    screensaver or the wallpaper?
 
