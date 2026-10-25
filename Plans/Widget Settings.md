@@ -1,13 +1,15 @@
 # Summary
 
-Two new settings for the iOS and Mac widgets. **How a photograph sits in a widget:** *Fit*, whole
-with black around it, as today, or *Fill*, with its edges cropped toward faces or the subject. **Whether a widget that is not
-square shows only photographs of roughly its shape:** landscape ones in a wide widget, portrait
-ones in a tall one. Each is set in the app, for every widget, and in a widget's own Edit Widget
-panel, where it starts at "As in the app". Syd, 2026-10-25.
+Two new settings for the iOS and Mac widgets, and the Mac's wallpaper, screensaver and app
+windows. **How a photograph sits:** *Fit*, whole with black around it, as today, or *Fill*, with
+its edges cropped toward faces or the subject. **Whether a place that is not square shows only
+photographs of roughly its shape:** landscape ones where it is wide, portrait ones where it is
+tall. For the widgets, each is set in the app, for every widget, and in a widget's own Edit
+Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper, the screensaver
+and the windows: *The wallpaper, the screensaver and the windows*.
 
-**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or agreed by him.
-What is still to be found out is under *TODO*.
+**A plan.** Nothing here is built. A decision marked *proposed* is Claude's and waits for Syd;
+every other is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -51,6 +53,13 @@ widgets working as they do today until the setting is changed.
   - The Mac widget draws and fetches by the settings, through the same TinyCache sources.
   - The Mac widget gets an Edit Widget panel: *Change Every*, and the two settings at "As in the
     app".
+- **Phase 5** — The wallpaper, the screensaver and the windows. *The wallpaper, the screensaver
+  and the windows*.
+  - The agent keeps each photograph's size, and its crop region, in its library.
+  - The agent serves a picture to fill when asked, cropped toward faces or the subject.
+  - The agent serves a picture of the asker's shape when asked, from what is queued.
+  - The two settings in the Settings window's *Screensaver* and *Wallpaper* panels, and in
+    Window Settings.
 
 # TODO
 
@@ -154,8 +163,8 @@ widgets working as they do today until the setting is changed.
   known and fills as pictures are seen. Unknown is not a size of none.
 - **In the agent's library:** a new schema version adds two columns to `photo`, `pixel_width` and
   `pixel_height`, empty until known, so no library is scanned again. A walk of Photos already
-  has each asset's size, so a walk fills them for the photographs it passes. Nothing in the
-  agent picks by shape yet; the wallpaper and the screensaver are not in this plan.
+  has each asset's size, so a walk fills them for the photographs it passes. The wallpaper, the
+  screensaver and the windows pick by them (*The wallpaper, the screensaver and the windows*).
 - **The widgets' store is in the App Group**, so the app and the extensions share it, on iOS and
   on the Mac. What a pick reads once, it does not read again; and a file in iCloud Drive that the
   app has read is a known shape to a widget that cannot read it. Each picture is known by its
@@ -235,9 +244,9 @@ widgets working as they do today until the setting is changed.
 
 *On the Mac*
 
-- **The iOS and Mac widgets both, and nothing else.** Not the screensaver or the wallpaper. Syd,
-  2026-10-25, chose that over the iOS widgets alone with the Mac's to come with the menubar app,
-  and over every product that shows pictures.
+- **The iOS and Mac widgets both.** Syd, 2026-10-25, chose that over the iOS widgets alone with
+  the Mac's to come with the menubar app. The wallpaper, the screensaver and the windows came
+  later the same day: *The wallpaper, the screensaver and the windows*.
 - **The Mac gets both places, as iOS does: the app, and Edit Widget.** Syd, 2026-10-25, chose that
   over the Mac app's setting alone with the widget's own to come with the menubar app.
 - **The Mac app's setting is in its Settings window**, in a *Pictures* section above the sources,
@@ -261,9 +270,50 @@ widgets working as they do today until the setting is changed.
 - **Building `Photos-Go-Round` registers the widget**, as `CLAUDE.md` says; a build to try the
   panel is unregistered afterwards.
 
+*The wallpaper, the screensaver and the windows*
+
+- **They get both settings too.** Syd, 2026-10-25: "Add this to wallpaper and screensavers and
+  application windows as well."
+- **They get their pictures from the agent, so the agent does the work.** Each asks
+  `GET /v1/next` with its size in pixels (`PictureClient`), and the agent serves from one queue
+  for every surface and shrinks the picture to fit. So the crop and the shape are the agent's,
+  and the surfaces say what they want with the size they already send. *Proposed.*
+- **Fill is a picture made to cover, and cropped by the agent.** Asked to fill, the agent makes
+  its resized copy to cover the box and crops it to the box's shape, toward faces or the subject,
+  and keeps it as a resized copy of its own (`resized`, `ResizedCopies`) beside the fitted one.
+  The surface then draws it whole, as now. *Proposed.*
+  - **The agent finds the crop region on the Mac, with no extension's limit.** Vision runs where
+    the agent shrinks the photograph, and the region is kept with the photograph's size in its
+    library, as for the widgets. The local model, if it is better, runs there too.
+- **The shape is picked from what is queued.** Asked for a shape, the agent serves the first
+  queued photograph of it, by the sizes kept in its library, and the first of any shape when none
+  is. A photograph whose size is not yet known is taken as the right shape, as for the widgets.
+  *Proposed.*
+  - **What is queued is a few photographs and not the library**, so a shape that is rare in the
+    library is often not in the queue, and any shape is served. Whether the queue should be dealt
+    with the shapes asked for in mind is for when it has been watched. *TODO*.
+- **A screen or a window is square, wide or tall by its size, with the photographs' rule:**
+  square when its long side is less than 1.2 times its short side. Almost every display is wide;
+  one turned on its side is tall; a window is whatever it has been dragged to, asked again for
+  each picture. *Proposed.*
+- **Each has its own, as for every setting they have.** Syd, 2026-09-14: "the wallpaper,
+  screensaver, app window, and agents preferences should all be separate." *Proposed:*
+  - **The screensaver and the wallpaper**: in their panels of the Settings window, under
+    *Shuffle All*, stored in their own domains (`ScreensaverPreferences`,
+    `WallpaperPreferences`), which the saver and the extension already read.
+  - **A window**: in its Window Settings sheet, a copy of the screensaver's taken when the
+    window is made and never stored, as its *Shuffle All* is. Syd, 2026-09-14, of the interval:
+    "the app window will read the current screensaver internal when it is created, and it will
+    stay there with its own copy of the setting".
+- **The pan.** A fitted photograph slides through its own black (`Pan`). A filled one has no
+  black to slide through. *Proposed:* a filled photograph sits still.
+- **The defaults are Fit, and any shape**, so the screensaver, the wallpaper and the windows look
+  as they do today until the settings are changed. *Proposed.*
+
 *Open questions for Syd*
 
-None left. Syd answered each, 2026-10-25.
+Those marked *proposed* under *The wallpaper, the screensaver and the windows*, to be asked one
+at a time.
 
 # Background
 
