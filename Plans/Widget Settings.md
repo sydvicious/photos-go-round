@@ -289,7 +289,7 @@ widgets working as they do today until the setting is changed.
 - **The shape is picked from what is queued.** Asked for a shape, the agent serves the first
   queued photograph of it, by the sizes kept in its library, and the first of any shape when none
   is. A photograph whose size is not yet known is taken as the right shape, as for the widgets.
-  *Proposed.*
+  Syd, 2026-10-25, chose that over dealing the queue by shape from the start.
   - **What is queued is a few photographs and not the library**, so a shape that is rare in the
     library is often not in the queue, and any shape is served. Whether the queue should be dealt
     with the shapes asked for in mind is for when it has been watched. *TODO*.
