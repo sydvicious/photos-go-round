@@ -296,7 +296,7 @@ widgets working as they do today until the setting is changed.
 - **A screen or a window is square, wide or tall by its size, with the photographs' rule:**
   square when its long side is less than 1.2 times its short side. Almost every display is wide;
   one turned on its side is tall; a window is whatever it has been dragged to, asked again for
-  each picture. *Proposed.*
+  each picture. Syd, 2026-10-25.
 - **Each has its own, as for every setting they have.** Syd, 2026-09-14: "the wallpaper,
   screensaver, app window, and agents preferences should all be separate." *Proposed:*
   - **The screensaver and the wallpaper**: in their panels of the Settings window, under
