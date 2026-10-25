@@ -220,3 +220,4 @@ curl -sS -H "$AUTH" -X PATCH "http://localhost:$PORT/v1/sources/<uuid>" -H 'Cont
 - [`Documentation/Wallpaper Extension.md`](Documentation/Wallpaper%20Extension.md) —
   checking the wallpaper extension once it is installed: registration, the
   gates, the logs.
+
