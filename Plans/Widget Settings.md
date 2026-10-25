@@ -6,8 +6,8 @@ square shows only photographs of roughly its shape:** landscape ones in a wide w
 ones in a tall one. Each is set in the app, for every widget, and in a widget's own Edit Widget
 panel, where it starts at "As in the app". Syd, 2026-10-25.
 
-**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or
-agreed by him; what is still to be found out is under *TODO*.
+**A plan.** Nothing here is built. A decision marked *proposed* is Claude's and waits for Syd;
+every other is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -31,6 +31,8 @@ widgets working as they do today until the setting is changed.
   - A filled picture is fetched to cover the widget and cropped to it when it is written, so the
     file is the widget's shape at its pixels. *The crop is made when the picture is written*.
   - Cropped about the middle first; then toward faces, or else the subject. *Fit or fill*.
+  - Whether a local model finds faces or the subject better than Vision, looked into apart from
+    the build. *A local model for the crop*.
   - The cache folders are named for the setting.
   - A control for it on the settings screen. *Where the settings go in the app*.
 - **Phase 2** — Matching the widget's shape, set in the app. *Matching the widget's shape*.
@@ -38,6 +40,8 @@ widgets working as they do today until the setting is changed.
   - Photos: picking among the photographs of the right shape.
   - Files and folders: the same, from what a file's header says of its size.
   - With none of the right shape, any photograph.
+  - Each picture's size kept once it is learned, in the widgets' store and the agent's library.
+    *Picture sizes, kept*.
 - **Phase 3** — Each widget's own. *In Edit Widget*.
   - Two settings in `PhotoWidgetSettings`, each starting at "As in the app".
   - The widget's cache folder and the clearing away go by them.
@@ -50,6 +54,9 @@ widgets working as they do today until the setting is changed.
 
 # TODO
 
+- Look into a local model for faces or the subject. *A local model for the crop*.
+- Find out what the app is told on an iPad, and on the iPhone Duo, when it is on screen and not
+  in focus, and when the Duo's cover closes. *When the app gives up focus*.
 - Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
   30 MB. *Fit or fill*.
 - Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
@@ -136,6 +143,43 @@ widgets working as they do today until the setting is changed.
   the shape it is shown at. Whether Photos' `pixelWidth` and `pixelHeight` already are is not
   known; *TODO*.
 
+*Picture sizes, kept*
+
+- **Each picture's size is kept once it is learned, in the agent's library and in a store of the
+  widgets' own.** Syd, 2026-10-25: "It might be good to store picture dimensions in the
+  database. This can happen on the fly with existing databases", and then both, over the
+  widgets' store alone and the agent's library alone.
+- **Filled on the fly.** Nothing walks a library ahead to fill them: a size is written when a pick
+  learns it, from a `PHAsset` or a file's header. An existing library or store starts with none
+  known and fills as pictures are seen. Unknown is not a size of none.
+- **In the agent's library:** a new schema version adds two columns to `photo`, `pixel_width` and
+  `pixel_height`, empty until known, so no library is scanned again. A walk of Photos already
+  has each asset's size, so a walk fills them for the photographs it passes. Nothing in the
+  agent picks by shape yet; the wallpaper and the screensaver are not in this plan.
+- **The widgets' store is in the App Group**, so the app and the extensions share it, on iOS and
+  on the Mac. What a pick reads once, it does not read again; and a file in iCloud Drive that the
+  app has read is a known shape to a widget that cannot read it. Each picture is known by its
+  source's name, as in the counts, and its own: a Photos identifier, or a file's path in its
+  folder.
+  - **SQLite, *proposed*,** since the app and an extension may write at once, and a library holds
+    tens of thousands of pictures, which a JSON file like `counts.json` would be read whole for.
+    The agent's `Database` is in `PhotosGoRoundKit`, on the Mac alone; whether it moves to the
+    shared code or the store has its own is to be decided when it is built.
+- **The crop found for a picture is kept with its size.** Faces and the subject are the picture's
+  and not the widget's, so a region found once, kept as fractions of the picture, serves every
+  widget, and Vision runs once for each picture. *Proposed.*
+
+*A local model for the crop*
+
+- **To be looked into: a local model finding faces or the subject.** Syd, 2026-10-25: "We should
+  investigate using local LLM to find faces or subject". Vision is the plan until then.
+- **Not in a widget.** An extension is held to 30 MB, which no model of that kind fits in. It
+  would run in the app, or the Mac's agent, ahead of a widget, and the region it finds would be
+  kept with the picture's size for the widget to read.
+- **What to compare, against Vision:** how well it frames, how long it takes, the memory, and the
+  battery. What on-device models there are to try, and whether Apple's own takes pictures on
+  iOS 27, is not known.
+
 *In Edit Widget*
 
 - **Each setting is a menu with "As in the app" first, and it is the default.** The app cannot
@@ -160,6 +204,20 @@ widgets working as they do today until the setting is changed.
     the sources change (`WidgetFolderBookmark.swift`). Syd, 2026-10-25, chose that over reloading
     when the Settings window closes.
 - **The preview follows the app's settings.** It cannot know a placed widget's own.
+
+*When the app gives up focus*
+
+- **When the app gives up focus, the widgets are reloaded and what the app has learned is
+  written to the widgets' store.** Syd, 2026-10-25: "We may need to update when app surrenders
+  focus", and then both, adding "Have to worry about this on Duo and iPad as well". On the Mac
+  it is as well as the reload at once.
+- **Giving up focus is not leaving the screen.** On an iPad the app can be in Split View or
+  Stage Manager beside another that has the focus, and on the iPhone Duo its cover can close.
+  The reload today goes by the scene's phase being anything but active (`WidgetsApp.swift`), which
+  should take in an app that is on screen without the focus; what each device says in each case
+  is not known. *TODO*.
+- **What the app learns is written as it is learned too**, so a widget woken while the app is in
+  front still has it. Losing focus is when whatever the app is holding is written. *Proposed.*
 
 *Where the settings go in the app*
 
