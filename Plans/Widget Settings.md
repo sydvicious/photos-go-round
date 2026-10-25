@@ -7,7 +7,7 @@ ones in a tall one. Each is set in the app, for every widget, and in a widget's 
 panel, where it starts at "As in the app". Syd, 2026-10-25.
 
 **An outline.** Nothing here is built. Where a decision is marked *proposed*, it is Claude's
-reading and waits for Syd; the open questions are at the end of *Design Decisions*.
+reading and waits for Syd.
 
 # Rationale
 
@@ -44,11 +44,12 @@ widgets working as they do today until the setting is changed.
   - The *Pictures* section in the Mac app's Settings window, stored where the Mac widget already
     reads the sources.
   - The Mac widget draws and fetches by the settings, through the same TinyCache sources.
-  - The Mac widget gets an Edit Widget panel, with the same two settings at "As in the app".
+  - The Mac widget gets an Edit Widget panel: *Change Every*, and the two settings at "As in the
+    app".
 
 # TODO
 
-- Every *proposed* decision below, and the open questions, for Syd.
+- Every *proposed* decision below, for Syd.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
   *Picking among Photos*.
 - Find out whether `PHAsset.pixelWidth` and `pixelHeight` are the photograph as shown or as
@@ -162,8 +163,11 @@ widgets working as they do today until the setting is changed.
   as on iOS. It is stored in the Mac app's preferences, whose domain carries the build variant,
   which is where the Mac widget already reads the sources (`Settings.sources()`). *Proposed.*
 - **The Mac widget moves from `StaticConfiguration` to `AppIntentConfiguration`**, with a settings
-  type of its own whose two parameters are the iOS one's. The two enums are shared, in a target
-  both extensions take, so their names and cases cannot drift apart. *Proposed.*
+  type of its own whose parameters are the iOS one's. The enums are shared, in a target both
+  extensions take, so their names and cases cannot drift apart. *Proposed.*
+- **Its panel has *Change Every* as well, with the same durations as iOS.** The five minutes
+  hard-coded in `Settings.interval` goes. Syd, 2026-10-25, chose that over keeping five minutes
+  until the menubar app.
 - **Its cache is named for the settings too.** It is one folder for each size today
   (`TinyCache/systemMedium`); it becomes one for each size and resolved settings, as on iOS.
 - **The crop and the shape are TinyCache's**, in `PhotosSource`, `FolderSource` and
@@ -173,8 +177,7 @@ widgets working as they do today until the setting is changed.
 
 *Open questions for Syd*
 
-1. **The Mac's interval.** Whether *Change Every* comes to the Mac's Edit Widget panel with the
-   two settings, or stays at five minutes until the menubar app.
+None left. Syd answered each, 2026-10-25.
 
 # Background
 
