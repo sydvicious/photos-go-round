@@ -138,18 +138,18 @@ widgets working as they do today until the setting is changed.
 
 *Where the settings go in the app*
 
-- *Proposed:* a third section in the list under the preview, after *Files and Folders*, headed
-  *Pictures*: a two-way control, *Fit* and *Fill*, and a switch, *Match the widget's shape*. The
-  preview is just above, so a change is seen at once. The bar is left alone: its two groups only
-  just fit an iPad's narrowest window (*The screen: controls in the bar*). Where the lists are
-  beside the preview, the section is there too.
+- **A section first in the list, above *Photos* and *Files and Folders*, headed *Pictures*:** a
+  two-way control, *Fit* and *Fill*, and a switch, *Match the widget's shape*. Directly under the
+  preview, so a change is seen at once. Syd, 2026-10-25, chose that over the same section after
+  the lists and over a menu in the bar. The bar is left alone: its two groups only just fit an
+  iPad's narrowest window (*The screen: controls in the bar*). Where the lists are beside the
+  preview, the section is there too, first.
 - The switch says when it does nothing to the size the preview is showing.
 
 *Open questions for Syd*
 
-1. **Where in the app**, if not a section under the lists.
-2. **With nothing of the right shape**, any photograph, or "No Photos found"?
-3. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
+1. **With nothing of the right shape**, any photograph, or "No Photos found"?
+2. **The Mac.** Its widget has no Edit Widget panel yet and reads the Mac app's preferences. Does
    it get these now, or with the menubar app? And are these for widgets alone, and not the
    screensaver or the wallpaper?
 
