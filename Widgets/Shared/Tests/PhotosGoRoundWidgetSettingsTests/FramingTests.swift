@@ -47,6 +47,21 @@ struct FramingTests {
         #expect(chosen.framing == .fit)
     }
 
+    /// A widget's own choice in Edit Widget is stored by these names, and
+    /// read back through `Framing`; the names are kept once widgets are out.
+    @Test(
+        "Each is stored by the name a widget's own choice carries",
+        arguments: [(Framing.fit, "fit"), (.fill, "fill"), (.actualSize, "actual-size")])
+    func storedNames(_ framing: Framing, _ name: String) {
+        #expect(framing.rawValue == name)
+        #expect(Framing(rawValue: name) == framing)
+    }
+
+    @Test("A widget following the app is not one of the three")
+    func asInTheApp() {
+        #expect(Framing(rawValue: "as-in-the-app") == nil)
+    }
+
     @Test("Only Actual Size draws a small picture at its own size")
     func enlarges() {
         #expect(Framing.fit.enlarges)

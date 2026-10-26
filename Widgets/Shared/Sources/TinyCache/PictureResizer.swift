@@ -241,7 +241,7 @@ public struct PictureResizer: Sendable {
             let coveringNeeds = needs(
                 type: type, storedWidth: storedWidth, storedHeight: storedHeight,
                 fraction: Self.fraction(of: max(width, height), for: covering.longestSide, type: type),
-                inBands: inBands, wanted: covering, fitted: fitted)
+                inBands: inBands, wanted: covering, fitted: fitted, cropped: Self.cropped(covering, to: box))
             if let reading, let left = reading.left, coveringNeeds > left {
                 Log.widget.notice(
                     """
@@ -262,7 +262,7 @@ public struct PictureResizer: Sendable {
         let fraction = Self.fraction(of: max(width, height), for: longestSide, type: type)
         let needed = needs(
             type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction,
-            inBands: inBands, wanted: wanted, fitted: fitted)
+            inBands: inBands, wanted: wanted, fitted: fitted, cropped: fills ? Self.cropped(wanted, to: box) : nil)
         try refuseIfTooLarge(
             original, type: type, storedWidth: storedWidth, storedHeight: storedHeight, needing: needed,
             with: reading, named: named, taken: taken)
@@ -304,11 +304,10 @@ public struct PictureResizer: Sendable {
             }
             image = whole
             // Cropped from what came back, which may be a pixel or so from
-            // the size asked for. The crop shares the picture's pixels, so
-            // nothing more is held.
+            // the size asked for.
             if fills {
                 let middle = Self.middle(ofWidth: whole.width, height: whole.height, shapedLike: box)
-                guard let cropped = whole.cropping(to: middle) else { throw Failure.notAPicture(original) }
+                guard let cropped = Self.drawn(whole, cutTo: middle) else { throw Failure.notAPicture(original) }
                 image = cropped
             }
         }
@@ -361,20 +360,53 @@ public struct PictureResizer: Sendable {
             height: croppedHeight)
     }
 
+    /// The size of the middle of a picture `sized` in `box`'s shape.
+    static func cropped(_ sized: Sized, to box: CGSize) -> Sized {
+        let middle = middle(ofWidth: sized.width, height: sized.height, shapedLike: box)
+        return Sized(width: Int(middle.width), height: Int(middle.height))
+    }
+
+    /// The part of `image` in `rect`, counted from its top left, drawn into a
+    /// bitmap of its own.
+    ///
+    /// **Drawn, and not cut with `cropping(to:)`.** On iOS a HEIC from Photos,
+    /// shrunk in one piece and then cut, came out at the size of the cut but
+    /// showed a part of the photograph at its full size: a quarter of its
+    /// width, enlarged. On *Claude iPhone*, 2026-10-25; the Mac cut the same
+    /// picture right. So the crop costs a bitmap of its size, as `needs` says.
+    static func drawn(_ image: CGImage, cutTo rect: CGRect) -> CGImage? {
+        let colours =
+            image.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil }
+            ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        guard
+            let context = CGContext(
+                data: nil, width: Int(rect.width), height: Int(rect.height), bitsPerComponent: 8,
+                bytesPerRow: 0, space: colours, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+        else { return nil }
+        // The rect is counted from the picture's top left, and a bitmap from
+        // its bottom left.
+        context.draw(
+            image,
+            in: CGRect(
+                x: -rect.minX, y: -(Double(image.height) - rect.maxY), width: Double(image.width),
+                height: Double(image.height)))
+        return context.makeImage()
+    }
+
     /// What a shrink is reckoned to need, for a picture made to cover as well
     /// as one made to fit.
     ///
-    /// **In one piece, a picture made to cover is decoded whole before it is
-    /// cropped**, so it needs what it holds beyond the fitted one. **In bands
-    /// only the crop is drawn**, which is no larger than the box, as the
-    /// largest fitted picture already is.
+    /// **In one piece, a picture made to cover is decoded whole and its crop
+    /// drawn into a bitmap of its own**, so it needs what it holds beyond the
+    /// fitted one, and the crop. **In bands only the crop is drawn**, which is
+    /// no larger than the box, as the largest fitted picture already is.
     func needs(
         type: String, storedWidth: Double, storedHeight: Double, fraction: Int, inBands: Bool,
-        wanted: Sized, fitted: Sized
+        wanted: Sized, fitted: Sized, cropped: Sized? = nil
     ) -> Int64 {
         let fitting = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
         guard !inBands, wanted.pixels > fitted.pixels else { return fitting }
-        return fitting + Int64(wanted.pixels - fitted.pixels) * 4
+        return fitting + Int64(wanted.pixels - fitted.pixels + (cropped?.pixels ?? 0)) * 4
     }
 
     /// About how much a fetch adds to what the process holds, at its most,

@@ -8,9 +8,10 @@ tall. For the widgets, each is set in the app, for every widget, and in a widget
 Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper, the screensaver
 and the windows: *The wallpaper, the screensaver and the windows*.
 
-**A plan, with Phase 1 written.** Phase 1 is on the branch and not yet built or run: it was written
-where there is no Swift to build it with, so Syd's Xcode is the first to compile it. Every decision
-in the plan is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
+**A plan, with Phase 1 and part of Phase 3 built.** Fit, Fill and Actual Size are set in the app,
+and on iOS in each widget's Edit Widget too. They work on *Claude iPhone* and in Syd's simulator,
+cropping about the middle; not yet tried on a phone. Every decision in the plan is Syd's,
+2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -28,8 +29,8 @@ photograph fill it. Together, a wide widget shows landscape photographs edge to 
 Each phase is small enough to try on a phone before the next is started, and each leaves the
 widgets working as they do today until the setting is changed.
 
-- **Phase 1** — Fit, Fill and Actual Size, set in the app. *Fit or fill*. Written 2026-10-26;
-  to be built and tried.
+- **Phase 1** — Fit, Fill and Actual Size, set in the app. *Fit or fill*. Built and tried in
+  simulators, 2026-10-25; to be tried on a phone.
   - The setting is stored in the App Group's preferences, which the extension already reads
     (`Preferences.widgetFraming`, `Framing`).
   - A filled picture is fetched to cover the widget and cropped to it when it is written, so the
@@ -55,7 +56,8 @@ widgets working as they do today until the setting is changed.
     the caches to the App Group, and in the agent's library.
     *Picture sizes, kept*.
 - **Phase 3** — Each widget's own. *In Edit Widget*.
-  - Two settings in `PhotoWidgetSettings`, each starting at "As in the app".
+  - Two settings in `PhotoWidgetSettings`, each starting at "As in the app". Fit or fill is built
+    for iOS (`framing`, *Pictures*); the shape's comes with Phase 2.
   - The widget's cache folder and the clearing away go by them.
 - **Phase 4** — The Mac. *On the Mac*.
   - The *Pictures* section in the Mac app's Settings window, stored where the Mac widget already
@@ -78,6 +80,8 @@ widgets working as they do today until the setting is changed.
   in focus, and when the Duo's cover closes. *When the app gives up focus*.
 - Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
   30 MB. *Fit or fill*.
+- Find why filling a HEIC in one piece peaks near 30 MB on *Claude iPhone*. `TODO.md`, *The iOS
+  app*.
 - Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
   *On the Mac*.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
@@ -125,6 +129,10 @@ widgets working as they do today until the setting is changed.
 - **Photos:** asked with `.aspectFill` instead of `.aspectFit` at the widget's size
   (`SystemPhotoLibraryPictures.request`), then cropped.
 - **Files:** `PictureResizer` shrinks to cover and not to fit, then crops.
+- **The crop is drawn into a bitmap of its own, not cut with `cropping(to:)`.** On *Claude
+  iPhone*, 2026-10-25, a HEIC from Photos shrunk in one piece and cut that way showed a quarter of
+  the photograph's width, enlarged; the Mac cut it right. Drawing costs a bitmap the crop's size,
+  which the guard counts.
 - **What covering costs.** Covering a widget takes more pixels than fitting it, and with no limit
   for a long panorama: a 1:3 photograph covering a 2:1 widget is six times the widget's pixels
   before the crop. The guard that refuses a picture too large for an extension
@@ -231,7 +239,8 @@ widgets working as they do today until the setting is changed.
   places" can only be the app's setting, and a widget's own choice when it has made one. Syd,
   2026-10-25, chose that over each widget's setting alone with the app's only for its preview,
   and over the app's alone for now.
-  - Fit or fill: *As in the app*, *Fit*, *Fill*, *Actual Size*.
+  - Fit or fill: *As in the app*, *Fit*, *Fill*, *Actual Size*. Titled *Pictures*, as the app's
+    section is; the name is Claude's.
   - The shape: *As in the app*, *Any shape*, *The widget's shape*.
 - **Their names are kept once widgets are out.** A widget whose settings type has changed stops
   reloading (*The trial, and what was built*), so the two parameters, like `every`, keep their
@@ -266,7 +275,8 @@ widgets working as they do today until the setting is changed.
 *Where the settings go in the app*
 
 - **A section first in the list, above *Photos* and *Files and Folders*, headed *Pictures*:** a
-  two-way control, *Fit* and *Fill*, and a switch, *Match the widget's shape*. Directly under the
+  three-way control, *Fit*, *Fill* and *Actual Size*, and, with Phase 2, a switch, *Match the
+  widget's shape*. Directly under the
   preview, so a change is seen at once. Syd, 2026-10-25, chose that over the same section after
   the lists and over a menu in the bar. The bar is left alone: its two groups only just fit an
   iPad's narrowest window (*The screen: controls in the bar*). Where the lists are beside the

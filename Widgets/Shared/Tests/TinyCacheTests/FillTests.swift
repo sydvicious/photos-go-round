@@ -1,7 +1,9 @@
 import CoreGraphics
 import Foundation
+import ImageIO
 import PhotosGoRoundAgentAPI
 import Testing
+import UniformTypeIdentifiers
 
 @testable import TinyCache
 
@@ -61,6 +63,49 @@ struct FillTests {
         let size = try #require(pixelSize(of: resized))
         #expect(size.width == 200)
         #expect(size.height == 400)
+    }
+
+    /// A picture of four by four squares, each its own colour, filling a wide
+    /// box and a tall one. What is written is the middle of the picture: its
+    /// whole width in the wide box, its whole height in the tall one.
+    ///
+    /// **Which part, and not only what size.** A HEIC from Photos, shrunk in
+    /// one piece, was written at the box's size and showed a small part of
+    /// the photograph, much enlarged. On *Claude iPhone*, 2026-10-25.
+    @Test(
+        "What is written is the middle of the picture, whatever its kind and however it is shrunk",
+        arguments: [
+            ("photo.heic", 4032, 3024), ("photo.jpg", 4032, 3024), ("photo.png", 800, 600),
+            ("photo.png", 3000, 2250),
+        ])
+    func middleIsWritten(_ name: String, _ width: Int, _ height: Int) throws {
+        let scratch = try ScratchFolder()
+        let original = scratch.url.appending(path: name)
+        try writeGrid(to: original, width: width, height: height)
+
+        // Wide: 4 by 3 covering 2 by 1 keeps rows from a sixth to five
+        // sixths of the way down, and every column.
+        let wide = scratch.url.appending(path: "wide.jpg")
+        try filling.write(original, fitting: CGSize(width: 800, height: 400), to: wide)
+        for (across, column) in [(0.125, 0), (0.375, 1), (0.625, 2), (0.875, 3)] {
+            for (down, row) in [(0.05, 0), (0.3125, 1), (0.6875, 2), (0.95, 3)] {
+                let found = try square(in: wide, across: across, down: down)
+                #expect(
+                    found == Square(column: column, row: row), "wide, \(across) across and \(down) down: \(found)")
+            }
+        }
+
+        // Tall: 4 by 3 covering 1 by 2 keeps the middle 3/8 of its width,
+        // from 0.31 to 0.69 across, and every row.
+        let tall = scratch.url.appending(path: "tall.jpg")
+        try filling.write(original, fitting: CGSize(width: 200, height: 400), to: tall)
+        for (across, column) in [(0.05, 1), (0.95, 2)] {
+            for (down, row) in [(0.125, 0), (0.375, 1), (0.625, 2), (0.875, 3)] {
+                let found = try square(in: tall, across: across, down: down)
+                #expect(
+                    found == Square(column: column, row: row), "tall, \(across) across and \(down) down: \(found)")
+            }
+        }
     }
 
     @Test("A picture smaller than the box is cropped to its shape at its own size, not enlarged")
@@ -133,22 +178,26 @@ struct FillTests {
                 == CGRect(x: 0, y: 0, width: 1014, height: 474))
     }
 
-    @Test("A covering picture decoded in one piece is reckoned at what it holds beyond the fitted one")
+    /// Covering 900 by 100 with 900 by 900: 800,000 pixels beyond the fitted
+    /// picture, and the crop, 90,000, drawn into a bitmap of its own.
+    @Test(
+        "A covering picture decoded in one piece is reckoned at what it holds beyond the fitted one, and its crop")
     func coveringNeedsMore() {
         let resizer = PictureResizer()
         let fitted = PictureResizer.Sized(width: 100, height: 100)
         let covering = PictureResizer.Sized(width: 900, height: 900)
+        let crop = PictureResizer.Sized(width: 900, height: 100)
         let fitting = resizer.needs(type: "public.png", storedWidth: 900, storedHeight: 900, fraction: 1)
 
         #expect(
             resizer.needs(
                 type: "public.png", storedWidth: 900, storedHeight: 900, fraction: 1, inBands: false,
-                wanted: covering, fitted: fitted) == fitting + 800_000 * 4)
+                wanted: covering, fitted: fitted, cropped: crop) == fitting + 800_000 * 4 + 90_000 * 4)
         // In bands only the crop is drawn, so it needs what fitting does.
         #expect(
             resizer.needs(
                 type: "public.png", storedWidth: 900, storedHeight: 900, fraction: 1, inBands: true,
-                wanted: covering, fitted: fitted) == fitting)
+                wanted: covering, fitted: fitted, cropped: crop) == fitting)
     }
 
     @Test("The line before a fill says what it is cropped to")
@@ -161,3 +210,69 @@ struct FillTests {
                 + "reckoned at 14 MB")
     }
 }
+
+/// Which of the grid's squares a colour is: red counts the columns and green
+/// the rows. Each is one of four levels, kept off black and full colour so
+/// that compressing the picture never moves one level into the next.
+struct Square: Equatable, CustomStringConvertible {
+    let column: Int
+    let row: Int
+
+    var description: String { "column \(column), row \(row)" }
+}
+
+/// Writes a picture of four by four squares, counted from the top left, each
+/// told apart by its red and green. A HEIC, a PNG or a JPEG by its name.
+func writeGrid(to file: URL, width: Int, height: Int) throws {
+    guard
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { throw PictureNotWritten() }
+    let side = (width: Double(width) / 4, height: Double(height) / 4)
+    for column in 0..<4 {
+        for row in 0..<4 {
+            context.setFillColor(
+                CGColor(red: level(column), green: level(row), blue: 0.5, alpha: 1))
+            // A bitmap counts up from its bottom row.
+            context.fill(
+                CGRect(
+                    x: Double(column) * side.width, y: Double(3 - row) * side.height, width: side.width,
+                    height: side.height))
+        }
+    }
+    let type = UTType(filenameExtension: file.pathExtension.lowercased()) ?? .jpeg
+    guard
+        let image = context.makeImage(),
+        let destination = CGImageDestinationCreateWithURL(file as CFURL, type.identifier as CFString, 1, nil)
+    else { throw PictureNotWritten() }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else { throw PictureNotWritten() }
+}
+
+/// The grid square at a point of the picture in `file`, given as fractions of
+/// its width and height from the top left.
+func square(in file: URL, across: Double, down: Double) throws -> Square {
+    guard
+        let source = CGImageSourceCreateWithURL(file as CFURL, nil),
+        let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+        let context = CGContext(
+            data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+            bytesPerRow: image.width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { throw PictureNotWritten() }
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    guard let data = context.data else { throw PictureNotWritten() }
+    // A bitmap's first row in memory is its top one.
+    let x = min(image.width - 1, Int(across * Double(image.width)))
+    let y = min(image.height - 1, Int(down * Double(image.height)))
+    let pixel = data.advanced(by: y * image.width * 4 + x * 4).assumingMemoryBound(to: UInt8.self)
+    return Square(column: step(pixel[0]), row: step(pixel[1]))
+}
+
+/// One of four levels of a colour, from 0.15 to 0.85.
+func level(_ step: Int) -> Double { 0.15 + 0.7 * Double(step) / 3 }
+
+/// Which of the four levels a colour, read back, is nearest.
+func step(_ value: UInt8) -> Int { Int(((Double(value) / 255 - 0.15) / 0.7 * 3).rounded()) }

@@ -1,7 +1,8 @@
-// The Photos-Go-Round widget on iOS and iPadOS: one photograph, fitted inside
-// the widget, changed on a timeline. `Plans/PGR Widgets - iOS.md`.
+// The Photos-Go-Round widget on iOS and iPadOS: one photograph, fitted to the
+// widget or filling it, changed on a timeline. `Plans/PGR Widgets - iOS.md`.
 //
-// **Its one setting is how often it changes**: `PhotoWidgetSettings`.
+// **Its settings are how often it changes, and how its pictures sit in it**:
+// `PhotoWidgetSettings`.
 //
 // **It draws what the app's preview draws.** `WidgetFace` is the one view for
 // both, so what a person sees in the app is what lands on the Home Screen.

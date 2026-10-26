@@ -13,9 +13,10 @@
 // asks once for each different setting at each size, and not once for each
 // widget. `PhotoWidgetSettings`.
 //
-// **How a picture sits in the widget is the app's**, for every widget, read at
-// each wake as the sources are. A filled widget has a cache of its own.
-// `Plans/Widget Settings.md`.
+// **How a picture sits in the widget is the widget's own, or the app's**: one
+// left at "As in the app" follows what the app says, read at each wake as the
+// sources are. A filled widget has a cache of its own.
+// `Plans/Widget Settings.md`, *In Edit Widget*.
 
 import Foundation
 import OSLog
@@ -52,7 +53,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     }
 
     func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {
-        let wake = Wake(context, settings.every)
+        let wake = Wake(context, settings)
         let face = wake.pictures.last(
             from: wake.sources, fitting: wake.box, inGallery: context.isPreview)
         // What the gallery was given for each size, and whether the picture
@@ -93,7 +94,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     }
 
     func timeline(for settings: PhotoWidgetSettings, in context: Context) async -> Timeline<PhotoEntry> {
-        let wake = Wake(context, settings.every)
+        let wake = Wake(context, settings)
         let now = Date.now
         // Once for each reload, with the size the system handed the widget
         // and what the widget is set to.
@@ -102,7 +103,8 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(Log.widgetsTag, privacy: .public) timeline asked, \
             \(String(describing: context.family), privacy: .public), \
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
-            \(wake.sources.count) sources, every \(wake.every.rawValue) seconds
+            \(wake.sources.count) sources, every \(wake.every.rawValue) seconds, \
+            \(wake.framing.rawValue, privacy: .public)
             """)
 
         let turned = try? await Self.wakes.run {
@@ -150,16 +152,20 @@ struct PhotoTimeline: AppIntentTimelineProvider {
 extension PhotoTimeline {
     /// Clears away the caches of settings no placed widget has: a widget set
     /// to something else, or taken off the Home Screen, leaves its folder
-    /// behind.
+    /// behind. Each is named for what its settings come to, so a widget
+    /// following the app and one set to the same keep one folder.
     fileprivate static func clearAway() async {
         guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return }
-        let framing = Wake.preferences.widgetFraming
+        let app = Wake.preferences.widgetFraming
         var keeping: Set<String> = []
         for widget in placed where widget.kind == PhotoWidget.kind {
             // One whose settings cannot be read could be set to anything, so
             // nothing is cleared.
             guard let settings = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return }
-            keeping.insert(Wake.folder(for: widget.family, every: settings.every, framing: framing))
+            keeping.insert(
+                Wake.folder(
+                    for: widget.family, every: settings.every,
+                    framing: settings.framing.resolved(app: app)))
         }
         let kept = keeping
         wakes.detached {
@@ -189,13 +195,14 @@ private struct Wake: Sendable {
         Preferences(suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
     }
 
-    init(_ context: TimelineProviderContext, _ every: ChangeEvery) {
-        self.every = every
+    init(_ context: TimelineProviderContext, _ settings: PhotoWidgetSettings) {
+        every = settings.every
 
         let group = Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String
         let preferences = Self.preferences
         sources = preferences.sources.filter(\.enabled)
-        let framing = preferences.widgetFraming
+        // The widget's own choice, or the app's.
+        let framing = settings.framing.resolved(app: preferences.widgetFraming)
         self.framing = framing
 
         // The size the system hands a widget is the only place its real size

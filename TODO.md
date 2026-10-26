@@ -54,6 +54,16 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
   a long time. I suggest we call that closed."
 - **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
   narrowest window the two groups may not fit again. Not tried.
+- **Run the widgets' package tests on iOS, not only the Mac.** `TinyCache` and the widget
+  settings run on iOS, but `Package Tests` builds the Mac-only targets too and cannot build for
+  a simulator, so their tests have only ever run on the Mac. That let a Fill bug through, 2026-10-25:
+  a HEIC from Photos, shrunk in one piece and cut with `cropping(to:)`, was cropped right on
+  the Mac and wrong on *Claude iPhone*. Something like a scheme or test plan of the
+  iOS-capable test targets.
+- **A filled HEIC peaks near the extension's 30 MB.** On *Claude iPhone*, 2026-10-25, filling a
+  medium widget from a 4032 by 3024 HEIC, shrunk in one piece, was reckoned at 17 MB and peaked
+  at 30 to 32 MB; fitting the same photograph peaked at about 18. Find where the rest goes, and
+  measure it on a phone, which ends an extension past its limit.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
