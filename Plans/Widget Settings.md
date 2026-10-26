@@ -1,15 +1,16 @@
 # Summary
 
 Two new settings for the iOS and Mac widgets, and the Mac's wallpaper, screensaver and app
-windows. **How a photograph sits:** *Fit*, whole with black around it, as today, or *Fill*, with
-its edges cropped toward faces or the subject. **Whether a place that is not square shows only
+windows. **How a photograph sits:** *Fit*, whole with black around it, as today; *Fill*, with
+its edges cropped toward faces or the subject; or *Actual Size*, never drawn larger than it is. **Whether a place that is not square shows only
 photographs of roughly its shape:** landscape ones where it is wide, portrait ones where it is
 tall. For the widgets, each is set in the app, for every widget, and in a widget's own Edit
 Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper, the screensaver
 and the windows: *The wallpaper, the screensaver and the windows*.
 
-**A plan.** Nothing here is built. Every decision in it is Syd's, 2026-10-25, or agreed by him.
-What is still to be found out is under *TODO*.
+**A plan, with Phase 1 written.** Phase 1 is on the branch and not yet built or run: it was written
+where there is no Swift to build it with, so Syd's Xcode is the first to compile it. Every decision
+in the plan is Syd's, 2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -27,16 +28,24 @@ photograph fill it. Together, a wide widget shows landscape photographs edge to 
 Each phase is small enough to try on a phone before the next is started, and each leaves the
 widgets working as they do today until the setting is changed.
 
-- **Phase 1** — Fill, set in the app. *Fit or fill*.
-  - The setting is stored in the App Group's preferences, which the extension already reads.
-  - `WidgetFace` draws a picture fitted or filled; the preview and the widgets follow the setting.
+- **Phase 1** — Fit, Fill and Actual Size, set in the app. *Fit or fill*. Written 2026-10-26;
+  to be built and tried.
+  - The setting is stored in the App Group's preferences, which the extension already reads
+    (`Preferences.widgetFraming`, `Framing`).
   - A filled picture is fetched to cover the widget and cropped to it when it is written, so the
-    file is the widget's shape at its pixels. *The crop is made when the picture is written*.
-  - Cropped about the middle first; then toward faces, or else the subject. *Fit or fill*.
+    file is the widget's shape at its pixels, and `WidgetFace` draws it as it draws any picture.
+    *The crop is made when the picture is written*. At Actual Size, `WidgetFace` draws a picture
+    no larger than its own pixels.
+  - Cropped about the middle first (written); then toward faces, or else the subject (not yet).
+    *Fit or fill*.
   - Whether a local model finds faces or the subject better than Vision, looked into apart from
     the build. *A local model for the crop*.
-  - The cache folders are named for the setting.
-  - A control for it on the settings screen. *Where the settings go in the app*.
+  - The cache folders are named for the setting: `systemMedium-300-fill`, `1014x474-fill`. Fit and
+    Actual Size write the same pictures, and keep the folders there were before.
+  - A control for it on the settings screen, *Fit*, *Fill*, *Actual Size*, in a *Pictures* section
+    first in the list. *Where the settings go in the app*.
+  - **A RAW photograph from Photos is fitted, not filled**, in this phase: Photos draws it at the
+    size asked for (`SystemPhotoLibraryPictures`), and that drawing is not yet asked to cover.
 - **Phase 2** — Matching the widget's shape, set in the app. *Matching the widget's shape*.
   - What shape a widget is, from its size's name.
   - Photos: picking among the photographs of the right shape.
@@ -83,6 +92,11 @@ widgets working as they do today until the setting is changed.
 - **Fit is the whole photograph with black around it, and Fill is no black with the edges
   cropped.** Those are the words for the control. Syd, 2026-10-25, of "crop vs fill": "Yes that is
   what I meant", and "Fit and fill are better terms".
+- **A third choice, Actual Size: never drawn larger than it is.** Syd, 2026-10-25: "we should
+  also have an option not to expand the picture at all of it fits", and then a third choice over
+  a switch beside Fit and Fill. A photograph that fits is shown at its own size with black around
+  it; a larger one is shrunk to fit, as with Fit. So Fit and Actual Size write the same picture,
+  and differ only in how it is drawn. The name, *Actual Size*, is Claude's.
 - **Fit stays the default.** A photograph is fitted whole with black around it "as everywhere
   else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
   on as it was. Syd, 2026-10-25.
@@ -217,7 +231,7 @@ widgets working as they do today until the setting is changed.
   places" can only be the app's setting, and a widget's own choice when it has made one. Syd,
   2026-10-25, chose that over each widget's setting alone with the app's only for its preview,
   and over the app's alone for now.
-  - Fit or fill: *As in the app*, *Fit*, *Fill*.
+  - Fit or fill: *As in the app*, *Fit*, *Fill*, *Actual Size*.
   - The shape: *As in the app*, *Any shape*, *The widget's shape*.
 - **Their names are kept once widgets are out.** A widget whose settings type has changed stops
   reloading (*The trial, and what was built*), so the two parameters, like `every`, keep their

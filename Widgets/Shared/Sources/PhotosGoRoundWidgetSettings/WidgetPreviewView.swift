@@ -12,6 +12,7 @@
 // **A small slideshow.** Its picture changes by itself every few seconds, and
 // on a tap. It stops while the app is not in front.
 
+import PhotosGoRoundAgentAPI
 import PhotosGoRoundWidgetFace
 import SwiftUI
 
@@ -42,7 +43,8 @@ public struct WidgetPreviewView: View {
 
     public var body: some View {
         let face = face ?? model.content
-        WidgetFace(face)
+        // Drawn as the app frames the widgets' pictures.
+        WidgetFace(face, enlarges: model.framing.enlarges)
             .frame(width: model.size.width, height: model.size.height)
             .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
             .contentShape(Rectangle())

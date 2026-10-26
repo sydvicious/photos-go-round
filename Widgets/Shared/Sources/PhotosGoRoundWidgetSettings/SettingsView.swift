@@ -298,6 +298,22 @@ public struct SettingsView: View {
 
     private var lists: some View {
         List {
+            // How the photographs sit in every widget. First, directly under
+            // the preview, so a change is seen at once; Syd, 2026-10-25, over
+            // after the lists and over a menu in the bar. `Plans/Widget
+            // Settings.md`, *Where the settings go in the app*.
+            Section("Pictures") {
+                Picker(
+                    "Pictures",
+                    selection: Binding(get: { model.framing }, set: { model.framing = $0 })
+                ) {
+                    ForEach(Framing.allCases, id: \.self) { framing in
+                        Text(framing.title).tag(framing)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
             Section {
                 if model.photosAccessIsOff {
                     accessOff

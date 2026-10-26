@@ -207,6 +207,18 @@ public final class SettingsModel {
     /// time the lists are read.
     public let preview: PreviewModel
 
+    /// How the photographs sit in every widget: Fit, Fill or Actual Size.
+    /// Kept with the sources, and shown at once in the preview. The widgets
+    /// take a change when the person leaves the app, as they take a change
+    /// of sources. `Plans/Widget Settings.md`.
+    public var framing: Framing {
+        get { preview.framing }
+        set {
+            sources.frame(newValue)
+            preview.use(framing: newValue)
+        }
+    }
+
     private let sources: ChosenSources
     private let library: any PhotoLibrary
     /// What the collections sheet reads the library through. A new one each
@@ -450,6 +462,7 @@ public final class SettingsModel {
         // A source that is gone from the list takes its record with it.
         skipped?.keep(only: sources.filesAndFolders + sources.collections + [ChosenSources.selectedPhotos])
         lookForSkipped()
+        preview.use(framing: sources.framing)
         preview.show(sources.shown)
     }
 
