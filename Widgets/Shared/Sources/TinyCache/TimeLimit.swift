@@ -28,10 +28,13 @@ public struct TimedOut: Error, Equatable, LocalizedError, Sendable {
 }
 
 public enum TimeLimit {
-    /// How long Photos has to hand over one picture. Claude's figure,
-    /// 2026-10-11: a picture on the device comes back in well under a second,
-    /// and one fetched from iCloud has not been timed.
-    public static let forAPicture: Duration = .seconds(15)
+    /// How long Photos has to hand over one picture. A picture on the device
+    /// comes back in well under a second, and one from iCloud took 30 to 65
+    /// seconds on Syd's phone, 2026-10-25. It was 15 seconds, Claude's figure
+    /// of 2026-10-11, then 30, Syd's "double that 15s timeout", then 90 the
+    /// same night, when a photograph only in iCloud came to be waited for only
+    /// when none on the device was found: `PhotosSource`.
+    public static let forAPicture: Duration = .seconds(90)
 
     /// Runs `work` on a thread that may block, and gives its answer or what it
     /// threw. Throws `TimedOut` when `limit` passes first.

@@ -9,9 +9,10 @@ Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper
 and the windows: *The wallpaper, the screensaver and the windows*.
 
 **A plan, with Phase 1 and part of Phase 3 built.** Fit, Fill and Actual Size are set in the app,
-and on iOS in each widget's Edit Widget too. They work on *Claude iPhone* and in Syd's simulator,
-cropping about the middle; not yet tried on a phone. Every decision in the plan is Syd's,
-2026-10-25, or agreed by him. What is still to be found out is under *TODO*.
+and on iOS in each widget's Edit Widget too. On Syd's phone, a widget filled from a HEIC crops
+toward faces, or else the subject; a picture shrunk in bands is still cropped about the middle.
+Not yet tried on the iPad. Every decision in the plan is Syd's, 2026-10-25, or agreed by him.
+What is still to be found out is under *TODO*.
 
 # Rationale
 
@@ -29,16 +30,16 @@ photograph fill it. Together, a wide widget shows landscape photographs edge to 
 Each phase is small enough to try on a phone before the next is started, and each leaves the
 widgets working as they do today until the setting is changed.
 
-- **Phase 1** — Fit, Fill and Actual Size, set in the app. *Fit or fill*. Built and tried in
-  simulators, 2026-10-25; to be tried on a phone.
+- **Phase 1** — Fit, Fill and Actual Size, set in the app. *Fit or fill*. Built, and tried on
+  Syd's phone; to be tried on the iPad.
   - The setting is stored in the App Group's preferences, which the extension already reads
     (`Preferences.widgetFraming`, `Framing`).
   - A filled picture is fetched to cover the widget and cropped to it when it is written, so the
     file is the widget's shape at its pixels, and `WidgetFace` draws it as it draws any picture.
     *The crop is made when the picture is written*. At Actual Size, `WidgetFace` draws a picture
     no larger than its own pixels.
-  - Cropped about the middle first (written); then toward faces, or else the subject (not yet).
-    *Fit or fill*.
+  - Cropped toward faces, or else the subject, for a picture shrunk in one piece (built); for one
+    shrunk in bands, still about the middle. *Fit or fill*.
   - Whether a local model finds faces or the subject better than Vision, looked into apart from
     the build. *A local model for the crop*.
   - The cache folders are named for the setting: `systemMedium-300-fill`, `1014x474-fill`. Fit and
@@ -78,10 +79,13 @@ widgets working as they do today until the setting is changed.
 - Look into a local model for faces or the subject. *A local model for the crop*.
 - Find out what the app is told on an iPad, and on the iPhone Duo, when it is on screen and not
   in focus, and when the Duo's cover closes. *When the app gives up focus*.
-- Measure what Vision's two requests add to a widget extension's memory, on a phone, against its
-  30 MB. *Fit or fill*.
-- Find why filling a HEIC in one piece peaks near 30 MB on *Claude iPhone*. `TODO.md`, *The iOS
-  app*.
+- Try Fill on the iPad, whose widget is held to 30 MB: whether Vision ever fits there, and what
+  is fitted instead of filled. *Fit or fill*.
+- Decide how a picture shrunk in bands is cropped toward faces, when only its crop is ever drawn.
+  *Fit or fill*.
+- Decide whether the app's preview reckons against the device's own widget limit. Reckoned as a
+  30 MB widget, it fits a Large where the phone's widget fills, and never asks Vision. *Fit or
+  fill*.
 - Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
   *On the Mac*.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
@@ -106,16 +110,29 @@ widgets working as they do today until the setting is changed.
   on as it was. Syd, 2026-10-25.
 - **Fill crops toward faces, or else the subject.** Syd, 2026-10-25, chose that over cropping
   about the middle. How, as below, Syd agreed the same day:
-  - **Vision is asked of the covering picture, not the original.** It is already at the widget's
-    pixels, so what Vision holds is bounded by the widget and not by the photograph.
+  - **In the widget, at its wake.** A widget runs for months with the app never opened, so
+    nothing the app finds reaches the pictures a widget picks. Syd, 2026-10-25: "Normal use case
+    for a widget is that once it is setup, the app won't run again for months."
+  - **Vision is asked of the covering picture shrunk to 512 pixels on its long side**
+    (`CropFocus.shownToVision`). Syd, 2026-10-25, over asking it of the whole covering picture.
+    Vision answers in fractions, so the answer lies on the covering picture as it is. Asked of
+    the whole picture, the extension on Syd's phone found subjects and never faces, where the app
+    found faces in the same photographs; at 512 it found them.
   - **Faces first** (`VNDetectFaceRectanglesRequest`): the crop holds as many of them as it can,
-    centred on them. **With none, the subject** (`VNGenerateAttentionBasedSaliencyImageRequest`),
-    centred on its bounds. **With neither, the middle.**
+    centred on them, and of as many, the larger. **With none, the subject**
+    (`VNGenerateAttentionBasedSaliencyImageRequest`), centred on its bounds. **With neither, the
+    middle.** `CropFocus`.
   - **The crop is kept inside the picture**, so a face at an edge moves the crop to that edge and
     no further.
   - **Vision failing is the middle**, not a picture passed over.
-  - **Built after the middle.** The middle crop is tried on a phone first, and the faces and the
-    subject come next in the same phase.
+  - **Vision is asked only when it fits.** The guard counts it at 16 MB beyond the shrink
+    (`PictureResizer.visionNeeds`): on Syd's phone a fill from a HEIC added 8 to 26 MB with
+    Vision, and two processes were ended asking it on top of a large fill. When the shrink and
+    Vision do not fit in what is left, the crop is the middle.
+  - **Only for a picture shrunk in one piece.** One shrunk in bands has only its crop drawn, so
+    there is no covering picture to ask; it is cropped about the middle. *TODO*.
+  - **In a simulator, Vision runs on the CPU.** Left to choose, it failed there: "Could not create
+    inference context".
 - **One view still draws both.** `WidgetFace` takes the setting, so what the preview shows is
   what a widget shows, as Syd asked on 2026-10-09.
 
@@ -139,6 +156,10 @@ widgets working as they do today until the setting is changed.
   (`PictureResizer.refuseFromPhotosIfTooLarge`, `needsFromPhotos(fitting:)`) is asked about the
   covering size. A picture whose covering size the guard refuses is fitted instead, with black
   around it, rather than passed over. Syd, 2026-10-25.
+- **A HEIC holds two copies of what covering adds.** On Syd's phone, 2026-10-25, a 5712 by 4284
+  HEIC covering the Extra Large Portrait, 2263 by 1697, took 34 MB before its crop was drawn, and
+  three processes were ended drawing it. Reckoned at two copies, about 44 MB, it is fitted
+  instead, and the process lives.
 - **The cache folders are named for it.** A picture made to fill is never shown fitted, or the
   other way round. A widget's folder becomes `systemMedium-300-fill`, and the preview's sized
   folder `1014x474-fill`. With the defaults the names stay as they are now, so the pictures
@@ -227,6 +248,9 @@ widgets working as they do today until the setting is changed.
 - **Not in a widget.** An extension is held to 30 MB, which no model of that kind fits in. It
   would run in the app, or the Mac's agent, ahead of a widget, and the region it finds would be
   written with the picture's size into the widget caches' databases, or the agent's library.
+  **In the app it reaches only the pictures the app has seen**: a widget runs for months with the
+  app never opened (*Fit or fill*). The Mac's agent runs all the time, so there it would serve
+  every picture.
 - **What to compare, against Vision:** how well it frames, how long it takes, the memory, and the
   battery. What on-device models there are to try, and whether Apple's own takes pictures on
   iOS 27, is not known.

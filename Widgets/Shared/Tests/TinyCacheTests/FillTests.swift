@@ -23,6 +23,7 @@ struct FillTests {
     }
 
     let filling = PictureResizer(framing: .fill)
+    let aboutTheMiddle = PictureResizer(framing: .fill, finding: { _ in .middle })
 
     @Test("A wide picture filling a square box is the box, cut from its middle")
     func wideIntoSquare() throws {
@@ -72,6 +73,8 @@ struct FillTests {
     /// **Which part, and not only what size.** A HEIC from Photos, shrunk in
     /// one piece, was written at the box's size and showed a small part of
     /// the photograph, much enlarged. On *Claude iPhone*, 2026-10-25.
+    ///
+    /// Told to crop about the middle: Vision finds a subject in the grid.
     @Test(
         "What is written is the middle of the picture, whatever its kind and however it is shrunk",
         arguments: [
@@ -86,7 +89,7 @@ struct FillTests {
         // Wide: 4 by 3 covering 2 by 1 keeps rows from a sixth to five
         // sixths of the way down, and every column.
         let wide = scratch.url.appending(path: "wide.jpg")
-        try filling.write(original, fitting: CGSize(width: 800, height: 400), to: wide)
+        try aboutTheMiddle.write(original, fitting: CGSize(width: 800, height: 400), to: wide)
         for (across, column) in [(0.125, 0), (0.375, 1), (0.625, 2), (0.875, 3)] {
             for (down, row) in [(0.05, 0), (0.3125, 1), (0.6875, 2), (0.95, 3)] {
                 let found = try square(in: wide, across: across, down: down)
@@ -98,7 +101,7 @@ struct FillTests {
         // Tall: 4 by 3 covering 1 by 2 keeps the middle 3/8 of its width,
         // from 0.31 to 0.69 across, and every row.
         let tall = scratch.url.appending(path: "tall.jpg")
-        try filling.write(original, fitting: CGSize(width: 200, height: 400), to: tall)
+        try aboutTheMiddle.write(original, fitting: CGSize(width: 200, height: 400), to: tall)
         for (across, column) in [(0.05, 1), (0.95, 2)] {
             for (down, row) in [(0.125, 0), (0.375, 1), (0.625, 2), (0.875, 3)] {
                 let found = try square(in: tall, across: across, down: down)
@@ -151,6 +154,31 @@ struct FillTests {
         #expect(resize.writtenHeight == 100)
     }
 
+    /// An 800 by 600 PNG filling 200 by 400 is reckoned at about 9 MB, and
+    /// Vision at `PictureResizer.visionNeeds` more. Two processes on Syd's
+    /// phone were ended asking Vision on top of a large fill, 2026-10-25.
+    @Test(
+        "Vision is asked only when it fits in what is left; otherwise the crop is about the middle",
+        arguments: [(left: 20 as Int64, asked: false), (left: 30, asked: true)])
+    func visionOnlyWhenItFits(_ left: Int64, _ asked: Bool) throws {
+        let scratch = try ScratchFolder()
+        let original = try scratch.picture("photo.png", width: 800, height: 600)
+        let resized = scratch.url.appending(path: "resized.jpg")
+        let calls = Collected<Bool>()
+        let resizer = PictureResizer(
+            memory: Self.memory(held: 10, of: 10 + left), framing: .fill,
+            finding: { _ in
+                calls.add(true)
+                return .middle
+            })
+
+        let resize = try resizer.write(original, fitting: CGSize(width: 200, height: 400), to: resized)
+
+        #expect(resize.writtenWidth == 200)
+        #expect(resize.writtenHeight == 400)
+        #expect(!calls.values.isEmpty == asked)
+    }
+
     @Test("Where the kernel tells of no limit, the same picture fills")
     func filledWithNoLimit() throws {
         let scratch = try ScratchFolder()
@@ -162,6 +190,128 @@ struct FillTests {
 
         #expect(resize.writtenWidth == 900)
         #expect(resize.writtenHeight == 100)
+    }
+
+    // MARK: Toward faces, or else the subject
+
+    /// A picture 1000 by 500 in a box twice as tall as it is wide: the crop is
+    /// 250 by 500, and slides across.
+    static let wide = (width: 1000, height: 500, box: CGSize(width: 200, height: 400))
+
+    static func across(_ x: Double) -> CGRect { CGRect(x: x, y: 0, width: 250, height: 500) }
+
+    static func face(from left: Double, to right: Double) -> CGRect {
+        CGRect(x: left, y: 100, width: right - left, height: right - left)
+    }
+
+    func crop(toward focus: CropFocus) -> CGRect {
+        PictureResizer.crop(ofWidth: Self.wide.width, height: Self.wide.height, shapedLike: Self.wide.box, toward: focus)
+    }
+
+    @Test("With neither faces nor a subject, the middle")
+    func towardNothing() {
+        #expect(crop(toward: .middle) == Self.across(375))
+        #expect(crop(toward: .faces([])) == Self.across(375))
+    }
+
+    @Test("Centred on one face")
+    func towardOneFace() {
+        #expect(crop(toward: .faces([Self.face(from: 600, to: 700)])) == Self.across(525))
+    }
+
+    @Test("Kept inside the picture: a face at an edge takes the crop to that edge and no further")
+    func keptInside() {
+        #expect(crop(toward: .faces([Self.face(from: 50, to: 150)])) == Self.across(0))
+        #expect(crop(toward: .faces([Self.face(from: 900, to: 990)])) == Self.across(750))
+    }
+
+    @Test("Faces that fit together are centred on together")
+    func towardFacesThatFit() {
+        #expect(
+            crop(toward: .faces([Self.face(from: 300, to: 350), Self.face(from: 450, to: 500)]))
+                == Self.across(275))
+    }
+
+    @Test("As many faces as it can hold: two close together over one far away")
+    func towardMostFaces() {
+        #expect(
+            crop(toward: .faces([
+                Self.face(from: 100, to: 150), Self.face(from: 600, to: 650), Self.face(from: 680, to: 730),
+            ])) == Self.across(540))
+    }
+
+    @Test("Of faces held one at a time, the larger")
+    func towardTheLargerFace() {
+        #expect(
+            crop(toward: .faces([Self.face(from: 700, to: 760), Self.face(from: 100, to: 200)]))
+                == Self.across(25))
+    }
+
+    @Test("A face wider than the crop is centred on")
+    func towardAFaceTooLarge() {
+        #expect(crop(toward: .faces([Self.face(from: 300, to: 700)])) == Self.across(375))
+    }
+
+    @Test("Centred on the subject")
+    func towardTheSubject() {
+        #expect(crop(toward: .subject(CGRect(x: 700, y: 50, width: 200, height: 300))) == Self.across(675))
+    }
+
+    @Test("A tall picture in a wide box slides down")
+    func slidesDown() {
+        #expect(
+            PictureResizer.crop(
+                ofWidth: 500, height: 1000, shapedLike: CGSize(width: 400, height: 200),
+                toward: .faces([CGRect(x: 200, y: 800, width: 100, height: 100)]))
+                == CGRect(x: 0, y: 725, width: 500, height: 250))
+    }
+
+    /// A grey picture 800 by 600 with one bright square, a little left of the
+    /// middle. Filling a box twice as tall as it is wide, the middle would
+    /// leave the square out. What Vision would find is handed over: a grey
+    /// square is not a photograph, and Vision found it no subject, or one
+    /// six times its width, 2026-10-25.
+    @Test("Filled, a picture is cropped toward what is found in it")
+    func croppedTowardWhatIsFound() throws {
+        let scratch = try ScratchFolder()
+        let original = scratch.url.appending(path: "subject.png")
+        try writeSubject(to: original, width: 800, height: 600, at: CGRect(x: 100, y: 250, width: 100, height: 100))
+        let resized = scratch.url.appending(path: "resized.jpg")
+        // The square in the picture made to cover, at two thirds its size.
+        let resizer = PictureResizer(
+            framing: .fill, finding: { _ in .subject(CGRect(x: 67, y: 167, width: 66, height: 66)) })
+
+        try resizer.write(original, fitting: CGSize(width: 200, height: 400), to: resized)
+
+        // The square is 100 to 200 across of 800: at two thirds the size,
+        // 67 to 133 of the 533 the picture covers, all inside a crop 200
+        // wide that starts at the left edge.
+        #expect(try brightness(in: resized, across: 0.5, down: 0.5) > 0.9)
+    }
+
+    /// What Vision held in a widget, 8 to 23 MB on Syd's phone, 2026-10-25,
+    /// asked of the whole picture made to cover the box. Syd, the same day:
+    /// ask it of a smaller one.
+    @Test("Vision is shown the picture no more than 512 pixels on its long side, and never enlarged")
+    func visionIsShownLess() throws {
+        let wide = try #require(CropFocus.shownToVision(try blankImage(width: 1049, height: 787)))
+        #expect(wide.width == 512)
+        #expect(wide.height == 384)
+        let tall = try #require(CropFocus.shownToVision(try blankImage(width: 1049, height: 1697)))
+        #expect(tall.width == 316)
+        #expect(tall.height == 512)
+        let small = try #require(CropFocus.shownToVision(try blankImage(width: 300, height: 200)))
+        #expect(small.width == 300)
+        #expect(small.height == 200)
+    }
+
+    @Test("Already the box's shape, all of it")
+    func nothingToSlide() {
+        #expect(
+            PictureResizer.crop(
+                ofWidth: 1014, height: 474, shapedLike: CGSize(width: 1014, height: 474),
+                toward: .faces([CGRect(x: 0, y: 0, width: 100, height: 100)]))
+                == CGRect(x: 0, y: 0, width: 1014, height: 474))
     }
 
     @Test("The middle of a picture in a box's shape: as large as it can be, and centred")
@@ -198,6 +348,26 @@ struct FillTests {
             resizer.needs(
                 type: "public.png", storedWidth: 900, storedHeight: 900, fraction: 1, inBands: true,
                 wanted: covering, fitted: fitted, cropped: crop) == fitting)
+    }
+
+    /// The Extra Large Portrait from a 5712 by 4284 HEIC on Syd's phone,
+    /// 2026-10-25: covering 2263 by 1697 took the extension from 17 to 20 MB
+    /// up to 51 to 54 MB before the crop was drawn, and three processes were
+    /// ended drawing it. Reckoned at one copy of what covering adds, it was 32
+    /// MB; at two, 44.
+    @Test("A HEIC made to cover in one piece is reckoned at two copies of what covering adds, and its crop")
+    func heicCoveringNeedsTwoCopies() {
+        let resizer = PictureResizer()
+        let fitted = PictureResizer.Sized(width: 1049, height: 787)
+        let covering = PictureResizer.Sized(width: 2263, height: 1697)
+        let crop = PictureResizer.Sized(width: 1049, height: 1697)
+        let fitting = resizer.needs(type: "public.heic", storedWidth: 5712, storedHeight: 4284, fraction: 1)
+
+        #expect(
+            resizer.needs(
+                type: "public.heic", storedWidth: 5712, storedHeight: 4284, fraction: 1, inBands: false,
+                wanted: covering, fitted: fitted, cropped: crop)
+                == fitting + Int64(covering.pixels - fitted.pixels) * 4 * 2 + Int64(crop.pixels) * 4)
     }
 
     @Test("The line before a fill says what it is cropped to")
@@ -276,3 +446,60 @@ func level(_ step: Int) -> Double { 0.15 + 0.7 * Double(step) / 3 }
 
 /// Which of the four levels a colour, read back, is nearest.
 func step(_ value: UInt8) -> Int { Int(((Double(value) / 255 - 0.15) / 0.7 * 3).rounded()) }
+
+/// Writes a grey picture with one white square at `square`, counted from the
+/// top left. A HEIC, a PNG or a JPEG by its name.
+func writeSubject(to file: URL, width: Int, height: Int, at square: CGRect) throws {
+    guard
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { throw PictureNotWritten() }
+    context.setFillColor(CGColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    context.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
+    // A bitmap counts up from its bottom row.
+    context.fill(
+        CGRect(x: square.minX, y: Double(height) - square.maxY, width: square.width, height: square.height))
+    let type = UTType(filenameExtension: file.pathExtension.lowercased()) ?? .jpeg
+    guard
+        let image = context.makeImage(),
+        let destination = CGImageDestinationCreateWithURL(file as CFURL, type.identifier as CFString, 1, nil)
+    else { throw PictureNotWritten() }
+    CGImageDestinationAddImage(destination, image, nil)
+    guard CGImageDestinationFinalize(destination) else { throw PictureNotWritten() }
+}
+
+/// How bright the picture in `file` is at a point, from 0 to 1, given as
+/// fractions of its width and height from the top left.
+func brightness(in file: URL, across: Double, down: Double) throws -> Double {
+    guard
+        let source = CGImageSourceCreateWithURL(file as CFURL, nil),
+        let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
+        let context = CGContext(
+            data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+            bytesPerRow: image.width * 4, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { throw PictureNotWritten() }
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    guard let data = context.data else { throw PictureNotWritten() }
+    let x = min(image.width - 1, Int(across * Double(image.width)))
+    let y = min(image.height - 1, Int(down * Double(image.height)))
+    let pixel = data.advanced(by: y * image.width * 4 + x * 4).assumingMemoryBound(to: UInt8.self)
+    return (Double(pixel[0]) + Double(pixel[1]) + Double(pixel[2])) / (3 * 255)
+}
+
+/// A grey picture of the given size, held in memory.
+func blankImage(width: Int, height: Int) throws -> CGImage {
+    guard
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+    else { throw PictureNotWritten() }
+    context.setFillColor(CGColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1))
+    context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+    guard let image = context.makeImage() else { throw PictureNotWritten() }
+    return image
+}

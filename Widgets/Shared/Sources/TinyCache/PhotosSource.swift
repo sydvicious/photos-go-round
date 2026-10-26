@@ -70,6 +70,21 @@ public enum PicturePick: Sendable {
     case first
 }
 
+/// Where Photos may look for a photograph's file. `PhotosSource`.
+public enum PhotoReach: Sendable, Equatable {
+    /// On this device alone. A photograph kept only in iCloud is not handed
+    /// over; its download is started, and nobody waits for it.
+    case thisDevice
+    /// In iCloud too, and waited for.
+    case iCloudToo
+}
+
+/// The photograph is kept only in iCloud, and was asked for from this device
+/// alone. Its download has been started.
+public struct PhotoNotOnDevice: Error, Equatable {
+    public init() {}
+}
+
 public protocol PhotoLibraryPictures: Sendable {
     /// A picture from the collection, at the largest size that fits `box`, in
     /// pixels. Nil when the collection is gone or has no pictures, and an
@@ -100,11 +115,35 @@ public protocol PhotoLibraryPictures: Sendable {
 
     /// The same, from the photographs the person picked for the app.
     func selectedPictureFile(fitting box: CGSize, pick: PicturePick, to file: URL) throws -> LibraryPictureFile?
+
+    /// A photograph from the collection, looked for only as far as `reach`.
+    /// Throws `PhotoNotOnDevice` for one only in iCloud asked for from this
+    /// device alone.
+    func pictureFile(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile?
+
+    /// The same, from the photographs the person picked for the app.
+    func selectedPictureFile(
+        fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile?
 }
 
 /// A library that hands back pictures and not files, as a test's does, writes
-/// the picture it hands back.
+/// the picture it hands back, and keeps every one on this device.
 extension PhotoLibraryPictures {
+    public func pictureFile(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
+        try pictureFile(inCollection: identifier, fitting: box, pick: pick, to: file)
+    }
+
+    public func selectedPictureFile(
+        fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
+        try selectedPictureFile(fitting: box, pick: pick, to: file)
+    }
+
     public func pictureFile(
         inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL
     ) throws -> LibraryPictureFile? {
@@ -134,16 +173,38 @@ extension PhotoLibraryPictures {
 ///
 /// **Refused for now every time, it is refused for now**: whoever asked keeps
 /// the picture showing and asks again next time.
+///
+/// **A photograph on this device first.** One kept only in iCloud took 30 to
+/// 65 seconds to come down on Syd's phone, 2026-10-25, and one on the device a
+/// tenth of a second. So each is asked for from this device alone, and one
+/// only in iCloud is passed over, its download started for a later wake,
+/// without using up an attempt. After `inICloudAtMost` of those, the next is
+/// asked for from iCloud too, and waited for. Syd, the same day, of passing
+/// over and of waiting longer: "do BOTH". A picture wanted at once is waited
+/// for straight away.
 private func photograph(
     attempts: Int, fitting box: CGSize, to destination: URL, resizer: PictureResizer,
-    skipped: (@Sendable () -> Void)?, fetch: (URL) throws -> LibraryPictureFile?
+    skipped: (@Sendable () -> Void)?, waitsAtOnce: Bool,
+    fetch: (URL, PhotoReach) throws -> LibraryPictureFile?
 ) throws -> PictureResizer.Resize? {
+    let inICloudAtMost = 4
     var forNow: PictureResizer.Failure?
-    for _ in 0..<max(attempts, 1) {
+    var inICloud = 0
+    var attempt = 0
+    while attempt < max(attempts, 1) {
         // Hidden, so that a cache listing its pictures never takes it for one.
         let file = destination.deletingLastPathComponent().appending(path: ".photograph-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: file) }
-        guard let photograph = try fetch(file) else { return nil }
+        let reach: PhotoReach = waitsAtOnce || inICloud >= inICloudAtMost ? .iCloudToo : .thisDevice
+        let fetched: LibraryPictureFile?
+        do {
+            fetched = try fetch(file, reach)
+        } catch is PhotoNotOnDevice {
+            inICloud += 1
+            continue
+        }
+        guard let photograph = fetched else { return nil }
+        attempt += 1
         do {
             let resize = try resizer.write(
                 file, fitting: box, to: destination, named: photograph.name,
@@ -195,9 +256,10 @@ public struct SelectedPhotosSource: CountedSource {
 
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         try photograph(
-            attempts: pick == .first ? 1 : 3, fitting: box, to: destination, resizer: resizer, skipped: skipped
-        ) { file in
-            try library.selectedPictureFile(fitting: box, pick: pick, to: file)
+            attempts: pick == .first ? 1 : 3, fitting: box, to: destination, resizer: resizer, skipped: skipped,
+            waitsAtOnce: pick == .first
+        ) { file, reach in
+            try library.selectedPictureFile(fitting: box, pick: pick, to: file, reach: reach)
         }
     }
 }
@@ -240,9 +302,10 @@ public struct PhotosSource: CountedSource {
 
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         try photograph(
-            attempts: pick == .first ? 1 : 3, fitting: box, to: destination, resizer: resizer, skipped: skipped
-        ) { file in
-            try library.pictureFile(inCollection: collection, fitting: box, pick: pick, to: file)
+            attempts: pick == .first ? 1 : 3, fitting: box, to: destination, resizer: resizer, skipped: skipped,
+            waitsAtOnce: pick == .first
+        ) { file, reach in
+            try library.pictureFile(inCollection: collection, fitting: box, pick: pick, to: file, reach: reach)
         }
     }
 }
@@ -339,23 +402,42 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
     public func pictureFile(
         inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL
     ) throws -> LibraryPictureFile? {
-        guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
-        return try self.file(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box, to: file)
+        try pictureFile(inCollection: identifier, fitting: box, pick: pick, to: file, reach: .iCloudToo)
     }
 
     public func selectedPictureFile(fitting box: CGSize, pick: PicturePick, to file: URL) throws -> LibraryPictureFile? {
+        try selectedPictureFile(fitting: box, pick: pick, to: file, reach: .iCloudToo)
+    }
+
+    public func pictureFile(
+        inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
+        guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
+        return try self.file(
+            of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box, to: file, reach: reach)
+    }
+
+    public func selectedPictureFile(
+        fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
         guard let assets = try selected(), assets.count > 0 else { return nil }
-        return try self.file(of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box, to: file)
+        return try self.file(
+            of: assets.object(at: Self.index(pick, among: assets.count)), fitting: box, to: file, reach: reach)
     }
 
     /// The photograph's file as Photos keeps it, written to `file`: the edited
     /// one when it has been edited, which is what Photos shows, and the
-    /// original when not. From iCloud when it is not on this device.
+    /// original when not. From iCloud when it is not on this device and
+    /// `reach` allows; when it does not, its download is started and
+    /// `PhotoNotOnDevice` thrown.
     ///
     /// **A RAW photograph is drawn by Photos instead**, at the size wanted,
     /// and weighed first by what that is reckoned to cost. `ImageIO` is not
-    /// trusted to shrink a RAW file in bands; nothing has measured it.
-    private func file(of asset: PHAsset, fitting box: CGSize, to file: URL) throws -> LibraryPictureFile? {
+    /// trusted to shrink a RAW file in bands; nothing has measured it. It is
+    /// waited for from iCloud whatever `reach` says.
+    private func file(
+        of asset: PHAsset, fitting box: CGSize, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
         guard let resource = Self.resource(of: asset) else { return nil }
         if UTType(resource.uniformTypeIdentifier)?.conforms(to: .rawImage) == true {
             try PictureResizer().refuseFromPhotosIfTooLarge(fitting: box)
@@ -369,6 +451,7 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         Log.widget.notice(
             """
             \(Log.widgetsTag, privacy: .public) \(asking, privacy: .public)\
+            \(reach == .thisDevice ? ", from this device" : ", from iCloud too", privacy: .public)\
             \(Footprint.now().map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
             """)
         do {
@@ -376,8 +459,11 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
             // cannot be handed to.
             try TimeLimit.run(within: limit) {
                 guard let resource = Self.resource(of: asset) else { throw CocoaError(.fileNoSuchFile) }
-                try Self.write(resource, to: file)
+                try Self.write(resource, to: file, fromICloud: reach == .iCloudToo)
             }
+        } catch let error as PHPhotosError where error.code == .networkAccessRequired && reach == .thisDevice {
+            Self.startDownload(of: asset, named: name ?? "\(asset.pixelWidth)x\(asset.pixelHeight)")
+            throw PhotoNotOnDevice()
         } catch let late as TimedOut {
             Log.widget.error(
                 """
@@ -416,14 +502,46 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
             + "\(type)\(version)"
     }
 
+    /// Starts bringing the photograph down from iCloud, for a later wake, and
+    /// waits for none of it: it was 30 to 65 seconds on Syd's phone,
+    /// 2026-10-25. A download given up on that night went on and finished,
+    /// and the photograph was on the device from then on. What comes is let
+    /// go a piece at a time; the line it ends with says how long it took.
+    private static func startDownload(of asset: PHAsset, named name: String) {
+        guard let resource = resource(of: asset) else { return }
+        let options = PHAssetResourceRequestOptions()
+        options.isNetworkAccessAllowed = true
+        let started = Date.now
+        Log.widget.notice(
+            "\(Log.widgetsTag, privacy: .public) “\(name, privacy: .public)” is only in iCloud; bringing it down")
+        PHAssetResourceManager.default().requestData(for: resource, options: options) { _ in } completionHandler: {
+            error in
+            let after = Int(Date.now.timeIntervalSince(started).rounded())
+            if let error {
+                Log.widget.error(
+                    """
+                    \(Log.widgetsTag, privacy: .public) “\(name, privacy: .public)” did not come down from \
+                    iCloud, after \(after) seconds: \(error.localizedDescription, privacy: .public)
+                    """)
+            } else {
+                Log.widget.notice(
+                    """
+                    \(Log.widgetsTag, privacy: .public) “\(name, privacy: .public)” came down from iCloud, \
+                    after \(after) seconds
+                    """)
+            }
+        }
+    }
+
     /// Writes the resource to `file` a little at a time, so that it is never
     /// in memory whole. On a thread that may block: `TimeLimit` runs this on
-    /// one.
-    private static func write(_ resource: PHAssetResource, to file: URL) throws {
+    /// one. Without `fromICloud`, one kept only in iCloud fails with
+    /// `networkAccessRequired`.
+    private static func write(_ resource: PHAssetResource, to file: URL, fromICloud: Bool) throws {
         let options = PHAssetResourceRequestOptions()
         // From iCloud when the photograph is not on this device. Syd,
         // 2026-10-08: "I do want the pics downloaded in Photos."
-        options.isNetworkAccessAllowed = true
+        options.isNetworkAccessAllowed = fromICloud
         let done = DispatchSemaphore(value: 0)
         let outcome = Written()
         PHAssetResourceManager.default().writeData(for: resource, toFile: file, options: options) { error in

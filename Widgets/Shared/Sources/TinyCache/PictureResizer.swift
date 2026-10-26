@@ -76,6 +76,10 @@ public struct PictureResizer: Sendable {
     /// How the picture written sits in the box it is written for.
     public let framing: Framing
 
+    /// What a filled picture is cropped toward, found in the picture made to
+    /// cover the box.
+    private let finding: @Sendable (CGImage) -> CropFocus
+
     /// - Parameters:
     ///   - bandsAbove: A picture of more pixels than this is shrunk in bands.
     ///     A million. Shrunk in one piece, a JPEG of twelve million pixels
@@ -87,20 +91,25 @@ public struct PictureResizer: Sendable {
     ///     reading of its own.
     ///   - framing: How the picture written sits in its box. Fit and Actual
     ///     Size write the same file; Fill writes one in the box's shape.
+    ///   - finding: What a filled picture is cropped toward: its faces, or
+    ///     else its subject, by Vision. A test hands over its own.
     public init(
         bandsAbove: Int = 1_000_000, bandBytes: Int = 2 * 1_048_576,
         memory: @escaping @Sendable () -> Footprint.Reading? = { Footprint.now() },
-        framing: Framing = .fit
+        framing: Framing = .fit,
+        finding: @escaping @Sendable (CGImage) -> CropFocus = { CropFocus.found(in: $0) }
     ) {
         self.bandsAbove = bandsAbove
         self.bandBytes = bandBytes
         self.memory = memory
         self.framing = framing
+        self.finding = finding
     }
 
     /// The same resizer, writing for `framing`.
     public func framed(_ framing: Framing) -> PictureResizer {
-        PictureResizer(bandsAbove: bandsAbove, bandBytes: bandBytes, memory: memory, framing: framing)
+        PictureResizer(
+            bandsAbove: bandsAbove, bandBytes: bandBytes, memory: memory, framing: framing, finding: finding)
     }
 
     /// The kinds that are shrunk in one piece whatever their size. In bands a
@@ -306,8 +315,25 @@ public struct PictureResizer: Sendable {
             // Cropped from what came back, which may be a pixel or so from
             // the size asked for.
             if fills {
-                let middle = Self.middle(ofWidth: whole.width, height: whole.height, shapedLike: box)
-                guard let cropped = Self.drawn(whole, cutTo: middle) else { throw Failure.notAPicture(original) }
+                // Vision comes on top of the shrink, so it is asked only when
+                // both fit in what was left.
+                let visionFits = reading?.left.map { needed + Self.visionNeeds <= $0 } ?? true
+                if !visionFits {
+                    Log.widget.notice(
+                        """
+                        \(Log.widgetsTag, privacy: .public) not asking Vision: with the shrink it needs about \
+                        \((needed + Self.visionNeeds) / 1_048_576) MB\
+                        \(reading.map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
+                        """)
+                }
+                let focus = visionFits ? finding(whole) : .middle
+                let crop = Self.crop(ofWidth: whole.width, height: whole.height, shapedLike: box, toward: focus)
+                Log.widget.notice(
+                    """
+                    \(Log.widgetsTag, privacy: .public) cropped toward \(focus.said, privacy: .public)\
+                    \(memory().map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
+                    """)
+                guard let cropped = Self.drawn(whole, cutTo: crop) else { throw Failure.notAPicture(original) }
                 image = cropped
             }
         }
@@ -360,6 +386,14 @@ public struct PictureResizer: Sendable {
             height: croppedHeight)
     }
 
+    /// About how much asking Vision adds, beyond the shrink. On Syd's phone,
+    /// 2026-10-25, a fill from a HEIC in one piece added 8 to 26 MB between
+    /// the line before the shrink and the line after Vision, the most in a
+    /// process asking Vision for the first time; the shrink alone is
+    /// reckoned at 14 to 21 MB of that. Two processes were ended asking it on
+    /// top of a fill reckoned at 32 MB.
+    static let visionNeeds: Int64 = 16 * 1_048_576
+
     /// The size of the middle of a picture `sized` in `box`'s shape.
     static func cropped(_ sized: Sized, to box: CGSize) -> Sized {
         let middle = middle(ofWidth: sized.width, height: sized.height, shapedLike: box)
@@ -400,13 +434,19 @@ public struct PictureResizer: Sendable {
     /// drawn into a bitmap of its own**, so it needs what it holds beyond the
     /// fitted one, and the crop. **In bands only the crop is drawn**, which is
     /// no larger than the box, as the largest fitted picture already is.
+    ///
+    /// **A HEIC holds two copies of what covering adds.** On Syd's phone,
+    /// 2026-10-25, one of 5712 by 4284 covering 2263 by 1697 took 34 MB before
+    /// its crop was drawn, where one copy came to 32 MB with everything else,
+    /// and three extension processes were ended drawing the crop.
     func needs(
         type: String, storedWidth: Double, storedHeight: Double, fraction: Int, inBands: Bool,
         wanted: Sized, fitted: Sized, cropped: Sized? = nil
     ) -> Int64 {
         let fitting = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
         guard !inBands, wanted.pixels > fitted.pixels else { return fitting }
-        return fitting + Int64(wanted.pixels - fitted.pixels + (cropped?.pixels ?? 0)) * 4
+        let copies = Self.inOnePiece.contains(type) ? 2 : 1
+        return fitting + Int64((wanted.pixels - fitted.pixels) * copies + (cropped?.pixels ?? 0)) * 4
     }
 
     /// About how much a fetch adds to what the process holds, at its most,

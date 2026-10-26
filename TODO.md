@@ -60,10 +60,8 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
   a HEIC from Photos, shrunk in one piece and cut with `cropping(to:)`, was cropped right on
   the Mac and wrong on *Claude iPhone*. Something like a scheme or test plan of the
   iOS-capable test targets.
-- **A filled HEIC peaks near the extension's 30 MB.** On *Claude iPhone*, 2026-10-25, filling a
-  medium widget from a 4032 by 3024 HEIC, shrunk in one piece, was reckoned at 17 MB and peaked
-  at 30 to 32 MB; fitting the same photograph peaked at about 18. Find where the rest goes, and
-  measure it on a phone, which ends an extension past its limit.
+- **No "Scanning…" over a widget's last picture.** Syd, 2026-10-25: if the widget had a picture
+  before, show it plainly, even when there is a problem, such as Photos not answering in time.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
