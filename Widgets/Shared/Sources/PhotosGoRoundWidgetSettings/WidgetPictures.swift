@@ -175,9 +175,9 @@ public struct WidgetPictures: Sendable {
             // Named for its pixels, as in "600x600", and "600x600-fill" for
             // pictures made to fill.
             let named = sized.lastPathComponent
-            let pixels = named.split(separator: "-", maxSplits: 1).first.map(String.init) ?? named
-            guard String(named.dropFirst(pixels.count)) == suffix else { continue }
-            let sides = pixels.split(separator: "x").compactMap { Int($0) }
+            let measure = named.split(separator: "-", maxSplits: 1).first.map(String.init) ?? named
+            guard String(named.dropFirst(measure.count)) == suffix else { continue }
+            let sides = measure.split(separator: "x").compactMap { Int($0) }
             guard sides.count == 2 else { continue }
             let shown = sized.appending(path: name).appending(path: "shown")
             guard let last = folders(in: shown).max(by: { $0.lastPathComponent < $1.lastPathComponent })
