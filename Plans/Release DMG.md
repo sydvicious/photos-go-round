@@ -17,7 +17,7 @@ because the app installs everything else at launch (`Release App Installer.md`).
 Removing it is not: the agent, the wallpaper registration and the screensaver
 link outlive a dragged-away app, and the only ways to remove them are the Help
 menu, which needs the app, and `Scripts/uninstall.sh`, which needs the checkout.
-It is the last item on the *Before the first release* checklist.
+It is the last item on the *Before Photos-Go-Round's first release* checklist.
 
 # Phases
 
@@ -375,7 +375,7 @@ agent may run to check the contents, and what a CI runner would need.
 
 # References
 
-- `TODO.md` — *Before the first release*; *A finished DMG*.
+- `TODO.md` — *Before Photos-Go-Round's first release*; *A finished DMG*.
 - `Plans/PLAN.md` — *Shipping it: 1.0 distribution and updates*; *Settings are
   the only data a user would miss*; *No third-party dependencies*.
 - `Plans/Release App Installer.md` — *Uninstall*; the Help menu.

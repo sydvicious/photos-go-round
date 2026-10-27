@@ -1379,7 +1379,7 @@ day, with the app killed and the screen locking, holds no wake of any widget.
 Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to
 ask Dropbox to download files for us". Not looked into: whether it is the app or the widgets,
 and what the log says. What is asked for files not on the device is asked of iCloud Drive, and
-Dropbox is another provider. "Fully support Dropbox" is in `TODO.md`.
+Dropbox is another provider. `TODO.md`, *The first release: PhotosGoRound Widgets*, "Cloud storage such as Dropbox".
 
 **If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
 have to download files at new sizes, it sounds like we have to reproduce the caching that we do
