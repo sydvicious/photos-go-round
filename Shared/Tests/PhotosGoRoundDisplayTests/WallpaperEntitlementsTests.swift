@@ -22,7 +22,7 @@ import Testing
 /// the product names: it reads the entitlements file, substitutes each
 /// variant's suffix, and compares the result against the domains the
 /// extension's own code computes. `BuildVariantTests` separately holds
-/// `STORAGE_ID_SUFFIX` in `project.pbxproj` equal to
+/// `STORAGE_ID_SUFFIX` in `project.xcproj` equal to
 /// `BuildVariant.identifierSuffix`, which is the substitution Xcode performs.
 ///
 /// `Plans/Wallpaper Plan.md`.

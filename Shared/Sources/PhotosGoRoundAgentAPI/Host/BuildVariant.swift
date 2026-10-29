@@ -18,7 +18,7 @@ import Foundation
 ///
 /// **The suffixes below are stated twice, and cannot be stated once.** Xcode
 /// needs them as build settings — `SAVER_NAME_SUFFIX`, `SERVER_LABEL_SUFFIX`,
-/// `WALLPAPER_ID_SUFFIX` at project level in `project.pbxproj` — because they
+/// `WALLPAPER_ID_SUFFIX` at project level in `project.xcproj` — because they
 /// shape product names and `Info.plist` values before any Swift runs, and Swift
 /// cannot read an `.xcconfig` at runtime. The two must agree. Anything that can
 /// read the built bundle should prefer what the bundle carries:
@@ -158,7 +158,7 @@ public enum BuildVariant: String, Sendable, CaseIterable {
     }
 
     /// Mirrors `SAVER_ID_SUFFIX`, `SERVER_LABEL_SUFFIX` and
-    /// `WALLPAPER_ID_SUFFIX` in `project.pbxproj`.
+    /// `WALLPAPER_ID_SUFFIX` in `project.xcproj`.
     var identifierSuffix: String {
         switch self {
         case .release: ""
@@ -168,7 +168,7 @@ public enum BuildVariant: String, Sendable, CaseIterable {
     }
 
     /// Mirrors `SAVER_NAME_SUFFIX` and `WALLPAPER_NAME_SUFFIX` in
-    /// `project.pbxproj`. A leading space: it reads as a name, not a tag.
+    /// `project.xcproj`. A leading space: it reads as a name, not a tag.
     var nameSuffix: String {
         switch self {
         case .release: ""

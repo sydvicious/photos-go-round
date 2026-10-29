@@ -486,3 +486,7 @@ Syd, 2026-10-26: "Don't start over in the photos display every time there is a c
 - **A change of sources leaves the picture showing**, unless its own source was taken out; then the next one comes at once. Today any change of sources starts the preview over on "Scanning…": `PreviewModel.show(_:)`, called from `SettingsModel.reload()`.
 - ***Match the widget's shape* keeps the picture showing if it still fits, and moves to the next one that matches if it does not**, at once. Syd, 2026-10-26: "Just show the next picture that matches if the pic does not fit", and "If the pic still fits, don't change the pic. If it does not, move to the next one."
 - **The Mac's windows, screensaver and wallpaper do the same** when their settings change. Syd, 2026-10-26: "Mac surfaces should do the same."
+
+## A defaults suite named for its own bundle ID
+
+Syd, 2026-10-29: "fix Using your own bundle identifier as an NSUserDefaults suite name does not make sense and will not work. Break on _NSUserDefaults_Log_Nonsensical_Suites to find this"

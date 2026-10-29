@@ -69,7 +69,7 @@ Each phase leaves the tree working, and the products are taken smallest first.
     `scrub-dev.sh` know all three of everything; `make-agent-bundle.sh` lost
     `--install-to` (Syd: "Archive is the route") and the `make-*` scripts stopped
     defaulting their output into the repository.
-  - `BuildVariantTests` reads `project.pbxproj` and fails when the build
+  - `BuildVariantTests` reads `project.xcproj` and fails when the build
     settings and `BuildVariant` disagree — the one thing that could drift
     silently.
   - `CLAUDE.md` rewritten: the per-product incantations collapsed to
@@ -742,7 +742,7 @@ with cases `release`, `debug` and `claude`, and `ServiceAddress.port` and
 `pgr_install` both switch on it. One `#if` in the project rather than a second
 written alongside the first. It owns the port, the LaunchAgent label, the
 screensaver bundle name and the wallpaper extension identifier, and
-`BuildVariantTests` reads `project.pbxproj` to prove its suffixes still agree
+`BuildVariantTests` reads `project.xcproj` to prove its suffixes still agree
 with the build settings.
 
 What each variant installs is the Phase 1 question. Debug installs where a
