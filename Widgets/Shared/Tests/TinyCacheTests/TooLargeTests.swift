@@ -27,14 +27,25 @@ struct TooLargeTests {
 
     // MARK: What a shrink is reckoned to need
 
+    /// What a JPEG in bands is reckoned at: 14 MB, as measured for the guard
+    /// on iOS, and 16 MB on a Mac, where a 4000 by 3000 JPEG added 15.3 MB
+    /// in a loaded test run, 2026-10-28. Syd, the same day: "You can split
+    /// the estimate based on platform; we carefully measured the guard on
+    /// iOS".
+    #if os(macOS)
+        static let jpegInBands: Int64 = 16 * megabyte
+    #else
+        static let jpegInBands: Int64 = 14 * megabyte
+    #endif
+
     @Test("A JPEG in bands needs the same whatever its size")
     func aJPEGNeedsLittle() {
         let resizer = PictureResizer()
         let small = resizer.needs(type: "public.jpeg", storedWidth: 4000, storedHeight: 3000, fraction: 2)
         let largest = resizer.needs(type: "public.jpeg", storedWidth: 33280, storedHeight: 20395, fraction: 8)
 
-        #expect(small == 14 * Self.megabyte)
-        #expect(largest == 14 * Self.megabyte)
+        #expect(small == Self.jpegInBands)
+        #expect(largest == Self.jpegInBands)
     }
 
     /// The three colour scans of 9920 by 12925 were shrunk at an eighth on
@@ -44,7 +55,7 @@ struct TooLargeTests {
     func aFullColourJPEGNeedsLittle() {
         #expect(
             PictureResizer().needs(type: "public.jpeg", storedWidth: 9920, storedHeight: 12925, fraction: 8)
-                == 14 * Self.megabyte)
+                == Self.jpegInBands)
     }
 
     @Test("A PNG or a TIFF needs the picture at the fraction it is decoded at, and a little more again than a JPEG")

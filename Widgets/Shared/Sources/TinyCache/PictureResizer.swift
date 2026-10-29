@@ -165,6 +165,18 @@ public struct PictureResizer: Sendable {
     /// 6 MB here until that night. Syd, of counting it so: "1".
     static let heldIdle: Int64 = 12 * 1_048_576
 
+    /// What a JPEG in bands is reckoned to need, as `needs` says. **More on
+    /// a Mac**: a 4000 by 3000 JPEG decoded at its own size added 15.3 MB
+    /// there in a loaded test run, 2026-10-28, where 14 MB was reckoned. The
+    /// guard on iOS was measured on the devices and keeps 14. Syd, the same
+    /// day: "You can split the estimate based on platform; we carefully
+    /// measured the guard on iOS".
+    #if os(macOS)
+        static let jpegInBands: Int64 = 16 * 1_048_576
+    #else
+        static let jpegInBands: Int64 = 14 * 1_048_576
+    #endif
+
     /// About how much shrinking a picture adds to what the process holds, at
     /// its most. Each figure is the most measured on a Mac, 2026-10-12, in a
     /// process of its own, and a little over:
@@ -191,7 +203,7 @@ public struct PictureResizer: Sendable {
         guard Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove) else {
             return decoded * 2 + 4 * megabyte
         }
-        if type == "public.jpeg" { return 14 * megabyte }
+        if type == "public.jpeg" { return Self.jpegInBands }
         return decoded / Int64(fraction * fraction) + 14 * megabyte
     }
 
