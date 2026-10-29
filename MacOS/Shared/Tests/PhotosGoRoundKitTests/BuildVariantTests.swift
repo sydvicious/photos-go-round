@@ -3,7 +3,7 @@ import Testing
 
 @testable import PhotosGoRoundAgentAPI
 
-/// `BuildVariant` states the per-configuration suffixes, and `project.pbxproj`
+/// `BuildVariant` states the per-configuration suffixes, and `project.xcproj`
 /// states them again as build settings — because they shape product names and
 /// `Info.plist` values before any Swift runs, and Swift cannot read an
 /// `.xcconfig` at runtime.
@@ -21,34 +21,43 @@ import Testing
 @Suite("Build identity agrees with the project file")
 struct BuildVariantTests {
 
-    /// Every setting this suite checks, as configuration → key → value.
-    private static let settings: [String: [String: String]] = {
-        guard let text = try? String(contentsOf: projectFile, encoding: .utf8) else { return [:] }
+    /// The project file, read whole. Xcode 27's is JSON with trailing commas,
+    /// which only the JSON5 reading takes.
+    private static func project() -> [String: Any] {
+        guard let data = try? Data(contentsOf: projectFile),
+            let object = try? JSONSerialization.jsonObject(with: data, options: [.json5Allowed])
+        else { return [:] }
+        return object as? [String: Any] ?? [:]
+    }
 
-        // The project-level configurations, each a block ending in `name = X;`.
-        // Only those three carry the suffixes; per-target copies were removed
-        // on 2026-09-19 so that the aggregate install targets inherit them.
+    /// Whether a setting is one this suite checks.
+    private static func isChecked(_ key: String) -> Bool {
+        key.hasSuffix("_SUFFIX") || key == "OTHER_CODE_SIGN_FLAGS" || key == "DEVELOPMENT_TEAM"
+    }
+
+    /// What `key` is in `table` for `configuration`: the value set for that
+    /// configuration alone, `KEY[config=Debug]`, or else the one set for all.
+    private static func value(of key: String, in table: [String: Any], for configuration: String) -> String? {
+        (table["\(key)[config=\(configuration)]"] ?? table[key]) as? String
+    }
+
+    /// Every setting this suite checks, as configuration → key → value.
+    ///
+    /// The project-level settings only: they alone carry the suffixes.
+    /// Per-target copies were removed on 2026-09-19 so that the aggregate
+    /// install targets inherit them.
+    private static let settings: [String: [String: String]] = {
+        guard let table = project()["build-settings"] as? [String: Any] else { return [:] }
+        // A key without the configuration it is set for: `STORAGE_ID_SUFFIX`
+        // for `STORAGE_ID_SUFFIX[config=Debug]`.
+        let names = table.keys.map { String($0.prefix { $0 != "[" }) }
+        let keys = Set(names.filter(isChecked))
         var found: [String: [String: String]] = [:]
-        for block in text.components(separatedBy: "isa = XCBuildConfiguration;").dropFirst() {
-            guard let body = block.range(of: "\n\t\t};").map({ String(block[block.startIndex..<$0.lowerBound]) })
-            else { continue }
-            guard let nameLine = body.components(separatedBy: "\n").last(where: { $0.contains("\t\t\tname = ") })
-            else { continue }
-            let configuration = nameLine
-                .replacingOccurrences(of: "\t\t\tname = ", with: "")
-                .replacingOccurrences(of: ";", with: "")
-            var values: [String: String] = [:]
-            for line in body.components(separatedBy: "\n") {
-                let trimmed = line.trimmingCharacters(in: .whitespaces)
-                guard trimmed.hasSuffix(";"), let equals = trimmed.range(of: " = ") else { continue }
-                let key = String(trimmed[trimmed.startIndex..<equals.lowerBound])
-                guard key.hasSuffix("_SUFFIX") || key == "OTHER_CODE_SIGN_FLAGS" || key == "DEVELOPMENT_TEAM"
-                else { continue }
-                var value = String(trimmed[equals.upperBound...].dropLast())
-                if value.hasPrefix("\"") && value.hasSuffix("\"") { value = String(value.dropFirst().dropLast()) }
-                values[key] = value
+        for (configuration, _) in configurations {
+            for key in keys {
+                guard let setting = value(of: key, in: table, for: configuration) else { continue }
+                found[configuration, default: [:]][key] = setting
             }
-            if !values.isEmpty { found[configuration, default: [:]].merge(values) { a, _ in a } }
         }
         return found
     }()
@@ -56,31 +65,26 @@ struct BuildVariantTests {
     /// Each target's bundle identifier, as target → configuration → identifier,
     /// with the project-level suffixes it names filled in.
     private static let bundleIdentifiers: [String: [String: String]] = {
-        guard let text = try? String(contentsOf: projectFile, encoding: .utf8) else { return [:] }
-        let opening = /\/\* (\w+) configuration for PBXNativeTarget "([^"]+)" \*\/ = \{/
+        guard let targets = project()["targets"] as? [[String: Any]] else { return [:] }
         var found: [String: [String: String]] = [:]
-        for match in text.matches(of: opening) {
-            let configuration = String(match.output.1)
-            let target = String(match.output.2)
-            let rest = text[match.range.upperBound...]
-            guard let end = rest.range(of: "\n\t\t};") else { continue }
-            let body = rest[rest.startIndex..<end.lowerBound]
-            guard let line = body.split(separator: "\n").first(where: { $0.contains("PRODUCT_BUNDLE_IDENTIFIER = ") })
+        for target in targets {
+            guard let name = target["name"] as? String,
+                let table = target["build-settings"] as? [String: Any]
             else { continue }
-            var identifier = line.trimmingCharacters(in: .whitespaces)
-                .replacingOccurrences(of: "PRODUCT_BUNDLE_IDENTIFIER = ", with: "")
-                .replacingOccurrences(of: ";", with: "")
-                .replacingOccurrences(of: "\"", with: "")
-            for (key, value) in settings[configuration] ?? [:] {
-                identifier = identifier.replacingOccurrences(of: "$(\(key))", with: value)
+            for (configuration, _) in configurations {
+                guard var identifier = value(of: "PRODUCT_BUNDLE_IDENTIFIER", in: table, for: configuration)
+                else { continue }
+                for (key, value) in settings[configuration] ?? [:] {
+                    identifier = identifier.replacingOccurrences(of: "$(\(key))", with: value)
+                }
+                found[name, default: [:]][configuration] = identifier
             }
-            found[target, default: [:]][configuration] = identifier
         }
         return found
     }()
 
     private static var projectFile: URL {
-        packageRoot.appending(path: "Photos-Go-Round.xcodeproj/project.pbxproj")
+        packageRoot.appending(path: "Photos-Go-Round.xcodeproj/project.xcproj")
     }
 
     private static var packageRoot: URL {

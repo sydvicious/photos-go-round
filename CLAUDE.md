@@ -88,7 +88,7 @@ passed by hand — `PGR_AGENT_CONDITION`, `WALLPAPER_ID_SUFFIX`,
 how you break this.
 
 The suffixes live twice: as build settings at project level in
-`project.pbxproj`, and in `BuildVariant.swift`, because Swift cannot read an
+`project.xcproj`, and in `BuildVariant.swift`, because Swift cannot read an
 `.xcconfig` at runtime. `BuildVariantTests` reads the project file and fails
 when the two disagree. `Plans/Xcode - Separate Build and Run.md`.
 

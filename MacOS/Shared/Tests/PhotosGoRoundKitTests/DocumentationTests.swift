@@ -20,7 +20,7 @@ import Testing
 struct DocumentationTests {
 
     /// The checkout, from the path this file was compiled at. The same trick
-    /// `BuildVariantTests` uses to reach `project.pbxproj`.
+    /// `BuildVariantTests` uses to reach `project.xcproj`.
     static let repository = URL(filePath: #filePath)
         .deletingLastPathComponent()  // PhotosGoRoundKitTests
         .deletingLastPathComponent()  // Tests
