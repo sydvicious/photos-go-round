@@ -203,12 +203,12 @@ final class UninstallerModel {
     /// Asks this build's app to quit, and waits a few seconds for it. Returns
     /// the pid of one that is still running, or nil when none is.
     ///
-    /// **Only the app at this build's path.** Every build shares the bundle
-    /// identifier, so a running Debug app must not be asked to quit.
+    /// **Only the app at this build's path**, and with this build's identifier:
+    /// a copy of the same build kept elsewhere is not asked to quit.
     private func quitApp() async -> Int32? {
         guard let app else { return nil }
         let target = app.standardizedFileURL.path(percentEncoded: false)
-        let running = NSRunningApplication.runningApplications(withBundleIdentifier: Storage.identifier)
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: BuildVariant.current.appIdentifier)
             .filter { $0.bundleURL?.standardizedFileURL.path(percentEncoded: false) == target }
         guard !running.isEmpty else { return nil }
         for instance in running { instance.terminate() }

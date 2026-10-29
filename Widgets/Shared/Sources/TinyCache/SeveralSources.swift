@@ -85,6 +85,16 @@ public struct SeveralSources: PictureSource {
     /// failed or held less than its count said, so that it is counted again
     /// next time. One that said how many it holds on the way is remembered by
     /// that instead.
+    /// The picture `origin` names, written again by whichever source it is.
+    public func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        for source in sources {
+            if let resize = try source.writePicture(origin, fitting: box, to: destination) { return resize }
+        }
+        return nil
+    }
+
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         let remembered = counts.read()
         var known = remembered

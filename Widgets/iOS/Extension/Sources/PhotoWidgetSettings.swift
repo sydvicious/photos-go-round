@@ -23,9 +23,12 @@
 //
 // **The names are kept once widgets are out**: a widget whose settings type
 // is gone stops reloading.
+//
+// **What it offers is shared with the Mac's widget**, in
+// `PhotosGoRoundWidgetSettings`: `ChangeEvery` and `WidgetFraming`.
 
 import AppIntents
-import PhotosGoRoundAgentAPI
+import PhotosGoRoundWidgetSettings
 import WidgetKit
 
 struct PhotoWidgetSettings: WidgetConfigurationIntent {
@@ -35,57 +38,8 @@ struct PhotoWidgetSettings: WidgetConfigurationIntent {
     @Parameter(title: "Pictures", default: .asInTheApp) var framing: WidgetFraming
 }
 
-/// The durations offered, each by its length in seconds. Syd, 2026-10-08.
-///
-/// **Not one minute.** Each change of picture is a reload, and the system put
-/// a 1-minute widget's reload five minutes on. Syd, 2026-10-08: "One minute
-/// is dropped if the system won't honour it"; dropped 2026-10-11.
-enum ChangeEvery: Int, AppEnum, CaseIterable {
-    case fiveMinutes = 300
-    case tenMinutes = 600
-    case thirtyMinutes = 1800
-    case oneHour = 3600
-    case twoHours = 7200
-    case fourHours = 14400
-    case eightHours = 28800
-    case oneDay = 86400
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Duration"
-
-    static let caseDisplayRepresentations: [ChangeEvery: DisplayRepresentation] = [
-        .fiveMinutes: "5 minutes",
-        .tenMinutes: "10 minutes",
-        .thirtyMinutes: "30 minutes",
-        .oneHour: "1 hour",
-        .twoHours: "2 hours",
-        .fourHours: "4 hours",
-        .eightHours: "8 hours",
-        .oneDay: "24 hours",
-    ]
-
-    /// How long a picture stays up.
-    var seconds: TimeInterval { TimeInterval(rawValue) }
-}
-
-/// How a widget's pictures sit in it: as the app says, or a choice of its
-/// own. Each of its own is stored by `Framing`'s name for it.
-enum WidgetFraming: String, AppEnum, CaseIterable {
-    case asInTheApp = "as-in-the-app"
-    case fit
-    case fill
-    case actualSize = "actual-size"
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Pictures"
-
-    static let caseDisplayRepresentations: [WidgetFraming: DisplayRepresentation] = [
-        .asInTheApp: "As in the app",
-        .fit: "Fit",
-        .fill: "Fill",
-        .actualSize: "Actual Size",
-    ]
-
-    /// What the widget does, given what the app is set to.
-    func resolved(app: Framing) -> Framing {
-        Framing(rawValue: rawValue) ?? app
-    }
+/// What lets the system find the choices this extension offers, which are
+/// kept in the shared package.
+struct PhotoWidgetIntents: AppIntentsPackage {
+    static var includedPackages: [any AppIntentsPackage.Type] { [PhotoWidgetChoices.self] }
 }

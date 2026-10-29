@@ -87,6 +87,28 @@ struct WidgetSizesTests {
         #expect(WidgetSizes.size(of: .extraLarge, on: .pad, screen: screen) == CGSize(width: 628, height: 300))
     }
 
+    // MARK: The Mac
+
+    @Test("A Mac offers all five sizes")
+    func macFamilies() {
+        #expect(WidgetSizes.families(on: .mac) == WidgetFamily.allCases)
+    }
+
+    /// The sizes the Mac's widgets were handed on 2026-10-28, which are the
+    /// same on every display: a Mac's desktop is not laid out by its screen
+    /// as a Home Screen is.
+    @Test(
+        "A Mac's widgets are the desktop's sizes, whatever the screen",
+        arguments: [CGSize(width: 1512, height: 982), CGSize(width: 2560, height: 1440), .zero])
+    func macSizes(_ screen: CGSize) {
+        #expect(WidgetSizes.size(of: .small, on: .mac, screen: screen) == CGSize(width: 164, height: 164))
+        #expect(WidgetSizes.size(of: .medium, on: .mac, screen: screen) == CGSize(width: 344, height: 164))
+        #expect(WidgetSizes.size(of: .large, on: .mac, screen: screen) == CGSize(width: 344, height: 344))
+        #expect(WidgetSizes.size(of: .extraLarge, on: .mac, screen: screen) == CGSize(width: 704, height: 344))
+        #expect(
+            WidgetSizes.size(of: .extraLargePortrait, on: .mac, screen: screen) == CGSize(width: 344, height: 704))
+    }
+
     @Test("Each size has a name a person would call it")
     func names() {
         #expect(WidgetFamily.allCases.map(\.title) == ["Small", "Medium", "Large", "Extra Large", "Extra Large Portrait"])

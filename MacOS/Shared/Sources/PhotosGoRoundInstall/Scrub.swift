@@ -85,7 +85,7 @@ public enum Scrub {
             containers.appending(
                 path: "\(variant.wallpaperExtensionIdentifier)/Data/Library/Application Support"),
             containers.appending(
-                path: "\(variant.widgetExtensionIdentifier)/Data/Library/Caches/TinyCache"),
+                path: "\(variant.widgetExtensionIdentifier)/Data/Library/Caches/Widgets"),
             home.appending(path: "Library/Group Containers/\(variant.widgetAppGroup)/WidgetSource"),
         ]
     }
@@ -122,6 +122,7 @@ public enum Scrub {
         let candidates =
             libraries.flatMap { libraryFolders($0, home: home) + [cache($0, home: home), plist($0, home: home)] }
             + surfaces.map { plist($0, home: home) }
+            + variants.map { MacHostEnvironment.widgetPreviewCache(variant: $0, home: home) }
         return Plan(
             variants: variants,
             libraries: libraries,

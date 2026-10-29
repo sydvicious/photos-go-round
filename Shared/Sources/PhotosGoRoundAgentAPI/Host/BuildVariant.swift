@@ -89,21 +89,30 @@ public enum BuildVariant: String, Sendable, CaseIterable {
         return hash
     }
 
+    /// The app's bundle identifier: `com.sydpolk.photosgoround`, `….debug`,
+    /// `….claude`. `STORAGE_ID_SUFFIX` in the project.
+    ///
+    /// **Every product has its own in each configuration.** Syd, 2026-10-28:
+    /// "all products should have a separate bundle id per config". Until then
+    /// the app, the agent, the uninstaller and `pgr_ctl` kept one across all
+    /// three, so that Photos was answered once; and the system read the
+    /// Release app's App Intents metadata for a Debug build's widget, which
+    /// then had no settings. So each build is now asked for Photos once.
+    public var appIdentifier: String { "com.sydpolk.photosgoround" + identifierSuffix }
+
+    /// The agent's bundle identifier, under the app that carries it, as
+    /// everything in the app is named.
+    public var agentIdentifier: String { appIdentifier + ".server" }
+
     /// What launchd knows this build's agent by, and the name of its plist in
     /// `~/Library/LaunchAgents`. One job per label per user, so a shared label
     /// would mean one installed agent rather than three.
     ///
-    /// The bundle identifier deliberately does *not* vary: TCC grants hang off
-    /// it, and Syd, 2026-09-19, chose "label per configuration" so Photos is
-    /// answered once rather than once per configuration.
-    ///
-    /// **One identifier is not enough for that, and one signing requirement is
-    /// what completes it.** A permission is recorded with the requirement the
-    /// allowed build's signature states, and left alone Release and Debug state
-    /// different ones — measured 2026-10-08, when the two agents were prompted
-    /// for Documents in turn on every refresh. `OTHER_CODE_SIGN_FLAGS` in the
-    /// project gives every build the same one, and `BuildVariantTests` checks
-    /// that it stays.
+    /// **Every build is signed stating one requirement**, which
+    /// `BuildVariantTests` checks. A permission is recorded with the
+    /// requirement the allowed build's signature states, and left alone
+    /// Release and Debug state different ones — measured 2026-10-08, when the
+    /// two agents were prompted for Documents in turn on every refresh.
     public var agentLabel: String { "com.sydpolk.photosgoround.server" + identifierSuffix }
 
     /// The screensaver bundle's name, which is also its filename in
@@ -128,9 +137,9 @@ public enum BuildVariant: String, Sendable, CaseIterable {
 
     /// The widget extension's bundle identifier, which is what `pluginkit`
     /// registers and what names its sandbox container. It begins with the
-    /// app's own, as an extension carried in `Contents/PlugIns` has to, and
-    /// ends with the build's suffix. `Plans/Photos-Go-Round Widgets.md`.
-    public var widgetExtensionIdentifier: String { "com.sydpolk.photosgoround.widget" + identifierSuffix }
+    /// app's own, as an extension carried in `Contents/PlugIns` has to.
+    /// `Plans/Photos-Go-Round Widgets.md`.
+    public var widgetExtensionIdentifier: String { appIdentifier + ".widget" }
 
     /// The App Group the app and its widget extension share, where the app
     /// leaves the bookmarks that let the extension into a folder.

@@ -49,6 +49,10 @@
 		AA0000000000000000000B0D /* Photos-Go-Round Widget.appex in Embed Widget Extension */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		AA0000000000000000000B11 /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B12 /* PhotosGoRoundAgentAPI */; };
 		AA0000000000000000000B13 /* TinyCache in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B14 /* TinyCache */; };
+		AA0000000000000000000E10 /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000E11 /* PhotosGoRoundWidgetSettings */; };
+		AA0000000000000000000E12 /* PhotosGoRoundWidgetFace in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000E13 /* PhotosGoRoundWidgetFace */; };
+		AA0000000000000000000B17 /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B18 /* PhotosGoRoundWidgetSettings */; };
+		AA0000000000000000000B19 /* PhotosGoRoundWidgetFace in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000B1A /* PhotosGoRoundWidgetFace */; };
 		AA0000000000000000000C0D /* PhotosGoRoundAgentAPI in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C0E /* PhotosGoRoundAgentAPI */; };
 		AA0000000000000000000C0F /* PhotosGoRoundWidgetSettings in Frameworks */ = {isa = PBXBuildFile; productRef = AA0000000000000000000C10 /* PhotosGoRoundWidgetSettings */; };
 		AA0000000000000000000C11 /* PhotosGoRound.icon in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000801 /* PhotosGoRound.icon */; };
@@ -406,6 +410,8 @@
 				AA0000000000000000000014 /* PhotosGoRoundDisplay in Frameworks */,
 				AA0000000000000000000451 /* PhotosGoRoundInstall in Frameworks */,
 				AA0000000000000000000B13 /* TinyCache in Frameworks */,
+				AA0000000000000000000E10 /* PhotosGoRoundWidgetSettings in Frameworks */,
+				AA0000000000000000000E12 /* PhotosGoRoundWidgetFace in Frameworks */,
 			);
 		};
 		AA00000000000000000000A3 /* Frameworks */ = {
@@ -465,6 +471,8 @@
 			files = (
 				AA0000000000000000000B0A /* TinyCache in Frameworks */,
 				AA0000000000000000000B11 /* PhotosGoRoundAgentAPI in Frameworks */,
+				AA0000000000000000000B17 /* PhotosGoRoundWidgetSettings in Frameworks */,
+				AA0000000000000000000B19 /* PhotosGoRoundWidgetFace in Frameworks */,
 			);
 		};
 		AA0000000000000000000C03 /* Frameworks */ = {
@@ -735,6 +743,8 @@
 				AA0000000000000000000012 /* PhotosGoRoundDisplay */,
 				AA0000000000000000000452 /* PhotosGoRoundInstall */,
 				AA0000000000000000000B14 /* TinyCache */,
+				AA0000000000000000000E11 /* PhotosGoRoundWidgetSettings */,
+				AA0000000000000000000E13 /* PhotosGoRoundWidgetFace */,
 			);
 			productName = "Photos-Go-Round";
 			productReference = 000000000000000000000120 /* Photos-Go-Round.app */;
@@ -934,6 +944,8 @@
 			packageProductDependencies = (
 				AA0000000000000000000B0B /* TinyCache */,
 				AA0000000000000000000B12 /* PhotosGoRoundAgentAPI */,
+				AA0000000000000000000B18 /* PhotosGoRoundWidgetSettings */,
+				AA0000000000000000000B1A /* PhotosGoRoundWidgetFace */,
 			);
 			productName = "Photos-Go-Round Widget";
 			productReference = AA0000000000000000000B01 /* Photos-Go-Round Widget.appex */;
@@ -1414,7 +1426,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1455,7 +1467,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1477,7 +1489,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.tests$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1496,7 +1508,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.tests$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1564,7 +1576,7 @@
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.server;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).server";
 				PRODUCT_NAME = "Photos-Go-Round Server";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -1584,7 +1596,7 @@
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.server;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).server";
 				PRODUCT_NAME = "Photos-Go-Round Server";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -1603,7 +1615,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = pgr_ctl;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1621,7 +1633,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = pgr_ctl;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1824,7 +1836,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -1846,7 +1858,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.tests;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.tests$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -1891,7 +1903,7 @@
 				INFOPLIST_FILE = MacOS/Agent/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.server;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).server";
 				PRODUCT_NAME = "Photos-Go-Round Server";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -1910,7 +1922,7 @@
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = MacOS/Tools/pgr_ctl/Sources/Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.pgr-ctl$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = pgr_ctl;
 				SDKROOT = auto;
 				SUPPORTED_PLATFORMS = macosx;
@@ -2014,7 +2026,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.uninstaller$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "Uninstall Photos-Go-Round";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2039,7 +2051,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.uninstaller$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "Uninstall Photos-Go-Round";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2064,7 +2076,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sydpolk.photosgoround.uninstaller;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.uninstaller$(STORAGE_ID_SUFFIX)";
 				PRODUCT_NAME = "Uninstall Photos-Go-Round";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2113,8 +2125,9 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2137,8 +2150,9 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2161,8 +2175,9 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
+				LM_SKIP_METADATA_EXTRACTION = NO;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround.widget$(STORAGE_ID_SUFFIX)";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sydpolk.photosgoround$(STORAGE_ID_SUFFIX).widget";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
 				SKIP_INSTALL = YES;
@@ -2598,6 +2613,22 @@
 		AA0000000000000000000B14 /* TinyCache */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TinyCache;
+		};
+		AA0000000000000000000E11 /* PhotosGoRoundWidgetSettings */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetSettings;
+		};
+		AA0000000000000000000E13 /* PhotosGoRoundWidgetFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetFace;
+		};
+		AA0000000000000000000B18 /* PhotosGoRoundWidgetSettings */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetSettings;
+		};
+		AA0000000000000000000B1A /* PhotosGoRoundWidgetFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PhotosGoRoundWidgetFace;
 		};
 		AA0000000000000000000C0E /* PhotosGoRoundAgentAPI */ = {
 			isa = XCSwiftPackageProductDependency;

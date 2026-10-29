@@ -8,10 +8,10 @@ tall. For the widgets, each is set in the app, for every widget, and in a widget
 Widget panel, where it starts at "As in the app". Syd, 2026-10-25. The wallpaper, the screensaver
 and the windows: *The wallpaper, the screensaver and the windows*.
 
-**A plan, with Phase 1 and part of Phase 3 built.** Fit, Fill and Actual Size are set in the app,
-and on iOS in each widget's Edit Widget too. On Syd's phone, a widget filled from a HEIC crops
-toward faces, or else the subject; a picture shrunk in bands is still cropped about the middle.
-Not yet tried on the iPad. Every decision in the plan is Syd's, 2026-10-25, or agreed by him.
+**A plan, with Phases 1 and 4 and part of Phase 3 built.** Fit, Fill and Actual Size are set in
+the app, and in each widget's Edit Widget too, on iOS and on the Mac. On Syd's phone, a widget
+filled from a HEIC crops toward faces, or else the subject; a picture shrunk in bands is still
+cropped about the middle. Not yet tried on the iPad, or on the Mac's desktop. Every decision in the plan is Syd's, 2026-10-25, or agreed by him.
 What is still to be found out is under *TODO*.
 
 # Rationale
@@ -58,21 +58,25 @@ widgets working as they do today until the setting is changed.
     *Picture sizes, kept*.
 - **Phase 3** — Each widget's own. *In Edit Widget*.
   - Two settings in `PhotoWidgetSettings`, each starting at "As in the app". Fit or fill is built
-    for iOS (`framing`, *Pictures*); the shape's comes with Phase 2.
+    for iOS and the Mac (`framing`, *Pictures*); the shape's comes with Phase 2.
   - The widget's cache folder and the clearing away go by them.
-- **Phase 4** — The Mac. *On the Mac*.
-  - The *Pictures* section in the Mac app's Settings window, stored where the Mac widget already
-    reads the sources.
-  - The Mac widget draws and fetches by the settings, through the same TinyCache sources.
-  - The Mac widget gets an Edit Widget panel: *Change Every*, and the two settings at "As in the
-    app".
-- **Phase 5** — The wallpaper, the screensaver and the windows. *The wallpaper, the screensaver
-  and the windows*.
-  - The agent keeps each photograph's size, and its crop region, in its library.
+- **Phase 4** — The Mac. *On the Mac*. Built; to be tried on the desktop.
+  - The *Pictures* panel in the Mac app's Settings window, stored where the Mac widget reads the
+    sources.
+  - The Settings window drawn like the iOS app's, with the widget preview at its top. *The Mac's
+    Settings window*.
+  - The Mac widget draws and fetches by the settings, through the iOS widget's code
+    (`WidgetPictures`, `WidgetFace`).
+  - The Mac widget's Edit Widget panel: *Change Every*, and *Pictures* at "As in the app". The
+    shape's setting comes with Phase 2.
+- **Phase 5** — The wallpaper, the screensaver and the windows: Fit, Fill and Actual Size, on the
+  widgets' branch, before Phase 2. *The wallpaper, the screensaver and the windows*. Not started.
+  - The agent keeps each photograph's crop region in its library.
   - The agent serves a picture to fill when asked, cropped toward faces or the subject.
-  - The agent serves a picture of the asker's shape when asked, from what is queued.
-  - The two settings in the Settings window's *Screensaver* and *Wallpaper* panels, and in
-    Window Settings.
+  - Fit, Fill and Actual Size in the Settings window's *Screensaver* and *Wallpaper* panels, and
+    in Window Settings.
+  - With Phase 2, and not before: the agent keeps each photograph's size, serves a picture of the
+    asker's shape from what is queued, and the shape's setting joins the others.
 
 # TODO
 
@@ -80,14 +84,16 @@ widgets working as they do today until the setting is changed.
 - Find out what the app is told on an iPad, and on the iPhone Duo, when it is on screen and not
   in focus, and when the Duo's cover closes. *When the app gives up focus*.
 - Try Fill on the iPad, whose widget is held to 30 MB: whether Vision ever fits there, and what
-  is fitted instead of filled. *Fit or fill*.
+  is covered smaller. *Fit or fill*.
 - Decide how a picture shrunk in bands is cropped toward faces, when only its crop is ever drawn.
   *Fit or fill*.
 - Decide whether the app's preview reckons against the device's own widget limit. Reckoned as a
   30 MB widget, it fits a Large where the phone's widget fills, and never asks Vision. *Fit or
   fill*.
-- Find out how the system finds an `AppEnum` kept in a package target, for both extensions.
-  *On the Mac*.
+- Try Edit Widget on the Mac's desktop: whether it lists *Change Every* and *Pictures*, and
+  whether a widget placed before it had settings goes on changing. *On the Mac*.
+- Find out whether an iOS widget set to Fill keeps it, now that its choices are kept in the
+  package. *On the Mac*.
 - Find out whether Photos takes a fetch predicate comparing `pixelWidth` with `pixelHeight`.
   *Picking among Photos*.
 - Find out whether `PHAsset.pixelWidth` and `pixelHeight` are the photograph as shown or as
@@ -105,9 +111,12 @@ widgets working as they do today until the setting is changed.
   a switch beside Fit and Fill. A photograph that fits is shown at its own size with black around
   it; a larger one is shrunk to fit, as with Fit. So Fit and Actual Size write the same picture,
   and differ only in how it is drawn. The name, *Actual Size*, is Claude's.
-- **Fit stays the default.** A photograph is fitted whole with black around it "as everywhere
-  else in Photos-Go-Round" (`WidgetFace.swift`). A widget placed before the setting existed goes
-  on as it was. Syd, 2026-10-25.
+- **Fill is the widgets' default** (`Preferences.widgetFraming`), and the app's setting reads as
+  Fill when what is stored cannot be read. Syd, 2026-10-28: "for widgets, the default should be
+  "Fill". It's so nice." So a widget placed before the setting existed, following the app, now
+  fills. Fit stayed the default until then (Syd, 2026-10-25), and is still everywhere else's.
+  Fill sometimes goes wrong on iOS at Medium and Extra Large, so a default for each size is in
+  `TODO.md`.
 - **Fill crops toward faces, or else the subject.** Syd, 2026-10-25, chose that over cropping
   about the middle. How, as below, Syd agreed the same day:
   - **In the widget, at its wake.** A widget runs for months with the app never opened, so
@@ -135,6 +144,13 @@ widgets working as they do today until the setting is changed.
     inference context".
 - **One view still draws both.** `WidgetFace` takes the setting, so what the preview shows is
   what a widget shows, as Syd asked on 2026-10-09.
+- **In the preview, a change of size or setting redraws the photograph showing**, and pictures
+  being fetched for what was showing before are dropped. Syd, 2026-10-28: "what i want is for
+  the current picture to show the new setting and all pictures in flight to be discarded". Each
+  picture's origin, a Photos identifier or a file's path, is kept beside it in the cache
+  (`.origins.json`), and the same photograph is fetched again for the new size or setting
+  (`PreviewPictures.again`, `TinyCache.showAgain`). A picture whose origin is not known, or
+  cannot be fetched again, starts the preview over.
 
 *The crop is made when the picture is written*
 
@@ -154,16 +170,21 @@ widgets working as they do today until the setting is changed.
   for a long panorama: a 1:3 photograph covering a 2:1 widget is six times the widget's pixels
   before the crop. The guard that refuses a picture too large for an extension
   (`PictureResizer.refuseFromPhotosIfTooLarge`, `needsFromPhotos(fitting:)`) is asked about the
-  covering size. A picture whose covering size the guard refuses is fitted instead, with black
-  around it, rather than passed over. Syd, 2026-10-25.
+  covering size. Rather than passed over, a picture whose covering size the guard refuses is
+  **covered smaller**: at the largest scale between fitting and covering that the guard allows
+  (`PictureResizer.largestCovering`), cropped to the widget's shape, and drawn larger. Never
+  fitted with black around it. Syd, 2026-10-28, of a portrait photograph fitted with black in an
+  Extra Large set to Fill: "its precisely these portrait pics that need it the most". It was
+  fitted from 2026-10-25 until then.
+  - **Photos handing over only the crop, at full resolution, was looked at and dropped.** Syd,
+    2026-10-28: "dont do photos handing over the crop".
 - **A HEIC holds two copies of what covering adds.** On Syd's phone, 2026-10-25, a 5712 by 4284
   HEIC covering the Extra Large Portrait, 2263 by 1697, took 34 MB before its crop was drawn, and
-  three processes were ended drawing it. Reckoned at two copies, about 44 MB, it is fitted
-  instead, and the process lives.
+  three processes were ended drawing it. Reckoned at two copies, about 44 MB, it is covered
+  smaller instead, and the process lives.
 - **The cache folders are named for it.** A picture made to fill is never shown fitted, or the
   other way round. A widget's folder becomes `systemMedium-300-fill`, and the preview's sized
-  folder `1014x474-fill`. With the defaults the names stay as they are now, so the pictures
-  already cached are kept.
+  folder `1014x474-fill`. Fit and Actual Size keep the names from before.
 
 *Matching the widget's shape*
 
@@ -318,27 +339,85 @@ widgets working as they do today until the setting is changed.
   as on iOS. Syd, 2026-10-25, chose that over below the sources and over a tab of its own. It is
   stored in the Mac app's preferences, whose domain carries the build variant, which is where the
   Mac widget already reads the sources (`Settings.sources()`).
-- **The Mac widget moves from `StaticConfiguration` to `AppIntentConfiguration`**, with a settings
-  type of its own whose parameters are the iOS one's. The enums are shared, in a target both
-  extensions take, so their names, cases and wording cannot drift apart. Syd, 2026-10-25, chose
-  that over a copy in each extension.
-  - **The system must still find them.** An `AppEnum` outside the extension's own target is
-    found only when its package says so (`AppIntentsPackage`), and the extension's target extracts
-    the metadata (*The trial, and what was built*, in `PGR Widgets - iOS.md`). *TODO*.
-- **Its panel has *Change Every* as well, with the same durations as iOS.** The five minutes
-  hard-coded in `Settings.interval` goes. Syd, 2026-10-25, chose that over keeping five minutes
+  - **Its control is in a row headed *Widgets*,** so the panel is not read as setting the
+    screensaver and the wallpaper, which have their own (*The wallpaper, the screensaver and the
+    windows*). The heading is Claude's.
+- **The Settings window is drawn like the iOS app's.** *The Mac's Settings window*, below.
+- **The Mac widget runs on the iOS widget's code.** Syd, 2026-10-28: "please try to share code
+  between mac and ios if possible", and then the shared parts, over a timeline shared too: what a
+  wake does (`WidgetPictures`), what is drawn (`WidgetFace`), the folders opened through the
+  app's bookmarks (`BookmarkedSources`), and the cache's name (`WidgetPictures.folder`). The Mac
+  keeps a timeline of its own (`PhotoTimeline`), for where its preferences, its cache and its
+  log are.
+  - **So it shows the iOS widget's faces without a photograph**: the plain icon with nothing
+    chosen, "No Photos found", "No Photos Access". It no longer says in a sentence what went
+    wrong.
+- **The Mac widget is an `AppIntentConfiguration`**, no longer a `StaticConfiguration`, with a
+  settings type of its own whose parameters are the iOS one's. The enums are shared, in
+  `PhotosGoRoundWidgetSettings` (`EditWidgetChoices.swift`), which both extensions take, so their
+  names, cases and wording cannot drift apart. Syd, 2026-10-25, chose that over a copy in each
+  extension.
+  - **The system finds them through `PhotoWidgetChoices`**, an `AppIntentsPackage` in the shared
+    target, which each extension's own (`PhotoWidgetIntents`) includes; each extension's target
+    extracts the metadata (*The trial, and what was built*, in `PGR Widgets - iOS.md`). Both
+    extensions' metadata lists `ChangeEvery` and `WidgetFraming`. Whether Edit Widget shows them
+    on the Mac, and whether an iOS widget keeps a choice made before they moved, is *TODO*.
+- **Its panel has *Change Every* as well, with the same durations as iOS.** The five minutes that
+  were hard-coded are gone. Syd, 2026-10-25, chose that over keeping five minutes
   until the menubar app.
-- **Its cache is named for the settings too.** It is one folder for each size today
-  (`TinyCache/systemMedium`); it becomes one for each size and resolved settings, as on iOS.
+- **Its cache is named for the settings too**: one folder for each size and resolved settings, as
+  on iOS (`Caches/Widgets/systemMedium-300-fill`), with the source counts in each. The folders
+  from before, one for each size in `Caches/TinyCache`, are deleted at the first wake.
 - **The crop and the shape are TinyCache's**, in `PhotosSource`, `FolderSource` and
-  `PictureResizer`, which the Mac widget uses directly, so the Mac does not build them twice.
+  `PictureResizer`, which the Mac widget uses through `WidgetPictures` as iOS does, so the Mac
+  does not build them twice.
+- **The app and its widget have a bundle ID for each configuration**: the widget is
+  `com.sydpolk.photosgoround.debug.widget` in a Debug build. While every build of the app was
+  `com.sydpolk.photosgoround`, the system read the Release app's App Intents metadata for a Debug
+  build's widget, found no settings, and showed no Edit Widget. Syd, 2026-10-28: "all products
+  should have a separate bundle id per config". `CLAUDE.md`, the identity table.
 - **Building `Photos-Go-Round` registers the widget**, as `CLAUDE.md` says; a build to try the
   panel is unregistered afterwards.
+
+*The Mac's Settings window*
+
+- **It looks a lot like the iOS app's.** Syd, 2026-10-28: "the settings window should look a lot
+  like the ios window."
+- **From the top: the preview, *Pictures*, *Screensaver*, *Wallpaper*, then the sources.** Syd,
+  2026-10-28: "There should be a preview, the widget fill settings, screensaver settings,
+  wallpaper settings, and then the sources."
+- **The preview is the iOS app's** (`WidgetPreviewView`, `PreviewModel`), with the Mac widget's
+  sizes: Small 164 by 164 points, Medium 344 by 164, Large 344 by 344, Extra Large 704 by 344,
+  Extra Large Portrait 344 by 704, as the Mac widget was handed them on 2026-10-28. The Mac widget
+  records the sizes it is handed for the preview, as the iOS widget does.
+- **The preview gets its pictures from the sources, as a widget does**, through the shared code
+  (`CachedPreviewPictures`), and not from the agent. Syd, 2026-10-28: "the preview gets pictures
+  from the sources. the app, screensaver, wallpaper from the agent. the widgets don't need the
+  agent".
+- **The size is chosen in the window's toolbar**, five shapes with the chosen one marked, as iOS
+  puts them in its bar. Syd, 2026-10-28, over a segmented control under the preview.
+- **The whole window scrolls, and the preview is as tall as the size it shows.** Syd,
+  2026-10-28: "make the entire window scrollable. adjust the height of the preview based on
+  widget size." That replaced the iOS app's way, a preview area as tall as a Large that scrolls
+  by itself for the bigger sizes, which Syd had first asked for the same day.
+- **The window is at least as wide as the widest size, with a margin.** Syd, 2026-10-28. Since
+  the whole window scrolls, it has no least height beyond a small one (300 points).
+- **Each source list is as tall as its rows, up to five, then scrolls, and never shows part of
+  a row.** Syd, 2026-10-28: "shrink the number of rows in the sources to adapt to the number of
+  rows to a maximum of five each before scrolling", and "these lists should never have partial
+  rows showing". A list's height is its rows' measured height, not a fixed guess, since a row
+  can take two lines.
+- **The sources are the Mac's own lists**, drawn as sections like iOS's: they still go through
+  the agent (`SourcesModel`), and Photos collections are still chosen from the agent's album list.
+  Syd, 2026-10-28, over the iOS app's shared lists (`ChosenSources`).
 
 *The wallpaper, the screensaver and the windows*
 
 - **They get both settings too.** Syd, 2026-10-25: "Add this to wallpaper and screensavers and
   application windows as well."
+  - **Fit, Fill and Actual Size first, and the shape after Phase 2.** Syd, 2026-10-28:
+    "screensaver, wallpaper, and app window settings also need fit/fill/actual size settings",
+    and "we are only doing the three right now".
 - **They get their pictures from the agent, so the agent does the work.** Each asks
   `GET /v1/next` with its size in pixels (`PictureClient`), and the agent serves from one queue
   for every surface and shrinks the picture to fit. So the crop and the shape are the agent's,

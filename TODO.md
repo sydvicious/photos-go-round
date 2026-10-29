@@ -12,7 +12,13 @@ Syd, 2026-10-26: "Pgr widgets is first release and highest priority. English onl
 
 **Screensaver and wallpaper work is done for now only where it shares work with the widgets.** Syd, 2026-10-26: "We should only do screensaver wallpaper work when it shares work with widgets for now." What they would have on their own is under *Held until after the first release*, below.
 
-- [ ] **Fit, Fill and actual size.** Syd, 2026-10-26: "Fit/Fill/actual size (in progress on different branch)". `Plans/Widget Settings.md` has Fit and Fill; actual size is new.
+- [ ] **Fit, Fill and actual size.** Syd, 2026-10-26: "Fit/Fill/actual size (in progress on different branch)". Try them on the iPad and on the Mac's desktop, with the Mac widget's Edit Widget, and the rest of what is open under *TODO* in `Plans/Widget Settings.md`.
+  - [ ] **Ask a foundation model where the people are, and crop to the clump.** Syd, 2026-10-28: "perhaps ask foundation model to find clumps of people in the center and fit that clump, etc. Write a good prompt. doubt it would survive memory guard, but we can try...". Vision finds faces one at a time; a group photograph wants the group kept whole. Whether Apple's on-device model takes a picture, and what it costs in a widget's 30 MB, is to be found out; `Plans/Widget Settings.md`, *A local model for the crop*. A first prompt, given the picture and the widget's shape:
+
+    > This photograph will be cropped to fill a widget {W} wide by {H} tall, so only part of it will show. Find the people in it. If there are several, find the largest group of them standing or sitting together, and of groups that are close in size, the one nearest the middle of the photograph. Give the smallest rectangle that holds the whole head and shoulders of everyone in that group. If there are no people, give the rectangle around the photograph's main subject instead. Give the rectangle as fractions of the photograph's width and height, measured from its top-left corner, and nothing else: {"x": 0.0, "y": 0.0, "width": 0.0, "height": 0.0, "people": 0}
+
+    The crop is then the widget's shape around that rectangle, centred on it and kept inside the photograph; a group wider than the crop can hold keeps its middle.
+  - [ ] **A default for each widget size.** Fill is the default for every size, and it sometimes goes wrong on iOS at Medium and Extra Large. Syd, 2026-10-28: "it does mess up sometimes on ios medium and extra large, so add to the TODO.md separate defaults for each widget size."
 - [ ] **The Mac's menu bar app**, PhotosGoRound Widgets.app on the Mac App Store. Syd, 2026-10-26: "Mac: PhotosGoRound Widgets menu bar app". It carries the widget, and writes its sources into the App Group container as the iOS app already does, since the Store does not accept the entitlement by which the Mac widget reads the app's preferences today. Its questions were to wait for a good version of the iOS app; `Plans/PGR Widgets - iOS.md`, *The menubar app's questions wait*. Related: *A menu-bar app for shipping*, below, which is the existing product's.
   - [ ] **The proof-of-concept widget comes out of `Photos-Go-Round.app`** once the menu bar app carries it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 - [ ] **Cloud storage such as Dropbox, as a source, everywhere.** Syd, 2026-10-26: "All: support for cloud services like Dropbox. This is the biggest win that nobody else supports. If it's possible we have to do it."
@@ -60,7 +66,8 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
   way to say "these photographs". And what Photos gives back after limited access, then none,
   then full is not known. *Photos access*, *How the selection is kept*.
 - **Add a button for an individual photo picker.** Syd, 2026-10-11. It is what closes the hole
-  above.
+  above. A second picker, beside the collections': Syd, 2026-10-29: "right now you can't do both
+  collections and independent photos".
 - **Learn which pictures a widget cannot show, from what it records.** Syd, 2026-10-14: "store
   the file we want to display in a widget, and store the fact that is completed. The app can
   collect all of that data. We can then do heuristics on how often a given photo succeeds, and

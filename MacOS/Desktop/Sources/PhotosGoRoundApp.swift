@@ -76,9 +76,8 @@ struct PhotosGoRoundApp: App {
         Window("\(Bundle.main.displayName) Settings", id: SourcesSettingsView.windowID) {
             SourcesSettingsView()
         }
-        // The content names a floor and the rest is the user's. A list of
-        // sources has no natural length: somebody with forty should be able to
-        // see forty.
+        // The content names a floor, as wide as the widest widget, and the
+        // rest is the person's: the whole window scrolls.
         .windowResizability(.contentMinSize)
         .defaultPosition(.center)
 

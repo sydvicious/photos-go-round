@@ -321,16 +321,17 @@ public struct Preferences: @unchecked Sendable {
         return (specs, unreadable)
     }
 
-    /// How a photograph sits in every widget that follows the app. Fit when
+    /// How a photograph sits in every widget that follows the app. Fill when
     /// nothing has been chosen, and when what is stored is not one of the
-    /// three. `Plans/Widget Settings.md`, *Fit or fill*.
+    /// three. Syd, 2026-10-28: "for widgets, the default should be "Fill".
+    /// It's so nice." `Plans/Widget Settings.md`, *Fit or fill*.
     public var widgetFraming: Framing {
-        guard let stored = defaults.object(forKey: Key.widgetFraming.rawValue) else { return .fit }
+        guard let stored = defaults.object(forKey: Key.widgetFraming.rawValue) else { return .fill }
         guard let raw = stored as? String, let framing = Framing(rawValue: raw) else {
             Log.prefs.error(
                 kind: "preferences.unreadable.\(Key.widgetFraming.rawValue)",
-                "\(Key.widgetFraming.rawValue) is not one of fit, fill, actual-size; using fit")
-            return .fit
+                "\(Key.widgetFraming.rawValue) is not one of fit, fill, actual-size; using fill")
+            return .fill
         }
         return framing
     }

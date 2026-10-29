@@ -139,19 +139,41 @@ struct FillTests {
     }
 
     /// Decoded in one piece at 900 by 900: about 10 MB to fit a box 900 by
-    /// 100, and 3 MB more to cover it. Syd, 2026-10-25: a picture too large
-    /// to cover is fitted instead.
-    @Test("One that covering would make too large for what is left is fitted instead")
-    func fittedWhenCoveringIsTooLarge() throws {
+    /// 100, and 3 MB more to cover it, with 12 MB left. Syd, 2026-10-28, of a
+    /// portrait photograph fitted into an Extra Large with Fill set: "when
+    /// "fill" is set this should not happen", and "its precisely these
+    /// portrait pics that need it the most". So it is covered at the largest
+    /// size that fits what is left, and drawn larger where it is shown.
+    @Test("One too large to cover at full size is covered smaller, in the box's shape, and never fitted")
+    func coveredSmallerWhenCoveringIsTooLarge() throws {
         let scratch = try ScratchFolder()
         let original = try scratch.picture("square.png", width: 900, height: 900)
         let resized = scratch.url.appending(path: "resized.jpg")
-        let resizer = PictureResizer(memory: Self.memory(held: 10, of: 22), framing: .fill)
+        let resizer = PictureResizer(
+            memory: Self.memory(held: 10, of: 22), framing: .fill, finding: { _ in .middle })
 
         let resize = try resizer.write(original, fitting: CGSize(width: 900, height: 100), to: resized)
 
-        #expect(resize.writtenWidth == 100)
-        #expect(resize.writtenHeight == 100)
+        // The box's shape, nine to one, to the pixel.
+        #expect(abs(resize.writtenWidth - 9 * resize.writtenHeight) <= 9)
+        // Smaller than the box, and larger than the fitted picture's width.
+        #expect(resize.writtenWidth < 900)
+        #expect(resize.writtenWidth > 100)
+    }
+
+    @Test("Covering smaller takes the largest size that fits what is left")
+    func coveredAsLargeAsFits() throws {
+        let scratch = try ScratchFolder()
+        let original = try scratch.picture("square.png", width: 900, height: 900)
+        let box = CGSize(width: 900, height: 100)
+        let tight = PictureResizer(memory: Self.memory(held: 10, of: 22), framing: .fill, finding: { _ in .middle })
+        let roomier = PictureResizer(
+            memory: Self.memory(held: 10, of: 23), framing: .fill, finding: { _ in .middle })
+
+        let smaller = try tight.write(original, fitting: box, to: scratch.url.appending(path: "a.jpg"))
+        let larger = try roomier.write(original, fitting: box, to: scratch.url.appending(path: "b.jpg"))
+
+        #expect(larger.writtenWidth > smaller.writtenWidth)
     }
 
     /// An 800 by 600 PNG filling 200 by 400 is reckoned at about 9 MB, and

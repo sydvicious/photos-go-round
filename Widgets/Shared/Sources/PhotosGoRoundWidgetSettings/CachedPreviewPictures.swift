@@ -108,6 +108,18 @@ public struct CachedPreviewPictures: PreviewPictures {
         return (try? cache.lastShown()) ?? nil
     }
 
+    /// The picture `shown` drawn again for `box`, from the photograph or file
+    /// it was made from: the one on screen, at another size or framed
+    /// another way. Nil when where it came from is not known, or its source
+    /// cannot write it again.
+    public func again(_ shown: URL, for sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        guard let origin = TinyCache.origin(of: shown) else { return nil }
+        return try TinyCache(
+            directory: folder(for: sources, fitting: box),
+            source: source(for: sources), fitting: box, fillLimit: 1, onFetch: onFetch
+        ).showAgain(origin)
+    }
+
     /// Fetches one picture ahead of time and keeps it waiting, so that the
     /// next `next` has it without asking any source. A widget does this
     /// after it has handed over what it is showing.

@@ -23,14 +23,7 @@ struct BuildVariantTests {
 
     /// Every setting this suite checks, as configuration → key → value.
     private static let settings: [String: [String: String]] = {
-        let project = URL(filePath: #filePath)
-            .deletingLastPathComponent()  // PhotosGoRoundKitTests
-            .deletingLastPathComponent()  // Tests
-            .deletingLastPathComponent()  // Shared
-            .deletingLastPathComponent()  // MacOS
-            .deletingLastPathComponent()  // the package root
-            .appending(path: "Photos-Go-Round.xcodeproj/project.pbxproj")
-        guard let text = try? String(contentsOf: project, encoding: .utf8) else { return [:] }
+        guard let text = try? String(contentsOf: projectFile, encoding: .utf8) else { return [:] }
 
         // The project-level configurations, each a block ending in `name = X;`.
         // Only those three carry the suffixes; per-target copies were removed
@@ -59,6 +52,45 @@ struct BuildVariantTests {
         }
         return found
     }()
+
+    /// Each target's bundle identifier, as target → configuration → identifier,
+    /// with the project-level suffixes it names filled in.
+    private static let bundleIdentifiers: [String: [String: String]] = {
+        guard let text = try? String(contentsOf: projectFile, encoding: .utf8) else { return [:] }
+        let opening = /\/\* (\w+) configuration for PBXNativeTarget "([^"]+)" \*\/ = \{/
+        var found: [String: [String: String]] = [:]
+        for match in text.matches(of: opening) {
+            let configuration = String(match.output.1)
+            let target = String(match.output.2)
+            let rest = text[match.range.upperBound...]
+            guard let end = rest.range(of: "\n\t\t};") else { continue }
+            let body = rest[rest.startIndex..<end.lowerBound]
+            guard let line = body.split(separator: "\n").first(where: { $0.contains("PRODUCT_BUNDLE_IDENTIFIER = ") })
+            else { continue }
+            var identifier = line.trimmingCharacters(in: .whitespaces)
+                .replacingOccurrences(of: "PRODUCT_BUNDLE_IDENTIFIER = ", with: "")
+                .replacingOccurrences(of: ";", with: "")
+                .replacingOccurrences(of: "\"", with: "")
+            for (key, value) in settings[configuration] ?? [:] {
+                identifier = identifier.replacingOccurrences(of: "$(\(key))", with: value)
+            }
+            found[target, default: [:]][configuration] = identifier
+        }
+        return found
+    }()
+
+    private static var projectFile: URL {
+        packageRoot.appending(path: "Photos-Go-Round.xcodeproj/project.pbxproj")
+    }
+
+    private static var packageRoot: URL {
+        URL(filePath: #filePath)
+            .deletingLastPathComponent()  // PhotosGoRoundKitTests
+            .deletingLastPathComponent()  // Tests
+            .deletingLastPathComponent()  // Shared
+            .deletingLastPathComponent()  // MacOS
+            .deletingLastPathComponent()  // the package root
+    }
 
     /// Which `BuildVariant` each Xcode configuration is.
     private static let configurations: [(String, BuildVariant)] = [
@@ -107,8 +139,64 @@ struct BuildVariantTests {
     func widgetNamesMatch(_ pair: (String, BuildVariant)) {
         let (configuration, variant) = pair
         let suffix = Self.settings[configuration]?["STORAGE_ID_SUFFIX"] ?? "missing"
-        #expect(variant.widgetExtensionIdentifier == "com.sydpolk.photosgoround.widget\(suffix)")
+        #expect(variant.widgetExtensionIdentifier == "com.sydpolk.photosgoround\(suffix).widget")
         #expect(variant.widgetAppGroup == "R5PQPZARC5.com.sydpolk.photosgoround.widgets\(suffix)")
+    }
+
+    // MARK: - Bundle identifiers
+
+    /// Syd, 2026-10-28: "all products should have a separate bundle id per
+    /// config". A shared one let the system read a Release app's App Intents
+    /// metadata for a Debug build's widget, which then had no settings.
+    @Test("No product shares its bundle identifier with another configuration's")
+    func everyProductIsItsBuildsOwn() {
+        #expect(Self.bundleIdentifiers.count >= 8, "read \(Self.bundleIdentifiers.keys.sorted())")
+        for (target, byConfiguration) in Self.bundleIdentifiers {
+            #expect(byConfiguration.count == 3, "\(target): \(byConfiguration)")
+            #expect(
+                Set(byConfiguration.values).count == byConfiguration.count,
+                "\(target) shares an identifier between configurations: \(byConfiguration)")
+            #expect(
+                !byConfiguration.values.contains { $0.contains("$(") },
+                "\(target) names a setting no configuration states: \(byConfiguration)")
+        }
+    }
+
+    @Test("The app, its agent and its widget are named as BuildVariant names them", arguments: configurations)
+    func identifiersMatch(_ pair: (String, BuildVariant)) {
+        let (configuration, variant) = pair
+        #expect(Self.bundleIdentifiers["Photos-Go-Round"]?[configuration] == variant.appIdentifier)
+        #expect(Self.bundleIdentifiers["Photos-Go-Round Server"]?[configuration] == variant.agentIdentifier)
+        #expect(Self.bundleIdentifiers["Photos-Go-Round Widget"]?[configuration] == variant.widgetExtensionIdentifier)
+    }
+
+    /// Xcode refuses to embed an extension whose identifier does not begin with
+    /// its app's, and the agent the app carries is named the same way.
+    @Test("What the app carries is named under the app", arguments: BuildVariant.allCases)
+    func carriedUnderTheApp(_ variant: BuildVariant) {
+        #expect(variant.agentIdentifier.hasPrefix(variant.appIdentifier + "."))
+        #expect(variant.widgetExtensionIdentifier.hasPrefix(variant.appIdentifier + "."))
+    }
+
+    /// An identifier written into an `Info.plist` is the same in every
+    /// configuration, whatever the project says.
+    @Test("Every Info.plist takes its identifier from the build")
+    func infoPlistsTakeTheBuildsIdentifier() throws {
+        let root = Self.packageRoot
+        let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil)
+        var checked = 0
+        while let file = walker?.nextObject() as? URL {
+            let path = file.path(percentEncoded: false)
+            if path.contains("/.build/") || path.contains("/DerivedData/") || path.contains("/.git/") { continue }
+            guard file.pathExtension == "plist", file.lastPathComponent.hasSuffix("Info.plist"),
+                let data = try? Data(contentsOf: file),
+                let values = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any],
+                let identifier = values["CFBundleIdentifier"] as? String
+            else { continue }
+            checked += 1
+            #expect(identifier == "$(PRODUCT_BUNDLE_IDENTIFIER)", "\(path) says \(identifier)")
+        }
+        #expect(checked >= 5)
     }
 
     @Test("The team is the project's")
@@ -187,6 +275,9 @@ struct BuildVariantTests {
 
     @Test("Release carries no suffix at all, so it is the plain name everywhere")
     func releaseIsUnadorned() {
+        #expect(BuildVariant.release.appIdentifier == "com.sydpolk.photosgoround")
+        #expect(BuildVariant.release.agentIdentifier == "com.sydpolk.photosgoround.server")
+        #expect(BuildVariant.release.widgetExtensionIdentifier == "com.sydpolk.photosgoround.widget")
         #expect(BuildVariant.release.agentLabel == "com.sydpolk.photosgoround.server")
         #expect(BuildVariant.release.saverBundleName == "Photos-Go-Round Screensaver")
         #expect(

@@ -188,4 +188,21 @@ struct ChosenWidgetSizesTests {
         #expect(chosen[.extraLargePortrait] == onTheInner[.extraLargePortrait])
         #expect(chosen[.small] == onTheCover[.small])
     }
+
+    /// A Mac's desktop has one set of sizes, whatever the display, so what
+    /// each size was handed last is what it measures.
+    @Test("On a Mac, each size is the one it was handed last")
+    func onAMac() {
+        let all: [WidgetFamily: [CGSize]] = [
+            .small: [CGSize(width: 170, height: 170), CGSize(width: 164, height: 164)],
+            .medium: [CGSize(width: 344, height: 164)],
+            .large: [CGSize(width: 344, height: 344)],
+        ]
+        let chosen = RecordedWidgetSizes.chosen(from: all, for: CGSize(width: 1512, height: 982), on: .mac)
+        #expect(chosen == [
+            .small: CGSize(width: 164, height: 164),
+            .medium: CGSize(width: 344, height: 164),
+            .large: CGSize(width: 344, height: 344),
+        ])
+    }
 }

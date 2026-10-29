@@ -49,6 +49,18 @@ struct ScrubTests {
         #expect(plan.domains.count == 2 + 6)
     }
 
+    /// The Settings window's widget preview keeps its pictures beside the
+    /// agent's cache and not in it, where the agent's sweep would take them.
+    @Test("The widget preview's pictures are a build's, and go with it")
+    func widgetPreview() {
+        let plan = Scrub.plan(variants: [.debug], home: home, fileExists: { _ in true })
+        let found = Set(plan.found.map { $0.path(percentEncoded: false) })
+        #expect(found.contains(path("Library/Caches/com.sydpolk.photosgoround.debug.widget-preview")))
+        #expect(
+            MacHostEnvironment.widgetPreviewCache(variant: .debug, home: home).path(percentEncoded: false)
+                == path("Library/Caches/com.sydpolk.photosgoround.debug.widget-preview"))
+    }
+
     @Test("A library is looked for in Application Support and in its retired container")
     func bothLibraryFolders() {
         let plan = Scrub.plan(variants: [.debug], home: home, fileExists: { _ in true })
@@ -75,7 +87,7 @@ struct ScrubTests {
             // The widgets' cached pictures, and the bookmarks the app left
             // them. Measured 2026-10-09: a Debug build was deleted and both
             // of its folders were still there afterwards.
-            path("Library/Containers/com.sydpolk.photosgoround.widget.debug/Data/Library/Caches/TinyCache"),
+            path("Library/Containers/com.sydpolk.photosgoround.debug.widget/Data/Library/Caches/Widgets"),
             path("Library/Group Containers/R5PQPZARC5.com.sydpolk.photosgoround.widgets.debug/WidgetSource"),
         ])
     }
@@ -83,7 +95,7 @@ struct ScrubTests {
     @Test("A Release build's widget folders carry no suffix")
     func releaseWidgetPaths() {
         let paths = Scrub.protectedPaths(for: .release, home: home).map { $0.path(percentEncoded: false) }
-        #expect(paths.contains(path("Library/Containers/com.sydpolk.photosgoround.widget/Data/Library/Caches/TinyCache")))
+        #expect(paths.contains(path("Library/Containers/com.sydpolk.photosgoround.widget/Data/Library/Caches/Widgets")))
         #expect(paths.contains(path("Library/Group Containers/R5PQPZARC5.com.sydpolk.photosgoround.widgets/WidgetSource")))
     }
 }

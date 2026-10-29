@@ -109,6 +109,8 @@ public struct RecordedWidgetSizes: Sendable {
         from all: [WidgetFamily: [CGSize]], for screen: CGSize?, on device: WidgetDevice
     ) -> [WidgetFamily: CGSize] {
         let latest = all.compactMapValues(\.last)
+        // A Mac's desktop has one set, whatever the display.
+        guard device != .mac else { return latest }
         guard let screen,
             let lead = [WidgetFamily.medium, .large, .extraLargePortrait].first(where: { all[$0] != nil }),
             let candidates = all[lead]
@@ -138,6 +140,8 @@ public struct RecordedWidgetSizes: Sendable {
             }
             leading =
                 leaveRoom.max { $0.width < $1.width } ?? candidates.min { $0.width < $1.width }
+        case .mac:
+            return latest
         case .pad:
             leading =
                 screen.height > screen.width

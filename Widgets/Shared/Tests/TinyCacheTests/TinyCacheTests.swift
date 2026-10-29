@@ -256,4 +256,52 @@ struct TinyCacheTests {
         #expect(exists(preview))
         #expect(try cache.waiting() == [preview])
     }
+
+    // MARK: Where each picture came from
+
+    /// So that the photograph on screen can be drawn again at another size,
+    /// or framed another way. Syd, 2026-10-28: "what i want is for the
+    /// current picture to show the new setting".
+    @Test("Each picture's origin is kept, waiting and once shown")
+    func originKept() throws {
+        let scratch = try ScratchFolder()
+        let (cache, _) = try cache(in: scratch)
+        try cache.fill(to: 1)
+        let waiting = try #require(try cache.waiting().first)
+        let origin = try #require(TinyCache.origin(of: waiting))
+
+        let shown = try #require(try cache.take(upTo: 1, from: noon, every: 60).first)
+
+        #expect(TinyCache.origin(of: shown.file) == origin)
+        guard case .file(let path) = origin else {
+            Issue.record("expected a file origin, got \(origin)")
+            return
+        }
+        #expect(path.hasSuffix("coin-1.jpg"))
+    }
+
+    @Test("A picture is written again from its origin at another size, and shown last")
+    func shownAgain() throws {
+        let scratch = try ScratchFolder()
+        let (small, source) = try cache(in: scratch)
+        let first = try #require(try small.take(upTo: 1, from: noon, every: 60).first)
+        let origin = try #require(TinyCache.origin(of: first.file))
+        let larger = TinyCache(
+            directory: scratch.url.appending(path: "larger", directoryHint: .isDirectory),
+            source: source, fitting: CGSize(width: 80, height: 80))
+
+        let again = try #require(try larger.showAgain(origin))
+
+        #expect(exists(again))
+        #expect(TinyCache.origin(of: again) == origin)
+        #expect(try larger.lastShown()?.lastPathComponent == again.lastPathComponent)
+    }
+
+    @Test("An origin the source cannot write again gives nothing")
+    func notShownAgain() throws {
+        let scratch = try ScratchFolder()
+        let (cache, _) = try cache(in: scratch)
+
+        #expect(try cache.showAgain(.photo("not one of its")) == nil)
+    }
 }

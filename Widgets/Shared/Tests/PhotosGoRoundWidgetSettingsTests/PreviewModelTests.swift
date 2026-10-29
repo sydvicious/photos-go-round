@@ -27,6 +27,9 @@ final class ScriptedPictures: PreviewPictures {
     private let lastTime: String?
     private let asked = Mutex<[CGSize]>([])
     private let called = Mutex<[String]>([])
+    /// Whether it can draw a picture again, at another size or framed
+    /// another way.
+    private let drawsAgain: Bool
 
     /// Which of its three questions it was asked, in order.
     var calls: [String] { called.withLock { $0 } }
@@ -35,10 +38,18 @@ final class ScriptedPictures: PreviewPictures {
     ///   - last: The picture it gave last time, if it has one kept.
     ///   - first: What it answers when asked for the first source's first
     ///     picture; with none scripted, that there is none.
-    init(_ script: [Answer], last: String? = nil, first: [Answer] = []) {
+    init(_ script: [Answer], last: String? = nil, first: [Answer] = [], drawsAgain: Bool = true) {
         self.script = Mutex(script)
         self.firsts = Mutex(first)
         self.lastTime = last
+        self.drawsAgain = drawsAgain
+    }
+
+    /// `again-a.jpg` for `a.jpg`, when it draws again.
+    func again(_ shown: URL, for sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        called.withLock { $0.append("again") }
+        guard drawsAgain else { return nil }
+        return URL(filePath: "/pictures/again-\(shown.lastPathComponent)")
     }
 
     func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? {
@@ -98,6 +109,34 @@ final class HeldPictures: PreviewPictures {
     }
 }
 
+/// Pictures whose next is stuck until the test lets it go, as a request to
+/// Photos can be, and which draw the picture showing again at once.
+final class StuckPictures: PreviewPictures {
+    private let waiting = Mutex(false)
+    private let gate = DispatchSemaphore(value: 0)
+
+    /// Whether the next picture has been asked for and is stuck.
+    var isStuck: Bool { waiting.withLock { $0 } }
+
+    func letGo() { gate.signal() }
+
+    func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? { nil }
+
+    func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        URL(filePath: "/pictures/a.jpg")
+    }
+
+    func next(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        waiting.withLock { $0 = true }
+        gate.wait()
+        return URL(filePath: "/pictures/stuck.jpg")
+    }
+
+    func again(_ shown: URL, for sources: [SourceSpec], fitting box: CGSize) throws -> URL? {
+        URL(filePath: "/pictures/again-\(shown.lastPathComponent)")
+    }
+}
+
 /// Pictures that take a moment to fetch, and notice when two are fetched at once.
 final class SlowPictures: PreviewPictures {
     private struct State {
@@ -128,6 +167,34 @@ final class SlowPictures: PreviewPictures {
 @MainActor
 @Suite("The preview: which face it shows, and at what size")
 struct PreviewModelTests {
+    // MARK: On a Mac
+
+    /// `Plans/Widget Settings.md`, *The Mac's Settings window*.
+    func onAMac() -> PreviewModel {
+        PreviewModel(
+            pictures: ScriptedPictures([]), device: .mac, screen: CGSize(width: 1512, height: 982), scale: 2)
+    }
+
+    @Test("On a Mac, the preview offers all five sizes")
+    func macFamilies() {
+        #expect(onAMac().families == WidgetFamily.allCases)
+    }
+
+    @Test("On a Mac, the preview's bounds are as tall as a Large, and the Extra Large is the widest")
+    func macBounds() {
+        let preview = onAMac()
+        #expect(preview.boundsHeight == 344)
+        #expect(preview.widest == 704)
+    }
+
+    @Test("On a Mac, it starts on the largest size that fits without scrolling, which is the Extra Large")
+    func macStarts() {
+        let preview = onAMac()
+        preview.settle(within: CGSize(width: 744, height: 344))
+        #expect(preview.family == .extraLarge)
+        #expect(preview.size == CGSize(width: 704, height: 344))
+    }
+
     let cats = SourceSpec(kind: .photosCollection, locator: "A2")
     let iceland = SourceSpec(kind: .photosCollection, locator: "A1")
     let phone = CGSize(width: 393, height: 852)
@@ -697,6 +764,127 @@ struct PreviewModelTests {
         #expect(preview.boundsHeight == 0)
     }
 
+    // MARK: Another size
+
+    /// Syd, 2026-10-28: "when I change the size of the widget preview it can
+    /// take a couple of pics to respect the fill setting". The picture made
+    /// for the old size was left up, fitted into the new one.
+    /// Syd, 2026-10-28: "what i want is for the current picture to show the
+    /// new setting and all pictures in flight to be discarded".
+    @Test("Choosing another size draws the picture showing again at that size")
+    func anotherSizeDrawsAgain() async {
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([.picture("a.jpg"), .picture("b.jpg")]), device: .phone, screen: phone,
+            scale: 3)
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+        #expect(preview.content == picture("a.jpg"))
+
+        preview.family = .large
+        await preview.advance()
+
+        #expect(preview.content == picture("again-a.jpg"))
+    }
+
+    /// Shows `a.jpg`, then starts a fetch that is stuck until `pictures` lets
+    /// it go, and gives back that fetch's task.
+    func stuckFetch(_ pictures: StuckPictures, in preview: PreviewModel) async -> Task<Void, Never> {
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+        #expect(preview.content == picture("a.jpg"))
+        let stuck = Task { await preview.advance() }
+        // Two seconds at most, so a preview that never asks fails rather
+        // than hangs.
+        var waits = 0
+        while !pictures.isStuck, waits < 400 {
+            try? await Task.sleep(for: .milliseconds(5))
+            waits += 1
+        }
+        #expect(pictures.isStuck)
+        return stuck
+    }
+
+    @Test("Another size, chosen while a fetch is stuck, gives up on it and draws the picture showing again at once")
+    func anotherSizeGivesUpOnAStuckFetch() async {
+        let pictures = StuckPictures()
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3)
+        let stuck = await stuckFetch(pictures, in: preview)
+
+        preview.family = .large
+        await preview.advance()
+        #expect(preview.content == picture("again-a.jpg"))
+
+        // What the stuck fetch brings back at last answers nobody.
+        pictures.letGo()
+        await stuck.value
+        #expect(preview.content == picture("again-a.jpg"))
+    }
+
+    @Test("Fit or Fill, chosen while a fetch is stuck, gives up on it and draws the picture showing again at once")
+    func framingGivesUpOnAStuckFetch() async {
+        let pictures = StuckPictures()
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3)
+        let stuck = await stuckFetch(pictures, in: preview)
+
+        preview.use(framing: .fill)
+        await preview.advance()
+        #expect(preview.content == picture("again-a.jpg"))
+
+        pictures.letGo()
+        await stuck.value
+        #expect(preview.content == picture("again-a.jpg"))
+    }
+
+    @Test("When the picture showing cannot be drawn again, another size starts the preview over")
+    func anotherSizeStartsOver() async {
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([.picture("a.jpg"), .picture("b.jpg")], drawsAgain: false),
+            device: .phone, screen: phone, scale: 3)
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+        #expect(preview.content == picture("a.jpg"))
+
+        preview.family = .large
+        await preview.advance()
+
+        #expect(preview.content == picture("b.jpg"))
+    }
+
+    @Test("Choosing the size already showing leaves the picture up")
+    func sameSizeKeepsThePicture() async {
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([], first: [.picture("a.jpg")]), device: .phone, screen: phone,
+            scale: 3)
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+        #expect(preview.content == picture("a.jpg"))
+
+        preview.family = preview.family
+
+        #expect(preview.content == picture("a.jpg"))
+    }
+
+    @Test("A picture fetched for the old size is not shown once another size is chosen")
+    func oldSizesPictureIsDropped() async {
+        let pictures = HeldPictures()
+        let preview = PreviewModel(pictures: pictures, device: .phone, screen: phone, scale: 3)
+        preview.show([.folder("/pictures")])
+
+        let advancing = Task { await preview.advance() }
+        var waits = 0
+        while !pictures.isHoldingFirst, waits < 400 {
+            try? await Task.sleep(for: .milliseconds(5))
+            waits += 1
+        }
+        #expect(pictures.isHoldingFirst)
+
+        preview.family = .large
+        pictures.letGo()
+        await advancing.value
+
+        #expect(preview.content != picture("first.jpg"))
+    }
+
     @Test("With nothing to show yet, last time's picture is up while the first is fetched")
     func lastTimeMeanwhile() async {
         let pictures = HeldPictures()
@@ -890,7 +1078,8 @@ struct PreviewModelTests {
 
     @Test("A picture is asked for at the widget's size in pixels")
     func pixels() async {
-        let pictures = ScriptedPictures([.picture("a.jpg"), .picture("b.jpg")])
+        // Pictures that cannot be drawn again, so each size asks for its own.
+        let pictures = ScriptedPictures([.picture("a.jpg"), .picture("b.jpg")], drawsAgain: false)
         let preview = preview(pictures)
         preview.show([cats])
 

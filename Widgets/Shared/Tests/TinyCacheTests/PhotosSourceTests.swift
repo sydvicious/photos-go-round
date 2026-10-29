@@ -358,4 +358,66 @@ struct PhotosSourceTests {
     func reckonedFromTheSizeAskedFor() {
         #expect(PictureResizer.needsFromPhotos(fitting: CGSize(width: 1590, height: 757)) == 5 * 1590 * 757 * 4)
     }
+
+    // MARK: Where a photograph came from
+
+    @Test("A photograph says it came from Photos, by its identifier")
+    func origin() throws {
+        let scratch = try ScratchFolder()
+
+        let resize = try PhotosSource(collection: "album", library: IdentifiedLibrary())
+            .writePicture(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize?.origin == .photo("ABC-123/L0/001"))
+    }
+
+    @Test("A photograph is written again from its identifier")
+    func writtenAgain() throws {
+        let scratch = try ScratchFolder()
+        let library = IdentifiedLibrary()
+
+        let resize = try PhotosSource(collection: "album", library: library)
+            .writePicture(.photo("ABC-123/L0/001"), fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize?.origin == .photo("ABC-123/L0/001"))
+        #expect(library.identifiersAsked == ["ABC-123/L0/001"])
+    }
+
+    @Test("A file is not Photos' to write again")
+    func notWrittenAgain() throws {
+        let scratch = try ScratchFolder()
+
+        #expect(
+            try PhotosSource(collection: "album", library: IdentifiedLibrary())
+                .writePicture(.file("/pictures/a.jpg"), fitting: box, to: scratch.url.appending(path: "w.jpg")) == nil)
+    }
+
+    /// Hands back photographs that carry their identifier, and can be asked
+    /// for one by it.
+    final class IdentifiedLibrary: PhotoLibraryPictures, @unchecked Sendable {
+        private let lock = NSLock()
+        private var asked: [String] = []
+        var identifiersAsked: [String] { lock.withLock { asked } }
+
+        func picture(inCollection identifier: String, fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? { nil }
+        func count(inCollection identifier: String) throws -> Int { 1 }
+        func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? { nil }
+        func selectedCount() throws -> Int { 0 }
+        func pictureFile(
+            inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL
+        ) throws -> LibraryPictureFile? {
+            try writePicture(to: file, width: 64, height: 48)
+            return LibraryPictureFile(originalWidth: 64, originalHeight: 48, identifier: "ABC-123/L0/001")
+        }
+        func selectedPictureFile(fitting box: CGSize, pick: PicturePick, to file: URL) throws -> LibraryPictureFile? {
+            nil
+        }
+        func pictureFile(
+            identifiedBy identifier: String, fitting box: CGSize, to file: URL, reach: PhotoReach
+        ) throws -> LibraryPictureFile? {
+            lock.withLock { asked.append(identifier) }
+            try writePicture(to: file, width: 64, height: 48)
+            return LibraryPictureFile(originalWidth: 64, originalHeight: 48, identifier: identifier)
+        }
+    }
 }

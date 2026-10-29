@@ -212,7 +212,7 @@ struct UninstallTests {
             removing: [.widget], variants: [.debug], launchAgents: agents, screenSavers: savers,
             surroundings: surroundings(records: [Self.deleted(.debug)]))
         #expect(plan.describedSteps == [
-            "widget: forget the record of a deleted com.sydpolk.photosgoround.widget.debug",
+            "widget: forget the record of a deleted com.sydpolk.photosgoround.debug.widget",
             "  /Deleted/debug/Photos-Go-Round.app/Contents/PlugIns/Photos-Go-Round Widget.appex",
         ])
     }

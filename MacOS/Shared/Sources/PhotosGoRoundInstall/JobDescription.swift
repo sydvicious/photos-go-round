@@ -34,8 +34,8 @@ public struct JobDescription: Codable, Equatable, Sendable {
     /// app and costs nothing; whether a Developer ID build honours it is not
     /// known.
     ///
-    /// The app's identifier is the same in every build configuration, so every
-    /// configuration's agent is filed under the one app.
+    /// Each build configuration's app has an identifier of its own, so each
+    /// configuration's agent is filed under its own app.
     ///
     /// **Optional only so an older plist still decodes.** Every plist this
     /// writes carries it. One written before this key existed read as a
@@ -103,13 +103,18 @@ public struct JobDescription: Codable, Equatable, Sendable {
     /// The program and nothing else: the agent's build decides its storage,
     /// and there is no choice left to pass. It passed `--prod` for a Release
     /// build until 2026-09-24, when each build got one set of assets.
-    public init(label: String, program: URL, version: BundleVersion? = nil) {
+    /// - Parameter app: The bundle identifier of the app the job belongs to:
+    ///   the installing build's own.
+    public init(
+        label: String, program: URL, version: BundleVersion? = nil,
+        app: String = BuildVariant.current.appIdentifier
+    ) {
         self.label = label
         self.programArguments = [program.path(percentEncoded: false)]
         self.runAtLoad = true
         self.keepAlive = KeepAlive(successfulExit: false)
         self.processType = Self.adaptive
-        self.associatedBundleIdentifiers = [Storage.identifier]
+        self.associatedBundleIdentifiers = [app]
         self.environmentVariables = version.map {
             [Self.versionKey: $0.version, Self.buildKey: $0.build]
         }

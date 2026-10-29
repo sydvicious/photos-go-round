@@ -45,7 +45,9 @@ public enum WidgetFamily: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-public enum WidgetDevice: Sendable { case phone, pad }
+/// Where the widgets are: a phone's or an iPad's Home Screen, or a Mac's
+/// desktop.
+public enum WidgetDevice: Sendable { case phone, pad, mac }
 
 public enum WidgetSizes {
     /// The sizes a device's Home Screen offers: four on each, and the fourth
@@ -56,6 +58,22 @@ public enum WidgetSizes {
         switch device {
         case .phone: [.small, .medium, .large, .extraLargePortrait]
         case .pad: [.small, .medium, .large, .extraLarge]
+        // Every size, which the Mac's widget offers. `Plans/Widget
+        // Settings.md`, *The Mac's Settings window*.
+        case .mac: WidgetFamily.allCases
+        }
+    }
+
+    /// A Mac's widgets in points, as they were handed on the desktop on
+    /// 2026-10-28. One set, whatever the display: a desktop is not laid out
+    /// by its screen as a Home Screen is.
+    private static func onAMac(_ family: WidgetFamily) -> CGSize {
+        switch family {
+        case .small: CGSize(width: 164, height: 164)
+        case .medium: CGSize(width: 344, height: 164)
+        case .large: CGSize(width: 344, height: 344)
+        case .extraLarge: CGSize(width: 704, height: 344)
+        case .extraLargePortrait: CGSize(width: 344, height: 704)
         }
     }
 
@@ -76,6 +94,7 @@ public enum WidgetSizes {
     /// A screen the table does not list gets the row for the nearest one, and
     /// may be a few points out. The screen may be given either way up.
     public static func size(of family: WidgetFamily, on device: WidgetDevice, screen: CGSize) -> CGSize? {
+        if device == .mac { return onAMac(family) }
         let short = min(screen.width, screen.height)
         let long = max(screen.width, screen.height)
         let rows = device == .phone ? phones : pads

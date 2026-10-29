@@ -20,6 +20,29 @@ public protocol PictureSource: Sendable {
     /// folder has an original to shrink. The Photos library can be asked for a
     /// picture at the size wanted, and then no original is ever held.
     func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize?
+
+    /// Writes the picture that came from `origin` again, at the largest size
+    /// that fits `box`. Nil when it is not this source's to write.
+    func writePicture(_ origin: PictureOrigin, fitting box: CGSize, to destination: URL) throws
+        -> PictureResizer.Resize?
+}
+
+extension PictureSource {
+    public func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        nil
+    }
+}
+
+/// Where a written picture came from, so that the same one can be written
+/// again at another size, or framed another way. Syd, 2026-10-28: "what i
+/// want is for the current picture to show the new setting".
+public enum PictureOrigin: Codable, Sendable, Hashable {
+    /// A photograph in Photos, by its local identifier.
+    case photo(String)
+    /// A file, by its path.
+    case file(String)
 }
 
 /// A source that can say how many pictures it holds, which is what lets
@@ -94,6 +117,21 @@ public struct FolderSource: CountedSource {
     /// may then have the folder gone through, below.
     public func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         try writePictureAndCount(fitting: box, to: destination).resize
+    }
+
+    /// A file in this folder, written again. Only one inside the folder: a
+    /// path from elsewhere is another source's.
+    public func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        guard case .file(let path) = origin else { return nil }
+        // Both resolved: walking a folder gives the real paths of its files,
+        // as `/private/var` for `/var`.
+        let file = URL(filePath: path)
+        let inside = folder.resolvingSymlinksInPath().path(percentEncoded: false)
+        let within = inside.hasSuffix("/") ? inside : inside + "/"
+        guard file.resolvingSymlinksInPath().path(percentEncoded: false).hasPrefix(within) else { return nil }
+        return try resizer.write(file, fitting: box, to: destination)
     }
 
     public func writePictureAndCount(
