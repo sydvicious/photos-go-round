@@ -12,6 +12,11 @@
 // **How often is the widget's own setting**, and so is its cache: the system
 // asks once for each different setting at each size, and not once for each
 // widget. `PhotoWidgetSettings`.
+//
+// **How a picture sits in the widget is the widget's own, or the app's**: one
+// left at "As in the app" follows what the app says, read at each wake as the
+// sources are. A filled widget has a cache of its own.
+// `Plans/Widget Settings.md`, *In Edit Widget*.
 
 import Foundation
 import OSLog
@@ -24,6 +29,9 @@ import WidgetKit
 struct PhotoEntry: TimelineEntry {
     let date: Date
     let face: WidgetFace.Content
+    /// Whether a picture smaller than the widget is drawn larger. Not at
+    /// Actual Size.
+    var enlarges = true
 }
 
 struct PhotoTimeline: AppIntentTimelineProvider {
@@ -45,7 +53,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     }
 
     func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {
-        let wake = Wake(context, settings.every)
+        let wake = Wake(context, settings)
         let face = wake.pictures.last(
             from: wake.sources, fitting: wake.box, inGallery: context.isPreview)
         // What the gallery was given for each size, and whether the picture
@@ -58,7 +66,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
             \(Self.describe(face), privacy: .public), \(Wake.memory(), privacy: .public)
             """)
-        return PhotoEntry(date: .now, face: face)
+        return PhotoEntry(date: .now, face: face, enlarges: wake.framing.enlarges)
     }
 
     /// Said each time the system has a face drawn, with the memory as the
@@ -86,7 +94,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     }
 
     func timeline(for settings: PhotoWidgetSettings, in context: Context) async -> Timeline<PhotoEntry> {
-        let wake = Wake(context, settings.every)
+        let wake = Wake(context, settings)
         let now = Date.now
         // Once for each reload, with the size the system handed the widget
         // and what the widget is set to.
@@ -95,7 +103,8 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(Log.widgetsTag, privacy: .public) timeline asked, \
             \(String(describing: context.family), privacy: .public), \
             \(Int(context.displaySize.width))x\(Int(context.displaySize.height)) points, \
-            \(wake.sources.count) sources, every \(wake.every.rawValue) seconds
+            \(wake.sources.count) sources, every \(wake.every.rawValue) seconds, \
+            \(wake.framing.rawValue, privacy: .public)
             """)
 
         let turned = try? await Self.wakes.run {
@@ -135,22 +144,28 @@ struct PhotoTimeline: AppIntentTimelineProvider {
         // it was a quarter of an hour, until Syd, 2026-10-11: "the widget
         // looks again when the system pings it".
         let due = wait.map { Date.now + $0 } ?? now + wake.every.seconds
-        return Timeline(entries: [PhotoEntry(date: now, face: face)], policy: .after(due))
+        return Timeline(
+            entries: [PhotoEntry(date: now, face: face, enlarges: wake.framing.enlarges)], policy: .after(due))
     }
 }
 
 extension PhotoTimeline {
     /// Clears away the caches of settings no placed widget has: a widget set
     /// to something else, or taken off the Home Screen, leaves its folder
-    /// behind.
+    /// behind. Each is named for what its settings come to, so a widget
+    /// following the app and one set to the same keep one folder.
     fileprivate static func clearAway() async {
         guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return }
+        let app = Wake.preferences.widgetFraming
         var keeping: Set<String> = []
         for widget in placed where widget.kind == PhotoWidget.kind {
             // One whose settings cannot be read could be set to anything, so
             // nothing is cleared.
             guard let settings = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return }
-            keeping.insert(Wake.folder(for: widget.family, every: settings.every))
+            keeping.insert(
+                Wake.folder(
+                    for: widget.family, every: settings.every,
+                    framing: settings.framing.resolved(app: app)))
         }
         let kept = keeping
         wakes.detached {
@@ -166,20 +181,29 @@ extension PhotoTimeline {
 }
 
 /// What one wake works with: what is chosen, the widget's size in pixels, how
-/// often it changes, and the widget's own cache.
+/// often it changes, how its pictures sit in it, and the widget's own cache.
 private struct Wake: Sendable {
     let sources: [SourceSpec]
     let box: CGSize
     let every: ChangeEvery
+    let framing: Framing
     let pictures: WidgetPictures
 
-    init(_ context: TimelineProviderContext, _ every: ChangeEvery) {
-        self.every = every
+    /// The App Group's preferences, which the app writes. The group's name is
+    /// in `Info.plist` because it differs by configuration.
+    static var preferences: Preferences {
+        Preferences(suiteName: Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String)
+    }
 
-        // The App Group's preferences, which the app writes. The group's name
-        // is in `Info.plist` because it differs by configuration.
+    init(_ context: TimelineProviderContext, _ settings: PhotoWidgetSettings) {
+        every = settings.every
+
         let group = Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String
-        sources = Preferences(suiteName: group).sources.filter(\.enabled)
+        let preferences = Self.preferences
+        sources = preferences.sources.filter(\.enabled)
+        // The widget's own choice, or the app's.
+        let framing = settings.framing.resolved(app: preferences.widgetFraming)
+        self.framing = framing
 
         // The size the system hands a widget is the only place its real size
         // on this device can be learned, so it is written where the app's
@@ -194,14 +218,16 @@ private struct Wake: Sendable {
 
         pictures = WidgetPictures(
             directory: Self.caches.appending(
-                path: Self.folder(for: context.family, every: every), directoryHint: .isDirectory),
+                path: Self.folder(for: context.family, every: every, framing: framing),
+                directoryHint: .isDirectory),
             // So the gallery can show a size that has no picture yet one of
             // another size's.
             among: Self.caches,
             bookmarks: Self.bookmarks,
             onFetch: { Self.fetched($0, for: family) },
             // For the app's note that some pictures may not appear in widgets.
-            onSkip: { SkippedPictures(suiteName: group).record($0) })
+            onSkip: { SkippedPictures(suiteName: group).record($0) },
+            framing: framing)
     }
 
     /// What the extension holds, against the limit it is held to: about
@@ -235,8 +261,9 @@ private struct Wake: Sendable {
     }
 
     /// One cache for each setting at each size, which is as near as there is
-    /// to one for each widget: `systemSmall-300`.
-    static func folder(for family: WidgetKit.WidgetFamily, every: ChangeEvery) -> String {
-        "\(family)-\(every.rawValue)"
+    /// to one for each widget: `systemSmall-300`, and `systemSmall-300-fill`
+    /// for a widget whose pictures fill it.
+    static func folder(for family: WidgetKit.WidgetFamily, every: ChangeEvery, framing: Framing) -> String {
+        "\(family)-\(every.rawValue)" + CachedPreviewPictures.suffix(for: framing)
     }
 }

@@ -6,12 +6,38 @@ Things to look into, deferred out of the phase list. Each one earns its own plan
 
 **When a plan closes, check what it was holding.** Anything it left as later work moves here before the plan is marked done, or it disappears with it.
 
-## Before the first release
+## The first release: PhotosGoRound Widgets
 
-Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist for final release".
+Syd, 2026-10-26: "Pgr widgets is first release and highest priority. English only. Need the minimal website and support for App Store submission", and "I want iOS/Mac on first release". It goes out before anything else, on the iPhone and iPad and on the Mac, in English only.
+
+**Screensaver and wallpaper work is done for now only where it shares work with the widgets.** Syd, 2026-10-26: "We should only do screensaver wallpaper work when it shares work with widgets for now." What they would have on their own is under *Held until after the first release*, below.
+
+- [ ] **Fit, Fill and actual size.** Syd, 2026-10-26: "Fit/Fill/actual size (in progress on different branch)". `Plans/Widget Settings.md` has Fit and Fill; actual size is new.
+- [ ] **The Mac's menu bar app**, PhotosGoRound Widgets.app on the Mac App Store. Syd, 2026-10-26: "Mac: PhotosGoRound Widgets menu bar app". It carries the widget, and writes its sources into the App Group container as the iOS app already does, since the Store does not accept the entitlement by which the Mac widget reads the app's preferences today. Its questions were to wait for a good version of the iOS app; `Plans/PGR Widgets - iOS.md`, *The menubar app's questions wait*. Related: *A menu-bar app for shipping*, below, which is the existing product's.
+  - [ ] **The proof-of-concept widget comes out of `Photos-Go-Round.app`** once the menu bar app carries it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
+- [ ] **Cloud storage such as Dropbox, as a source, everywhere.** Syd, 2026-10-26: "All: support for cloud services like Dropbox. This is the biggest win that nobody else supports. If it's possible we have to do it."
+  - Syd, 2026-10-11: "I added a folder in my Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to ask Dropbox to download files for us". `Plans/PGR Widgets - iOS.md`, *The files and folders*.
+  - Syd, 2026-10-16: a Dropbox folder chosen through Files showed nothing, in the app or the widgets: "It does not download". Only iCloud's way of asking for a file is used (`startDownloadingUbiquitousItem`). Investigate reading a file that is not on the device through `NSFileCoordinator`, which asks its provider (Dropbox, OneDrive, Box, Google Drive) to fetch it: in the app first, then whether a widget may.
+- [ ] **A choice of transitions** — fade, swipe, a circle opening or closing, and others. Syd, 2026-10-26: "All: different transitions: fade, swipe, expanding/shrinking circles, etc". The fade is built; which transitions a widget can really show is to be found by trying each on the desktop. `Plans/Photos-Go-Round Widgets.md`, *Running the proof of concept*, "The change between pictures".
+- [ ] **Full accessibility testing.** Syd, 2026-10-26: "Full a11y testing."
+- [ ] **The widgets on Apple Watch.** Syd, 2026-10-26: "I also need Watch support for widgets". It needs a plan of its own: *Photos-Go-Round Widgets, carried out of its plan*, below, "CarPlay, StandBy (nightstand mode), Apple Watch, and the iOS Lock Screen", where the closed plan has a phase for watchOS. What a widget can do while the phone is locked is part of it, since Syd expects the watch to "fire even if the phone is locked"; the same section, "What a widget can do while the phone is locked".
+- [ ] **A minimal website, and the support App Store submission needs.** App Store Connect asks for a support URL and a privacy policy URL for each app.
+
+Syd, 2026-10-26: "Fit/fill, Dropbox, transitions and a11y are all in".
+
+## Held until after the first release
+
+- **Localization: Spanish, then French, then Russian.** Syd, 2026-10-26: "Localization. Spanish first as wife is bilingual", and "Then French then Russian as I have studied those though not fluent."
+- **The screensaver and the wallpaper**, except where the widgets share the work:
+  - **A choice of screensaver styles.** Syd, 2026-10-26: "Mac: selection of different screensaver styles. Transitions, tiles, sliding, Ken burns effect, etc." Related: *The slow pan does not run*, below, for the Ken Burns pan.
+  - **Every way of shrinking, fitting and cropping a picture.** Syd, 2026-10-26: "For wallpapers/screensaver: full support of all shrinking/fitting/cropping styles". Fit, Fill and actual size, above, are the shared part.
+  - **The wallpaper's background colours, tiling, and several pictures at once in a grid.** Syd, 2026-10-26: "For wallpapers: Background colors, tiling, Brady bunch-style multiple pic display."
+
+## Before Photos-Go-Round's first release
+
+Syd, 2026-09-23, after the first notarized Release worked end to end: "checklist for final release". This is the existing product, the agent with its screensaver and wallpaper, which now comes after PhotosGoRound Widgets.
 
 - [ ] **A finished DMG.** *A finished DMG*, below.
-- [ ] **The proof-of-concept widget is out of `Photos-Go-Round.app`.** It comes out when there is a menubar app to carry it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 
 ## The iOS app
 
@@ -54,6 +80,14 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
   a long time. I suggest we call that closed."
 - **The bar's shapes at the largest text sizes.** They grow with the text size, and on an iPad's
   narrowest window the two groups may not fit again. Not tried.
+- **Run the widgets' package tests on iOS, not only the Mac.** `TinyCache` and the widget
+  settings run on iOS, but `Package Tests` builds the Mac-only targets too and cannot build for
+  a simulator, so their tests have only ever run on the Mac. That let a Fill bug through, 2026-10-25:
+  a HEIC from Photos, shrunk in one piece and cut with `cropping(to:)`, was cropped right on
+  the Mac and wrong on *Claude iPhone*. Something like a scheme or test plan of the
+  iOS-capable test targets.
+- **No "Scanning…" over a widget's last picture.** Syd, 2026-10-25: if the widget had a picture
+  before, show it plainly, even when there is a problem, such as Photos not answering in time.
 
 ## Passed over on 2026-09-16 — to fix, not to keep
 
@@ -402,9 +436,8 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 
 `Plans/Photos-Go-Round Widgets.md` closed on 2026-10-11: it is the Mac proof of concept's record, as `Plans/PGR Widgets - iOS.md` is the iOS app's, and Syd: "all of the TODO.md in that plan should be integrated into TODO.md. Everything else can be left there". What it still held as work to do is here; the iOS app's own to-dos are under *The iOS app*, above, since 2026-10-16. The decisions in the closed plan still hold.
 
-- **CarPlay, StandBy (nightstand mode), Apple Watch, and the iOS Lock Screen.** Syd, 2026-10-11, for once the iOS plan closes, so that the widgets reach every place the phone shows them. Each needs a plan of its own, and so does HomeView, below. Syd, 2026-10-11: "Watches, CarPlay, night stand mode, future home pod work, lock screen, etc., will all require their own plans". The closed plan has a phase each for CarPlay, StandBy and watchOS, and a spike for CarPlay: how a photograph looks with the widget's background removed, and how often it may change on the road, with the phone locked and unlocked. The Lock Screen's own sizes, a circle, a rectangle and a line of text, are left out there by decision of 2026-10-09, and this reopens that. **The widgets already work in CarPlay**: Syd, 2026-10-17, "widgets work in Carplay. I tested that today." How a photograph looks there and how often it changes on the road were not reported.
+- **CarPlay, StandBy (nightstand mode), Apple Watch, and the iOS Lock Screen.** Syd, 2026-10-11, for once the iOS plan closes, so that the widgets reach every place the phone shows them. Each needs a plan of its own, and so does HomeView, below. Syd, 2026-10-11: "Watches, CarPlay, night stand mode, future home pod work, lock screen, etc., will all require their own plans". The closed plan has a phase each for CarPlay, StandBy and watchOS, and a spike for CarPlay: how a photograph looks with the widget's background removed, and how often it may change on the road, with the phone locked and unlocked. The Lock Screen's own sizes, a circle, a rectangle and a line of text, are left out there by decision of 2026-10-09, and this reopens that. **The widgets already work in CarPlay**: Syd, 2026-10-17, "widgets work in Carplay. I tested that today." How a photograph looks there and how often it changes on the road were not reported. **Apple Watch is in the first release**, above, since 2026-10-26.
 - **What a widget can do while the phone is locked.** Whether it can query Photos then, and whether it is woken at all. It waits for the plans above, since CarPlay and StandBy are what need it. Syd, 2026-10-11: "I don't think we need to worry about what happens when the phone is locked until we start putting widgets in weird places". What his phone has shown so far: a log of 21 minutes with no wake in it, and with auto-lock off a burst of wakes every two and a half minutes. His theory is that "widgets don't update when the screen is locked", and that "watch, car play, etc., will fire even if the phone is locked. It probably depends on the surface the widget is actually on". TinyCache's files are not protected, so they can be read then.
-- **The Mac's menubar app**, Photos-Go-Round Widgets.app on the Mac App Store, is the phase after the iOS app. It carries the widget, which then comes out of Photos-Go-Round.app (*Before the first release*, above), and it writes its sources into the App Group container as the iOS app already does, since the Store does not accept the entitlement by which the Mac widget reads the app's preferences today. Its questions wait for a good version of the iOS app; `Plans/PGR Widgets - iOS.md`, *The menubar app's questions wait*. Related: *A menu-bar app for shipping*, above, which is the existing product's.
 - **HomeView**, Apple's home hub with a display, which shows the iPhone's widgets. It was expected at the "Welcome Home" event on 2026-10-13 and is reported to ship in mid-November. Nothing extra is built: the iPhone widget is the HomeView widget, as it is the CarPlay one. A spike, once there is documentation or a device: which sizes it takes, how often a picture may change there, what shows while the phone is away, and how a photograph looks on its square screen.
   - **What Apple has published, checked 2026-10-14**, is only the [Developer Program License Agreement](https://developer.apple.com/support/terms/apple-developer-program-license-agreement/), [updated 2026-10-13](https://developer.apple.com/news/?id=17mwd36z) with Section 6.4, *CarPlay and Apple HomeView*. 6.4.1: the developer agrees that an iOS app's widgets may appear on HomeView; its `disfavoredLocations` duty is written for CarPlay only, and nothing says whether or how a widget can be kept off HomeView. 6.4.2: a CarPlay app in a category Apple names may appear on HomeView while it runs on a paired iPhone; we have no CarPlay app. No WidgetKit documentation, `WidgetLocation`, sample or session about HomeView was found, and Apple's Newsroom page didn't show the release when fetched.
   - **Reported before the event, not confirmed by Apple:** no App Store, only Apple's own apps, Photos among them, so the iPhone widget is our only way on; widgets come from a paired iPhone, with their data mirrored from it, in a widget gallery and a Smart Stack; everyone in the home sees them, but their content shows only while the linked iPhone is at home; a 7-inch square display, on a speaker base or on a wall. [MacRumors, 2026-08-18](https://www.macrumors.com/2026/08/18/apple-home-hub-widget-gallery/); [Cult of Mac](https://www.cultofmac.com/news/apple-homeview-two-versions-no-an-app-store).
@@ -413,7 +446,6 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 - **The Mac widget's timeline holds an `NSLock` across its wake.** `Widgets/macOS/Sources/PhotoTimeline.swift`. Syd, 2026-09-17: "I flatout don't want NSLocks". The iOS extension's went on 2026-10-11, for `SerialWork` in `Widgets/Shared/Sources/TinyCache`, which does a wake's work one piece at a time; the Mac's is to go the same way. Syd, 2026-10-11.
 - **The widgets have a time limit and waits of their own, beside the agent's.** The agent bounds each call to Photos with `Deadline`, through `BoundedPhotoLibrary`, and rests a source that only times out with `SourceBench`: after four in a row, 60 seconds, doubling to an hour. The widgets, 2026-10-11, got `TimeLimit` and `RequestBackoff` in `Widgets/Shared/Sources`: 15 seconds on a request for one picture, then 5 seconds doubling to 30 minutes, one minute in the app's preview. They are the same two ideas built twice, because the widgets ask Photos for a picture at the widget's size through a binding of their own, synchronously, and keep a wait in a file from one wake to the next. Bring them together. Syd, 2026-10-11. `Plans/PGR Widgets - iOS.md`, *When Photos does not answer*.
 - **The Mac's widget does only half of what the iOS widgets do when Photos does not answer.** It shares the request, so since 2026-10-11 it gives up on one after 15 seconds; it then shows "Can't get a picture" with the reason and asks again at its own time. It is to do what iOS does: keep the picture already showing, with "Scanning…" over it, or the icon with it when there is none; wait before asking again, 5 seconds doubling to 30 minutes and every 30 minutes after that; and keep the wait in a file from one wake to the next. `WidgetPictures` and `RequestBackoff` in `Widgets/Shared/Sources` do it for iOS; the Mac's timeline, `Widgets/macOS/Sources/PhotoTimeline.swift`, uses neither. Syd, 2026-10-11. `Plans/PGR Widgets - iOS.md`, *When Photos does not answer*.
-- **Each widget's transitions as a setting**, chosen from whatever the system actually supports. The fade is built; which transitions a widget can really show is to be found by trying each on the desktop. Closed plan, *Running the proof of concept*, "The change between pictures".
 - **At the next Mac release, read that the installed app states the shared signing requirement.** The export signs everything again and drops it; `Scripts/sign-shared-requirement.sh` puts it back, and has run only on a `Claude` build. Closed plan, *Next: the app's sources, then Photos*.
 - **Why an occasional Photos fetch costs far more memory than its neighbours.** One 12-megapixel photograph took the Mac extension's peak from 22 to 40 MB where dozens like it moved nothing; the guess is that one fetched from iCloud arrives as its original. Closed plan, *A longer run*.
 - **Whether the system goes on honouring a one-minute reload after a widget's first days.** One night on the Mac it reloaded every 64 seconds without a break, twenty times the guide's budget. Closed plan, *Spike: a 1-minute refresh*.
@@ -422,10 +454,6 @@ Every form of the name, whatever its case, is to read `photosgoround` or `Photos
 - **Whether a folder bookmark lasts**: after a restart, after the app is rebuilt, and after the folder moves. The plain bookmark opened with "stale" true. Closed plan, *The bookmark test worked*.
 - **TinyCache has no size ceiling.** Only the fill limit is enforced; space for 30 at the extra-large size measured about 12 MB at the largest, fitted. Closed plan, *What it leaves out*.
 - **Whether Notification Center on the Mac offers either extra-large size.** Closed plan, *Control Center and Notification Center on the Mac*.
-
-## Fully support Dropbox
-
-Syd, 2026-10-11: "I added a folder in my Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to ask Dropbox to download files for us". `Plans/PGR Widgets - iOS.md`, *The files and folders*.
 
 ## Google Photos as a source
 
@@ -443,6 +471,11 @@ Checked 2026-10-15, in Google's developer pages (last updated 2025-08-28):
   each wake. Syd: "Files will have to suffice": a Takeout export or a folder of saved pictures
   is a folder source like any other.
 
-## Dropbox and other storage folders, through NSFileCoordinator
+## The picture showing stays when a setting changes
 
-Syd, 2026-10-16: a Dropbox folder chosen through Files showed nothing, in the app or the widgets: "It does not download". Only iCloud's way of asking for a file is used (`startDownloadingUbiquitousItem`). Investigate reading a file that is not on the device through `NSFileCoordinator`, which asks its provider (Dropbox, OneDrive, Box, Google Drive) to fetch it: in the app first, then whether a widget may.
+Syd, 2026-10-26: "Don't start over in the photos display every time there is a change in settings. Changing fill and aspect should show you on the current picture. Leave previous picture showing if sources change unless the source the picture is in is removed."
+
+- **Fit or Fill redraws the picture showing.** The same photograph comes back fitted or filled, rather than the next one. `Plans/Widget Settings.md`, *Where the settings go in the app*: "Directly under the preview, so a change is seen at once".
+- **A change of sources leaves the picture showing**, unless its own source was taken out; then the next one comes at once. Today any change of sources starts the preview over on "Scanning…": `PreviewModel.show(_:)`, called from `SettingsModel.reload()`.
+- ***Match the widget's shape* keeps the picture showing if it still fits, and moves to the next one that matches if it does not**, at once. Syd, 2026-10-26: "Just show the next picture that matches if the pic does not fit", and "If the pic still fits, don't change the pic. If it does not, move to the next one."
+- **The Mac's windows, screensaver and wallpaper do the same** when their settings change. Syd, 2026-10-26: "Mac surfaces should do the same."

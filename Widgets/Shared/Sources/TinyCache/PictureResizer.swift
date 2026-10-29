@@ -19,6 +19,11 @@
 // not an error the extension is handed: the system ends it. So what a shrink
 // needs is reckoned before any of the picture is decoded, and held against
 // what the kernel says is left. *The guard*, in the same plan.
+//
+// **Filled, the picture is cropped as it is written**, so the file is the
+// widget's shape at its pixels and the widget never decodes more than it
+// shows. `Plans/Widget Settings.md`, *The crop is made when the picture is
+// written*.
 
 import CoreGraphics
 import Foundation
@@ -68,6 +73,13 @@ public struct PictureResizer: Sendable {
     /// What the process holds, and what it has left of its limit.
     private let memory: @Sendable () -> Footprint.Reading?
 
+    /// How the picture written sits in the box it is written for.
+    public let framing: Framing
+
+    /// What a filled picture is cropped toward, found in the picture made to
+    /// cover the box.
+    private let finding: @Sendable (CGImage) -> CropFocus
+
     /// - Parameters:
     ///   - bandsAbove: A picture of more pixels than this is shrunk in bands.
     ///     A million. Shrunk in one piece, a JPEG of twelve million pixels
@@ -77,13 +89,27 @@ public struct PictureResizer: Sendable {
     ///     be.
     ///   - memory: What the process holds and has left. A test hands over a
     ///     reading of its own.
+    ///   - framing: How the picture written sits in its box. Fit and Actual
+    ///     Size write the same file; Fill writes one in the box's shape.
+    ///   - finding: What a filled picture is cropped toward: its faces, or
+    ///     else its subject, by Vision. A test hands over its own.
     public init(
         bandsAbove: Int = 1_000_000, bandBytes: Int = 2 * 1_048_576,
-        memory: @escaping @Sendable () -> Footprint.Reading? = { Footprint.now() }
+        memory: @escaping @Sendable () -> Footprint.Reading? = { Footprint.now() },
+        framing: Framing = .fit,
+        finding: @escaping @Sendable (CGImage) -> CropFocus = { CropFocus.found(in: $0) }
     ) {
         self.bandsAbove = bandsAbove
         self.bandBytes = bandBytes
         self.memory = memory
+        self.framing = framing
+        self.finding = finding
+    }
+
+    /// The same resizer, writing for `framing`.
+    public func framed(_ framing: Framing) -> PictureResizer {
+        PictureResizer(
+            bandsAbove: bandsAbove, bandBytes: bandBytes, memory: memory, framing: framing, finding: finding)
     }
 
     /// The kinds that are shrunk in one piece whatever their size. In bands a
@@ -139,6 +165,18 @@ public struct PictureResizer: Sendable {
     /// 6 MB here until that night. Syd, of counting it so: "1".
     static let heldIdle: Int64 = 12 * 1_048_576
 
+    /// What a JPEG in bands is reckoned to need, as `needs` says. **More on
+    /// a Mac**: a 4000 by 3000 JPEG decoded at its own size added 15.3 MB
+    /// there in a loaded test run, 2026-10-28, where 14 MB was reckoned. The
+    /// guard on iOS was measured on the devices and keeps 14. Syd, the same
+    /// day: "You can split the estimate based on platform; we carefully
+    /// measured the guard on iOS".
+    #if os(macOS)
+        static let jpegInBands: Int64 = 16 * 1_048_576
+    #else
+        static let jpegInBands: Int64 = 14 * 1_048_576
+    #endif
+
     /// About how much shrinking a picture adds to what the process holds, at
     /// its most. Each figure is the most measured on a Mac, 2026-10-12, in a
     /// process of its own, and a little over:
@@ -165,7 +203,7 @@ public struct PictureResizer: Sendable {
         guard Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove) else {
             return decoded * 2 + 4 * megabyte
         }
-        if type == "public.jpeg" { return 14 * megabyte }
+        if type == "public.jpeg" { return Self.jpegInBands }
         return decoded / Int64(fraction * fraction) + 14 * megabyte
     }
 
@@ -174,16 +212,22 @@ public struct PictureResizer: Sendable {
     /// written at its own size: enlarging it here would only make a bigger
     /// file of the same picture.
     ///
-    /// **Fit, not fill**, as everywhere else in Photos-Go-Round: the whole
-    /// photograph, with black around it. Syd, 2026-10-08, of fit against fill:
-    /// "at some point that will be an option for all of this".
-    @discardableResult
+    /// **Filled, it is shrunk until it covers `box`, and cropped about the
+    /// middle to the box's shape.** Syd, 2026-10-08, of fit against fill: "at
+    /// some point that will be an option for all of this"; it became one on
+    /// 2026-10-25. A picture smaller than the box is still not enlarged: it is
+    /// cropped to the box's shape at its own size, and drawn larger where it
+    /// is shown.
+    ///
+    /// **One that covering would make too large is fitted instead**, with
+    /// black around it, rather than passed over. Syd, 2026-10-25.
     ///
     /// - Parameters:
     ///   - name: What the log calls the picture: the file's own name unless
     ///     given, as it is for a photograph from Photos, whose file here has
     ///     a name of the cache's.
     ///   - taken: When it was taken, for the log: from its EXIF unless given.
+    @discardableResult
     public func write(
         _ original: URL, fitting box: CGSize, to destination: URL, named name: String? = nil, taken: String? = nil
     ) throws -> Resize {
@@ -203,40 +247,70 @@ public struct PictureResizer: Sendable {
         let width = onItsSide ? storedHeight : storedWidth
         let height = onItsSide ? storedWidth : storedHeight
 
-        let scale = min(1, min(box.width / width, box.height / height))
-        let longestSide = max(1, Int((max(width, height) * scale).rounded()))
         let type = (CGImageSourceGetType(source) as String?) ?? ""
+        let inBands = Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove)
+        let reading = memory()
+        let named = name ?? original.lastPathComponent
+        let taken = taken ?? Self.taken(in: properties)
+
+        // Fitted, and what filling would take instead.
+        let fitted = Self.sized(width: width, height: height, scale: Self.fitScale(width, height, box))
+        var wanted = fitted
+        var fills = false
+        if framing == .fill {
+            let covering = Self.sized(width: width, height: height, scale: Self.fillScale(width, height, box))
+            let coveringNeeds = needs(
+                type: type, storedWidth: storedWidth, storedHeight: storedHeight,
+                fraction: Self.fraction(of: max(width, height), for: covering.longestSide, type: type),
+                inBands: inBands, wanted: covering, fitted: fitted, cropped: Self.cropped(covering, to: box))
+            if let reading, let left = reading.left, coveringNeeds > left {
+                Log.widget.notice(
+                    """
+                    \(Log.widgetsTag, privacy: .public) fitted a picture rather than fill: \
+                    \(Self.naming(named, taken), privacy: .public)covering \
+                    \(Int(box.width))x\(Int(box.height)) needs about \(coveringNeeds / 1_048_576) MB, \
+                    \(Footprint.againstLimit(reading), privacy: .public)
+                    """)
+            } else {
+                wanted = covering
+                fills = true
+            }
+        }
+
+        let longestSide = wanted.longestSide
         // Decoded at an eighth, a quarter or a half where the format allows:
         // the smallest that is still no smaller than what is wanted.
         let fraction = Self.fraction(of: max(width, height), for: longestSide, type: type)
-        let reading = memory()
-        let needed = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
-        let named = name ?? original.lastPathComponent
-        let taken = taken ?? Self.taken(in: properties)
+        let needed = needs(
+            type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction,
+            inBands: inBands, wanted: wanted, fitted: fitted, cropped: fills ? Self.cropped(wanted, to: box) : nil)
         try refuseIfTooLarge(
             original, type: type, storedWidth: storedWidth, storedHeight: storedHeight, needing: needed,
             with: reading, named: named, taken: taken)
 
-        let inBands = Self.shrinksInBands(type, pixels: storedWidth * storedHeight, above: bandsAbove)
-        let wantedWidth = max(1, Int((width * scale).rounded()))
-        let wantedHeight = max(1, Int((height * scale).rounded()))
+        let wantedWidth = wanted.width
+        let wantedHeight = wanted.height
+        // Where in the picture, at the size it is drawn, the crop is.
+        let crop = fills ? Self.middle(ofWidth: wantedWidth, height: wantedHeight, shapedLike: box) : nil
         // Said before it starts: a picture that ends the extension never
         // reaches the line a fetch writes when it ends. Read on an iPad,
         // 2026-10-12, where two processes were ended with nothing to say
         // which picture did it.
         let starting = Self.starting(
             type, width: Int(width), height: Int(height), toWidth: wantedWidth, height: wantedHeight,
-            inBands: inBands, fraction: fraction, needing: needed, named: named, taken: taken)
+            inBands: inBands, fraction: fraction, needing: needed, named: named, taken: taken,
+            croppedTo: crop.map { (width: Int($0.width), height: Int($0.height)) })
         Log.widget.notice(
             """
             \(Log.widgetsTag, privacy: .public) \(starting, privacy: .public)\
             \(reading.map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
             """)
 
-        let image: CGImage
+        var image: CGImage
         if inBands {
             let drawn = try self.inBands(
-                source, orientation: orientation, fraction: fraction, width: wantedWidth, height: wantedHeight)
+                source, orientation: orientation, fraction: fraction, width: wantedWidth, height: wantedHeight,
+                crop: crop)
             guard let drawn else { throw Failure.notAPicture(original) }
             image = drawn
         } else {
@@ -250,6 +324,30 @@ public struct PictureResizer: Sendable {
                 throw Failure.notAPicture(original)
             }
             image = whole
+            // Cropped from what came back, which may be a pixel or so from
+            // the size asked for.
+            if fills {
+                // Vision comes on top of the shrink, so it is asked only when
+                // both fit in what was left.
+                let visionFits = reading?.left.map { needed + Self.visionNeeds <= $0 } ?? true
+                if !visionFits {
+                    Log.widget.notice(
+                        """
+                        \(Log.widgetsTag, privacy: .public) not asking Vision: with the shrink it needs about \
+                        \((needed + Self.visionNeeds) / 1_048_576) MB\
+                        \(reading.map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
+                        """)
+                }
+                let focus = visionFits ? finding(whole) : .middle
+                let crop = Self.crop(ofWidth: whole.width, height: whole.height, shapedLike: box, toward: focus)
+                Log.widget.notice(
+                    """
+                    \(Log.widgetsTag, privacy: .public) cropped toward \(focus.said, privacy: .public)\
+                    \(memory().map { ", " + Footprint.againstLimit($0) } ?? "", privacy: .public)
+                    """)
+                guard let cropped = Self.drawn(whole, cutTo: crop) else { throw Failure.notAPicture(original) }
+                image = cropped
+            }
         }
 
         try Self.encode(image, to: destination)
@@ -259,6 +357,108 @@ public struct PictureResizer: Sendable {
             originalBytes: Self.byteCount(of: original),
             writtenWidth: image.width, writtenHeight: image.height,
             writtenBytes: Self.byteCount(of: destination))
+    }
+
+    /// A picture's size once it is shrunk, in whole pixels.
+    struct Sized: Equatable {
+        let width: Int
+        let height: Int
+
+        var longestSide: Int { max(width, height) }
+        var pixels: Int { width * height }
+    }
+
+    static func sized(width: Double, height: Double, scale: Double) -> Sized {
+        Sized(
+            width: max(1, Int((width * scale).rounded())), height: max(1, Int((height * scale).rounded())))
+    }
+
+    /// The scale that fits a picture inside `box`, and never enlarges it.
+    static func fitScale(_ width: Double, _ height: Double, _ box: CGSize) -> Double {
+        min(1, min(box.width / width, box.height / height))
+    }
+
+    /// The scale that has a picture cover `box`, and never enlarges it.
+    static func fillScale(_ width: Double, _ height: Double, _ box: CGSize) -> Double {
+        min(1, max(box.width / width, box.height / height))
+    }
+
+    /// The largest part of a picture `width` by `height` that is the shape of
+    /// `box`, about its middle, in whole pixels counted from the top left.
+    /// For a picture that covers the box it is the box's size.
+    static func middle(ofWidth width: Int, height: Int, shapedLike box: CGSize) -> CGRect {
+        guard box.width > 0, box.height > 0 else {
+            return CGRect(x: 0, y: 0, width: width, height: height)
+        }
+        let shape = box.width / box.height
+        let croppedWidth = max(1, min(width, Int((Double(height) * shape).rounded())))
+        let croppedHeight = max(1, min(height, Int((Double(width) / shape).rounded())))
+        return CGRect(
+            x: (width - croppedWidth) / 2, y: (height - croppedHeight) / 2, width: croppedWidth,
+            height: croppedHeight)
+    }
+
+    /// About how much asking Vision adds, beyond the shrink. On Syd's phone,
+    /// 2026-10-25, a fill from a HEIC in one piece added 8 to 26 MB between
+    /// the line before the shrink and the line after Vision, the most in a
+    /// process asking Vision for the first time; the shrink alone is
+    /// reckoned at 14 to 21 MB of that. Two processes were ended asking it on
+    /// top of a fill reckoned at 32 MB.
+    static let visionNeeds: Int64 = 16 * 1_048_576
+
+    /// The size of the middle of a picture `sized` in `box`'s shape.
+    static func cropped(_ sized: Sized, to box: CGSize) -> Sized {
+        let middle = middle(ofWidth: sized.width, height: sized.height, shapedLike: box)
+        return Sized(width: Int(middle.width), height: Int(middle.height))
+    }
+
+    /// The part of `image` in `rect`, counted from its top left, drawn into a
+    /// bitmap of its own.
+    ///
+    /// **Drawn, and not cut with `cropping(to:)`.** On iOS a HEIC from Photos,
+    /// shrunk in one piece and then cut, came out at the size of the cut but
+    /// showed a part of the photograph at its full size: a quarter of its
+    /// width, enlarged. On *Claude iPhone*, 2026-10-25; the Mac cut the same
+    /// picture right. So the crop costs a bitmap of its size, as `needs` says.
+    static func drawn(_ image: CGImage, cutTo rect: CGRect) -> CGImage? {
+        let colours =
+            image.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil }
+            ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        guard
+            let context = CGContext(
+                data: nil, width: Int(rect.width), height: Int(rect.height), bitsPerComponent: 8,
+                bytesPerRow: 0, space: colours, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+        else { return nil }
+        // The rect is counted from the picture's top left, and a bitmap from
+        // its bottom left.
+        context.draw(
+            image,
+            in: CGRect(
+                x: -rect.minX, y: -(Double(image.height) - rect.maxY), width: Double(image.width),
+                height: Double(image.height)))
+        return context.makeImage()
+    }
+
+    /// What a shrink is reckoned to need, for a picture made to cover as well
+    /// as one made to fit.
+    ///
+    /// **In one piece, a picture made to cover is decoded whole and its crop
+    /// drawn into a bitmap of its own**, so it needs what it holds beyond the
+    /// fitted one, and the crop. **In bands only the crop is drawn**, which is
+    /// no larger than the box, as the largest fitted picture already is.
+    ///
+    /// **A HEIC holds two copies of what covering adds.** On Syd's phone,
+    /// 2026-10-25, one of 5712 by 4284 covering 2263 by 1697 took 34 MB before
+    /// its crop was drawn, where one copy came to 32 MB with everything else,
+    /// and three extension processes were ended drawing the crop.
+    func needs(
+        type: String, storedWidth: Double, storedHeight: Double, fraction: Int, inBands: Bool,
+        wanted: Sized, fitted: Sized, cropped: Sized? = nil
+    ) -> Int64 {
+        let fitting = needs(type: type, storedWidth: storedWidth, storedHeight: storedHeight, fraction: fraction)
+        guard !inBands, wanted.pixels > fitted.pixels else { return fitting }
+        let copies = Self.inOnePiece.contains(type) ? 2 : 1
+        return fitting + Int64((wanted.pixels - fitted.pixels) * copies + (cropped?.pixels ?? 0)) * 4
     }
 
     /// About how much a fetch adds to what the process holds, at its most,
@@ -305,9 +505,13 @@ public struct PictureResizer: Sendable {
     /// person's, and a photograph that cost an iPad's widget 19 MB could not
     /// be found among 9,000 favorites. As the agent's record of what it
     /// served names photographs, by his direction of 2026-09-12.
+    ///
+    /// **And what it is cropped to, when it is filled**: `to 1014x1352,
+    /// cropped to 1014x474`.
     static func starting(
         _ type: String, width: Int, height: Int, toWidth: Int, height toHeight: Int,
-        inBands: Bool, fraction: Int, needing needed: Int64, named name: String? = nil, taken: String? = nil
+        inBands: Bool, fraction: Int, needing needed: Int64, named name: String? = nil, taken: String? = nil,
+        croppedTo cropped: (width: Int, height: Int)? = nil
     ) -> String {
         let way =
             if !inBands {
@@ -317,8 +521,9 @@ public struct PictureResizer: Sendable {
             } else {
                 "in bands at full size"
             }
-        return "shrinking \(Self.naming(name, taken))\(type) \(width)x\(height) to \(toWidth)x\(toHeight), \(way), "
-            + "reckoned at \(needed / 1_048_576) MB"
+        let crop = cropped.map { ", cropped to \($0.width)x\($0.height)" } ?? ""
+        return "shrinking \(Self.naming(name, taken))\(type) \(width)x\(height) to \(toWidth)x\(toHeight)\(crop), "
+            + "\(way), reckoned at \(needed / 1_048_576) MB"
     }
 
     /// `“DSC_0815.JPG”, taken 2024-09-21 18:03, `, or as much of it as is
@@ -390,8 +595,13 @@ public struct PictureResizer: Sendable {
     /// **A band is cut a little deep and drawn inside its own edges**, so that
     /// its first and last rows are made from the picture on both sides of
     /// them and no seam shows where two bands meet.
+    ///
+    /// **With a crop, only the crop is drawn on**: the bitmap is the crop's
+    /// size, and the picture is drawn at `width` by `height` across it, so
+    /// what falls outside is never kept.
     private func inBands(
-        _ source: CGImageSource, orientation: Int, fraction: Int, width: Int, height: Int
+        _ source: CGImageSource, orientation: Int, fraction: Int, width: Int, height: Int,
+        crop: CGRect? = nil
     ) throws -> CGImage? {
         var decoding: [CFString: Any] = [kCGImageSourceShouldCache: false]
         let onItsSide = (5...8).contains(orientation)
@@ -406,12 +616,16 @@ public struct PictureResizer: Sendable {
         let colours =
             picture.colorSpace.flatMap { $0.model == .rgb && $0.supportsOutput ? $0 : nil }
             ?? CGColorSpace(name: CGColorSpace.sRGB)!
+        let kept = crop ?? CGRect(x: 0, y: 0, width: width, height: height)
         guard
             let context = CGContext(
-                data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                space: colours, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+                data: nil, width: Int(kept.width), height: Int(kept.height), bitsPerComponent: 8,
+                bytesPerRow: 0, space: colours, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
         else { return nil }
         context.interpolationQuality = .high
+        // The crop is counted from the picture's top left, and a bitmap from
+        // its bottom left.
+        context.translateBy(x: -kept.minX, y: -(Double(height) - kept.maxY))
         context.concatenate(Self.upright(orientation, width: Double(width), height: Double(height)))
 
         // Decoded rows for each drawn row, and how many drawn rows a band of

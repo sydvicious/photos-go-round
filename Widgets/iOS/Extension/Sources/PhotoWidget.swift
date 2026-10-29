@@ -1,7 +1,8 @@
-// The Photos-Go-Round widget on iOS and iPadOS: one photograph, fitted inside
-// the widget, changed on a timeline. `Plans/PGR Widgets - iOS.md`.
+// The Photos-Go-Round widget on iOS and iPadOS: one photograph, fitted to the
+// widget or filling it, changed on a timeline. `Plans/PGR Widgets - iOS.md`.
 //
-// **Its one setting is how often it changes**: `PhotoWidgetSettings`.
+// **Its settings are how often it changes, and how its pictures sit in it**:
+// `PhotoWidgetSettings`.
 //
 // **It draws what the app's preview draws.** `WidgetFace` is the one view for
 // both, so what a person sees in the app is what lands on the Home Screen.
@@ -27,10 +28,11 @@ struct PhotosGoRoundWidgets: WidgetBundle {
 private struct DrawnFace: View {
     @Environment(\.widgetFamily) private var family
     let face: WidgetFace.Content
+    let enlarges: Bool
 
     var body: some View {
         let _ = PhotoTimeline.noteDrawing(face, for: family)
-        WidgetFace(face)
+        WidgetFace(face, enlarges: enlarges)
     }
 }
 
@@ -45,7 +47,7 @@ struct PhotoWidget: Widget {
 
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: Self.kind, intent: PhotoWidgetSettings.self, provider: PhotoTimeline()) { entry in
-            DrawnFace(face: entry.face)
+            DrawnFace(face: entry.face, enlarges: entry.enlarges)
                 // The system blanks a placeholder's words. These faces are an
                 // icon and a word or two, and are meant to be read.
                 .unredacted()

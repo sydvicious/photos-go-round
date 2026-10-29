@@ -132,6 +132,14 @@ public struct ChosenSources: Sendable {
     public func remove(_ source: SourceSpec) {
         _ = preferences.removeSource(locator: source.locator)
     }
+
+    /// How the photographs sit in every widget, which is chosen beside the
+    /// sources and kept with them. `Plans/Widget Settings.md`, *Fit or fill*.
+    public var framing: Framing { preferences.widgetFraming }
+
+    public func frame(_ framing: Framing) {
+        preferences.setWidgetFraming(framing)
+    }
 }
 
 extension BookmarkedSources {

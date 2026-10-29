@@ -6,7 +6,9 @@
 // the two cannot drift apart.
 //
 // **A photograph is fitted inside, whole, with black around it**, as
-// everywhere else in Photos-Go-Round.
+// everywhere else in Photos-Go-Round. A filled one is the widget's shape
+// already, so fitting it fills the widget. **At Actual Size it is never drawn
+// larger than its own pixels.** `Plans/Widget Settings.md`, *Fit or fill*.
 //
 // **Four faces without a photograph**, on iOS and iPadOS. Syd, 2026-10-09:
 // the plain app icon with nothing chosen; the icon greyed over with
@@ -42,10 +44,14 @@ public struct WidgetFace: View {
     }
 
     private let content: Content
+    private let enlarges: Bool
     @Environment(\.displayScale) private var displayScale
 
-    public init(_ content: Content) {
+    /// - Parameter enlarges: Whether a picture smaller than the widget is
+    ///   drawn larger to meet its edges. Not at Actual Size.
+    public init(_ content: Content, enlarges: Bool = true) {
         self.content = content
+        self.enlarges = enlarges
     }
 
     public var body: some View {
@@ -53,7 +59,7 @@ public struct WidgetFace: View {
             Color.black
             switch content {
             case .picture(let file), .scanningOver(let file):
-                FittedPicture(file: file)
+                FittedPicture(file: file, enlarges: enlarges)
                     // A new view for each photograph, so one fades into the next.
                     // The same view with and without "Scanning…" over it, so
                     // only the words come and go.
@@ -176,27 +182,54 @@ extension WidgetFace {
 /// is still on screen or fading out, so it is not read again at each drawing.
 private struct FittedPicture: View {
     @State private var image: Image?
+    /// The picture's own size, in pixels.
+    @State private var pixels: CGSize
+    private let enlarges: Bool
+    @Environment(\.displayScale) private var displayScale
 
-    init(file: URL) {
-        _image = State(initialValue: Self.load(file))
+    init(file: URL, enlarges: Bool) {
+        let loaded = Self.load(file)
+        _image = State(initialValue: loaded?.image)
+        _pixels = State(initialValue: loaded?.pixels ?? .zero)
+        self.enlarges = enlarges
     }
 
     var body: some View {
         image?
             .resizable()
             .scaledToFit()
+            // At Actual Size, no larger than its own pixels. It was made for
+            // the widget's pixels, so one larger than the widget still fits.
+            .frame(maxWidth: largest(pixels.width), maxHeight: largest(pixels.height))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private static func load(_ file: URL) -> Image? {
+    private func largest(_ side: CGFloat) -> CGFloat {
+        enlarges || side <= 0 ? .infinity : side / max(displayScale, 1)
+    }
+
+    private static func load(_ file: URL) -> (image: Image, pixels: CGSize)? {
         guard let data = try? Data(contentsOf: file) else { return nil }
+        let pixels = Self.pixels(in: data)
         #if canImport(UIKit)
-            return UIImage(data: data).map(Image.init(uiImage:))
+            return UIImage(data: data).map { (image: Image(uiImage: $0), pixels: pixels) }
         #elseif canImport(AppKit)
-            return NSImage(data: data).map(Image.init(nsImage:))
+            return NSImage(data: data).map { (image: Image(nsImage: $0), pixels: pixels) }
         #else
             return nil
         #endif
+    }
+
+    /// From the file's header: a platform's image may count its size in
+    /// points.
+    private static func pixels(in data: Data) -> CGSize {
+        guard
+            let source = CGImageSourceCreateWithData(data as CFData, nil),
+            let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+            let width = (properties[kCGImagePropertyPixelWidth] as? NSNumber)?.doubleValue,
+            let height = (properties[kCGImagePropertyPixelHeight] as? NSNumber)?.doubleValue
+        else { return .zero }
+        return CGSize(width: width, height: height)
     }
 }
 

@@ -35,12 +35,18 @@ public protocol PreviewPictures: Sendable {
     /// not counted and nothing is weighed, so it is the quickest picture
     /// there is to fetch. Nil when none has a picture. May block.
     func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL?
+
+    /// The same pictures, made for `framing`. `Plans/Widget Settings.md`.
+    func framed(_ framing: Framing) -> any PreviewPictures
 }
 
 extension PreviewPictures {
     public func last(for sources: [SourceSpec], fitting box: CGSize) -> URL? { nil }
 
     public func first(from sources: [SourceSpec], fitting box: CGSize) throws -> URL? { nil }
+
+    /// Pictures that are the same however they are framed, as a test's are.
+    public func framed(_ framing: Framing) -> any PreviewPictures { self }
 }
 
 @MainActor
@@ -64,6 +70,9 @@ public final class PreviewModel {
     }
 
     private let pictures: any PreviewPictures
+    /// How the pictures sit in the widget, as the app is set.
+    /// `Plans/Widget Settings.md`.
+    public private(set) var framing: Framing = .fit
     /// Which kind of device the widgets are on.
     public let device: WidgetDevice
     private var screen: CGSize?
@@ -228,6 +237,26 @@ public final class PreviewModel {
         content = sources.isEmpty ? .nothingChosen : .scanning
     }
 
+    /// How the pictures are to sit in the widget. A change starts the preview
+    /// over, as other sources do: a picture made to fit is not one made to
+    /// fill. Actual Size is drawn from the same pictures as Fit, so only the
+    /// drawing changes between those two.
+    public func use(framing: Framing) {
+        guard framing != self.framing else { return }
+        let differ = Self.picturesDiffer(self.framing, framing)
+        self.framing = framing
+        guard differ, !sources.isEmpty else { return }
+        started = false
+        backoff.answered()
+        nothingFound.answered()
+        content = .scanning
+    }
+
+    /// Whether a picture made for one framing is not one for the other.
+    static func picturesDiffer(_ one: Framing, _ other: Framing) -> Bool {
+        (one == .fill) != (other == .fill)
+    }
+
     /// Looks at the sources again, as when the app comes forward.
     ///
     /// A preview that had found nothing goes back to scanning, which fetches
@@ -297,9 +326,13 @@ public final class PreviewModel {
             return
         }
         let asked = sources
+        let framed = framing
         let box = CGSize(width: size.width * scale, height: size.height * scale)
         guard box != .zero else { return }
-        let pictures = pictures
+        let pictures = pictures.framed(framed)
+        // Chosen again, or framed another way, while this one was being
+        // fetched: it is not theirs.
+        func stillWanted() -> Bool { asked == sources && !Self.picturesDiffer(framed, framing) }
         if !started {
             // Nothing is showing yet, and the usual pick counts every source
             // before it fetches. So first what costs least: the picture kept
@@ -307,7 +340,7 @@ public final class PreviewModel {
             // first picture, which asks Photos about one collection. Syd,
             // 2026-10-10.
             let last = try? await BlockingWork.run { pictures.last(for: asked, fitting: box) }
-            guard asked == sources else { return }
+            guard stillWanted() else { return }
             if let last {
                 // With "Scanning…" over it while Photos is not answering:
                 // it is from last time, and nothing newer is to be had yet.
@@ -317,7 +350,7 @@ public final class PreviewModel {
             guard backoff.wait(at: now()) == nil else { return }
             do {
                 let first = try await BlockingWork.run { try pictures.first(from: asked, fitting: box) }
-                guard asked == sources else { return }
+                guard stillWanted() else { return }
                 started = true
                 if let first {
                     backoff.answered()
@@ -325,11 +358,11 @@ public final class PreviewModel {
                     return
                 }
             } catch is TimedOut {
-                guard asked == sources else { return }
+                guard stillWanted() else { return }
                 heldUp()
                 return
             } catch {
-                guard asked == sources else { return }
+                guard stillWanted() else { return }
                 started = true
             }
         }
@@ -338,8 +371,7 @@ public final class PreviewModel {
         // PhotoKit or walks a folder, and both block.
         do {
             let picture = try await BlockingWork.run { try pictures.next(from: asked, fitting: box) }
-            // Chosen again while this one was being fetched: it is not theirs.
-            guard asked == sources else { return }
+            guard stillWanted() else { return }
             backoff.answered()
             if picture == nil {
                 nothingFound.timedOut(at: now())
@@ -348,10 +380,10 @@ public final class PreviewModel {
             }
             content = picture.map { .picture($0) } ?? .noPhotos
         } catch is TimedOut {
-            guard asked == sources else { return }
+            guard stillWanted() else { return }
             heldUp()
         } catch {
-            guard asked == sources else { return }
+            guard stillWanted() else { return }
             nothingFound.timedOut(at: now())
             content = .noPhotos
         }

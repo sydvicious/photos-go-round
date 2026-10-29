@@ -31,6 +31,8 @@ import TinyCache
 public struct WidgetPictures: Sendable {
     private let pictures: CachedPreviewPictures
     private let root: URL?
+    /// How the pictures sit in the widget. `Plans/Widget Settings.md`.
+    private let framing: Framing
     /// Where the wait is kept while Photos is not answering.
     private let asking: URL
 
@@ -50,18 +52,21 @@ public struct WidgetPictures: Sendable {
     ///     with a memory limit of its own.
     ///   - onSkip: Told which source a picture was in when it is passed over
     ///     because no wake could shrink it inside an extension's memory.
+    ///   - framing: How the pictures sit in the widget.
     public init(
         directory: URL, among root: URL? = nil,
         library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
         bookmarks: BookmarkedSources? = nil,
         onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil,
         resizer: PictureResizer = PictureResizer(),
-        onSkip: (@Sendable (SourceSpec) -> Void)? = nil
+        onSkip: (@Sendable (SourceSpec) -> Void)? = nil,
+        framing: Framing = .fit
     ) {
         pictures = CachedPreviewPictures(
             directory: directory, library: library, bookmarks: bookmarks, onFetch: onFetch,
-            resizer: resizer, onSkip: onSkip)
+            resizer: resizer, onSkip: onSkip, framing: framing)
         self.root = root
+        self.framing = framing
         asking = directory.appending(path: "asking.json")
     }
 
@@ -152,6 +157,10 @@ public struct WidgetPictures: Sendable {
     /// preferring the one made for the most pixels. The layout is the
     /// extension's: a folder for each size of widget, in it one for each
     /// size in pixels, in that one for each list of sources.
+    ///
+    /// **Only one framed as this widget is.** A picture made to fill another
+    /// size is that size's shape, and one made to fit is not this one's.
+    /// Fit and Actual Size share pictures.
     private func lastOfAnySize(from sources: [SourceSpec]) -> URL? {
         guard let root else { return nil }
         let manager = FileManager.default
@@ -161,9 +170,14 @@ public struct WidgetPictures: Sendable {
         }
         let name = CacheFolders.name(forSources: CachedPreviewPictures.names(of: sources))
         var best: (pixels: Int, file: URL)?
+        let suffix = CachedPreviewPictures.suffix(for: framing)
         for sized in folders(in: root).flatMap(folders(in:)) {
-            // Named for its pixels, as in "600x600".
-            let sides = sized.lastPathComponent.split(separator: "x").compactMap { Int($0) }
+            // Named for its pixels, as in "600x600", and "600x600-fill" for
+            // pictures made to fill.
+            let named = sized.lastPathComponent
+            let measure = named.split(separator: "-", maxSplits: 1).first.map(String.init) ?? named
+            guard String(named.dropFirst(measure.count)) == suffix else { continue }
+            let sides = measure.split(separator: "x").compactMap { Int($0) }
             guard sides.count == 2 else { continue }
             let shown = sized.appending(path: name).appending(path: "shown")
             guard let last = folders(in: shown).max(by: { $0.lastPathComponent < $1.lastPathComponent })

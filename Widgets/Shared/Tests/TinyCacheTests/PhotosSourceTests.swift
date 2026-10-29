@@ -269,6 +269,89 @@ struct PhotosSourceTests {
         }
     }
 
+    // MARK: Photographs only in iCloud
+
+    /// Hands its photographs over in turn, each on this device or only in
+    /// iCloud, and says how each was asked for. One only in iCloud asked for
+    /// from this device alone is not handed over.
+    final class CloudLibrary: PhotoLibraryPictures, @unchecked Sendable {
+        enum Kept { case onDevice, inICloud }
+        private var kept: [Kept]
+        var asked: [PhotoReach] = []
+
+        init(_ kept: [Kept]) { self.kept = kept }
+
+        func picture(inCollection identifier: String, fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? { nil }
+        func count(inCollection identifier: String) throws -> Int { kept.count }
+        func selectedPicture(fitting box: CGSize, pick: PicturePick) throws -> LibraryPicture? { nil }
+        func selectedCount() throws -> Int { 0 }
+        func pictureFile(
+            inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+        ) throws -> LibraryPictureFile? {
+            asked.append(reach)
+            let next = kept.isEmpty ? .onDevice : kept.removeFirst()
+            if next == .inICloud && reach == .thisDevice { throw PhotoNotOnDevice() }
+            try writePicture(to: file, width: 64, height: 48)
+            return LibraryPictureFile(originalWidth: 4032, originalHeight: 3024)
+        }
+        func selectedPictureFile(
+            fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
+        ) throws -> LibraryPictureFile? {
+            try pictureFile(inCollection: "", fitting: box, pick: pick, to: file, reach: reach)
+        }
+    }
+
+    /// iCloud took 30 to 65 seconds for an original on Syd's phone,
+    /// 2026-10-25, while one on the device took a tenth of a second. Syd, of
+    /// passing over those and waiting longer: "do BOTH".
+    @Test("A photograph only in iCloud is passed over for one on this device")
+    func onDeviceFirst() throws {
+        let scratch = try ScratchFolder()
+        let library = CloudLibrary([.inICloud, .inICloud, .onDevice])
+
+        let resize = try PhotosSource(collection: "album", library: library)
+            .writePicture(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize != nil)
+        #expect(library.asked == [.thisDevice, .thisDevice, .thisDevice])
+    }
+
+    @Test("With none found on this device, the next is waited for from iCloud")
+    func thenFromICloud() throws {
+        let scratch = try ScratchFolder()
+        let library = CloudLibrary([.inICloud, .inICloud, .inICloud, .inICloud, .inICloud])
+
+        let resize = try PhotosSource(collection: "album", library: library)
+            .writePicture(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize != nil)
+        #expect(library.asked == [.thisDevice, .thisDevice, .thisDevice, .thisDevice, .iCloudToo])
+    }
+
+    @Test("The first picture, wanted at once, is waited for from iCloud straight away")
+    func firstFromICloud() throws {
+        let scratch = try ScratchFolder()
+        let library = CloudLibrary([.inICloud])
+
+        let resize = try PhotosSource(collection: "album", library: library, pick: .first)
+            .writePicture(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize != nil)
+        #expect(library.asked == [.iCloudToo])
+    }
+
+    @Test("The photographs a person picked are passed over the same way")
+    func selectedOnDeviceFirst() throws {
+        let scratch = try ScratchFolder()
+        let library = CloudLibrary([.inICloud, .onDevice])
+
+        let resize = try SelectedPhotosSource(library: library)
+            .writePicture(fitting: box, to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize != nil)
+        #expect(library.asked == [.thisDevice, .thisDevice])
+    }
+
     /// For a RAW photograph, which Photos still decodes: its file is not
     /// shrunk here.
     @Test("A fetch Photos decodes itself is reckoned at five times the picture asked for, at four bytes a pixel")

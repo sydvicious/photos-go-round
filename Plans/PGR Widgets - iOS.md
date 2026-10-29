@@ -1156,9 +1156,16 @@ the same thing was not tried.
 Built 2026-10-11. A request to Photos for a picture had no time limit, so one that Photos never
 answered was waited on for ever, by the preview and by a widget.
 
-- **The limit is on the request itself**, in `SystemPhotoLibraryPictures`: 15 seconds, then
-  `TimedOut` is thrown. `TimeLimit` runs the request on a thread that may block and waits for it
-  only so long. Counting a source has no limit; on a large library that is slow and not stuck.
+- **The limit is on the request itself**, in `SystemPhotoLibraryPictures`: 90 seconds, then
+  `TimedOut` is thrown. It was 15, then 30 at Syd's "double that 15s timeout", 2026-10-25, and 90
+  the same night, once an original from iCloud was found to take 30 to 65 seconds on his phone.
+  `TimeLimit` runs the request on a thread that may block and waits for it only so long.
+  Counting a source has no limit; on a large library that is slow and not stuck.
+- **A photograph on the device first.** A widget asks for each from the device alone; one only
+  in iCloud has its download started, nobody waiting, and another is picked. After four of
+  those, the next is asked for from iCloud too and waited for. The app's first picture is waited
+  for straight away. Syd, 2026-10-25, of passing over and of waiting longer: "do BOTH".
+  `PhotosSource`.
 - **The request given up on is not stopped.** PhotoKit's synchronous request cannot be
   cancelled. Its thread stays blocked until Photos answers or the process ends, and the new
   request is made beside it. Two at once is what never came back on 2026-10-10, *One fetch at a
@@ -1174,7 +1181,7 @@ answered was waited on for ever, by the preview and by a widget.
 - **The preview keeps its wait in memory**, and other sources chosen end it. During it a
   picture kept from last time is still looked for, so another size chosen shows its own.
 - **No other source is asked when one goes unanswered.** Passing over a source in trouble is
-  right for a folder that cannot be read, and here it would wait 15 seconds more for each. Its
+  right for a folder that cannot be read, and here it would wait 90 seconds more for each. Its
   count is kept, too: a count is forgotten when a source fails, and counting again is the slow
   part.
 - **The cache used to delete the picture on show before fetching the next**, which left nothing
@@ -1372,7 +1379,7 @@ day, with the app killed and the screen locking, holds no wake of any widget.
 Dropbox folder on my iPad, and it is not showing anything", and "I wonder if there is a way to
 ask Dropbox to download files for us". Not looked into: whether it is the app or the widgets,
 and what the log says. What is asked for files not on the device is asked of iCloud Drive, and
-Dropbox is another provider. "Fully support Dropbox" is in `TODO.md`.
+Dropbox is another provider. `TODO.md`, *The first release: PhotosGoRound Widgets*, "Cloud storage such as Dropbox".
 
 **If the pictures have to be copied, the copies need a bounded cache.** Syd, 2026-10-11: "if we
 have to download files at new sizes, it sounds like we have to reproduce the caching that we do

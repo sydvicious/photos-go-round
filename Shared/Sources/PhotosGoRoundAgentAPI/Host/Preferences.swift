@@ -82,6 +82,9 @@ public struct Preferences: @unchecked Sendable {
         public static let queueRefreshIntervalSeconds = Key("queueRefreshIntervalSeconds")
         public static let serveWaitSeconds = Key("serveWaitSeconds")
         public static let sources = Key("sources")
+        /// How a photograph sits in every widget, as the widgets' app sets it.
+        /// `Plans/Widget Settings.md`.
+        public static let widgetFraming = Key("widgetFraming")
         /// Where the service is listening. Written by the agent, read by every
         /// local client.
         public static let servicePort = Key("servicePort")
@@ -316,6 +319,24 @@ public struct Preferences: @unchecked Sendable {
             }
         }
         return (specs, unreadable)
+    }
+
+    /// How a photograph sits in every widget that follows the app. Fit when
+    /// nothing has been chosen, and when what is stored is not one of the
+    /// three. `Plans/Widget Settings.md`, *Fit or fill*.
+    public var widgetFraming: Framing {
+        guard let stored = defaults.object(forKey: Key.widgetFraming.rawValue) else { return .fit }
+        guard let raw = stored as? String, let framing = Framing(rawValue: raw) else {
+            Log.prefs.error(
+                kind: "preferences.unreadable.\(Key.widgetFraming.rawValue)",
+                "\(Key.widgetFraming.rawValue) is not one of fit, fill, actual-size; using fit")
+            return .fit
+        }
+        return framing
+    }
+
+    public func setWidgetFraming(_ framing: Framing) {
+        defaults.set(framing.rawValue, forKey: Key.widgetFraming.rawValue)
     }
 
     public func setSources(_ specs: [SourceSpec]) {

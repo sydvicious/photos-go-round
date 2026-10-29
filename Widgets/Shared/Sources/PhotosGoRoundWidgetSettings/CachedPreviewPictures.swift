@@ -20,6 +20,8 @@ public struct CachedPreviewPictures: PreviewPictures {
     private let onFetch: (@Sendable (PictureResizer.Resize) -> Void)?
     private let resizer: PictureResizer
     private let onSkip: (@Sendable (SourceSpec) -> Void)?
+    /// How the pictures sit in the widget. `Plans/Widget Settings.md`.
+    public let framing: Framing
 
     /// - Parameters:
     ///   - directory: Somewhere of the app's own to keep the pictures and the
@@ -34,19 +36,30 @@ public struct CachedPreviewPictures: PreviewPictures {
     ///     with a memory limit of its own.
     ///   - onSkip: Told which source a picture was in when it is passed over
     ///     because no wake could shrink it inside an extension's memory.
+    ///   - framing: How the pictures sit in the widget. A filled picture is
+    ///     written in the widget's shape, and kept apart from fitted ones.
     public init(
         directory: URL, library: any PhotoLibraryPictures = SystemPhotoLibraryPictures(),
         bookmarks: BookmarkedSources? = nil,
         onFetch: (@Sendable (PictureResizer.Resize) -> Void)? = nil,
         resizer: PictureResizer = PictureResizer(),
-        onSkip: (@Sendable (SourceSpec) -> Void)? = nil
+        onSkip: (@Sendable (SourceSpec) -> Void)? = nil,
+        framing: Framing = .fit
     ) {
         self.directory = directory
         self.library = library
         self.bookmarks = bookmarks
         self.onFetch = onFetch
-        self.resizer = resizer
+        self.resizer = resizer.framed(framing)
         self.onSkip = onSkip
+        self.framing = framing
+    }
+
+    /// The same pictures, for `framing`.
+    public func framed(_ framing: Framing) -> any PreviewPictures {
+        CachedPreviewPictures(
+            directory: directory, library: library, bookmarks: bookmarks, onFetch: onFetch,
+            resizer: resizer, onSkip: onSkip, framing: framing)
     }
 
     /// What a source is handed to say that one of its pictures was passed
@@ -147,9 +160,22 @@ public struct CachedPreviewPictures: PreviewPictures {
     /// A folder for each size and each set of sources, so a picture made for
     /// one is never shown for another.
     private func folder(for sources: [SourceSpec], fitting box: CGSize) -> URL {
-        let sized = directory.appending(
-            path: "\(Int(box.width))x\(Int(box.height))", directoryHint: .isDirectory)
+        let sized = directory.appending(path: Self.sizedName(box, framing), directoryHint: .isDirectory)
         return (try? CacheFolders.folder(in: sized, forSources: Self.names(of: sources))) ?? sized
+    }
+
+    /// What the folder for a size is called: `1014x474`, and `1014x474-fill`
+    /// for pictures made to fill it. Fit and Actual Size write the same
+    /// pictures, so they share a folder, which is the one there was before
+    /// there was a choice.
+    static func sizedName(_ box: CGSize, _ framing: Framing) -> String {
+        "\(Int(box.width))x\(Int(box.height))" + suffix(for: framing)
+    }
+
+    /// What a folder's name ends with for pictures framed so: nothing, or
+    /// `-fill`.
+    public static func suffix(for framing: Framing) -> String {
+        framing == .fill ? "-fill" : ""
     }
 
     /// What each source is called when a cache's folder is named for them.
