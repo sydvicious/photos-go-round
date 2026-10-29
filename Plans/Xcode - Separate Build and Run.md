@@ -44,8 +44,10 @@ Each phase leaves the tree working, and the products are taken smallest first.
   - The saver gained a bundle name and identifier per configuration, and the
     agent a LaunchAgent label — carried in its own `Info.plist` as
     `PGRLaunchAgentLabel`, so an installer reads it from the bundle rather than
-    from a constant. **The agent's bundle identifier deliberately did not
-    change**: TCC grants hang off it, and Photos should be answered once.
+    from a constant. **The agent's bundle identifier did not change then**, so
+    that Photos was answered once. **Since 2026-10-28 every product has its own
+    in each configuration**, the app and the agent included: Syd, "all products
+    should have a separate bundle id per config". `BuildVariant.appIdentifier`.
   - `BuildVariant` in `PhotoGoRoundAgentAPI` — the project's one `#if` on build
     identity, which `ServiceAddress.port` now switches on.
   - **The container, cache and preference domain moved out of `<repo>/.build`

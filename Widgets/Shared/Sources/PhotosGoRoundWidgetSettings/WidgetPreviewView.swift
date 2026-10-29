@@ -72,12 +72,12 @@ public struct WidgetPreviewView: View {
                 Task { await model.advance() }
             }
             // Started again whenever the app comes forward, the sources
-            // change, or another size is chosen; ended when any of those stops
-            // being so.
+            // change, or another size or framing is chosen; ended when any of
+            // those stops being so.
             .task(
                 id: Running(
                     active: scenePhase == .active, size: model.size,
-                    nothingChosen: model.content == .nothingChosen)
+                    nothingChosen: model.content == .nothingChosen, framing: model.framing)
             ) {
                 guard scenePhase == .active else { return }
                 while !Task.isCancelled {
@@ -101,6 +101,9 @@ public struct WidgetPreviewView: View {
         let size: CGSize
         /// Whether nothing is chosen, so that choosing something starts it.
         let nothingChosen: Bool
+        /// How the pictures sit, so that another framing draws the picture
+        /// showing again at once.
+        let framing: Framing
     }
 
     /// How long each photograph stays up. To be settled when it is seen

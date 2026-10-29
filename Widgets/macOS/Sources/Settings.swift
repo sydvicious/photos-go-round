@@ -1,27 +1,19 @@
-// What the widget shows and how often. `Plans/Photos-Go-Round Widgets.md`,
-// *Next: the app's sources, then Photos*.
+// What every widget shares: the app's sources, and how the app says pictures
+// sit. `Plans/Photos-Go-Round Widgets.md`, *Next: the app's sources, then
+// Photos*, and `Plans/Widget Settings.md`, *On the Mac*.
 //
 // **The sources are the app's.** Syd, 2026-10-08: "the widgets sharing the
 // app's sources. the only setting a widget would have is how often it updates."
-// The list is read from the app's preferences on every wake, so a source added
-// in the app is in the next timeline.
-//
-// **The interval is still hard-coded**, at five minutes. It becomes each
-// widget's own setting.
+// They are read from the app's preferences on every wake, so a source added in
+// the app is in the next timeline. How often, and how the pictures sit, are
+// each widget's own: `PhotoWidgetSettings`.
 
-import CoreGraphics
 import Foundation
 import PhotosGoRoundAgentAPI
 import TinyCache
-import WidgetKit
 
 enum Settings {
     static let kind = "PhotosGoRoundPhotoWidget"
-
-    /// How long each photograph stays up. Syd, 2026-10-09: "set the value for
-    /// widget refresh to five minutes until we have individual settings
-    /// panels." It was one minute through the first night's run.
-    static let interval: TimeInterval = 5 * 60
 
     /// *Photos-Go-Round*, with this build's suffix, from `Info.plist`. Debug,
     /// Release and Claude builds each show under their own name in the widget
@@ -29,73 +21,44 @@ enum Settings {
     static let displayName =
         Bundle.main.object(forInfoDictionaryKey: "PGRWidgetName") as? String ?? "Photos-Go-Round"
 
-    /// The app's sources that are switched on, as the app's preferences have
-    /// them. The domain is asked for rather than spelled: it carries the build
-    /// variant, so a Debug widget reads the Debug app's sources.
+    /// The app's preferences. The domain is asked for rather than spelled: it
+    /// carries the build variant, so a Debug widget reads the Debug app's.
+    static var preferences: Preferences {
+        Preferences(suiteName: MacHostEnvironment.preferenceDomain())
+    }
+
+    /// The app's sources that are switched on.
     static func sources() -> [SourceSpec] {
-        Preferences(suiteName: MacHostEnvironment.preferenceDomain()).sources.filter(\.enabled)
+        preferences.sources.filter(\.enabled)
     }
 
-    /// One source made of all of `specs` that a widget can show: folders and
-    /// Photos collections. Every picture has an equal chance, whichever of
-    /// them it is in.
-    static func source(for specs: [SourceSpec]) -> any PictureSource {
-        SeveralSources(
-            specs.compactMap { spec -> (any CountedSource)? in
-                switch spec.kind {
-                case .folder:
-                    // Through the bookmark the app left when there is one; by
-                    // its path otherwise, which the privacy system refuses for
-                    // a folder it protects.
-                    let folder =
-                        OpenedFolders.folder(at: spec.locator)
-                        ?? URL(fileURLWithPath: spec.locator, isDirectory: true)
-                    return FolderSource(folder: folder, recursive: spec.recursive)
-                case .photosCollection:
-                    return PhotosSource(collection: spec.locator)
-                default:
-                    return nil
-                }
-            },
-            // Beside the widgets' caches and not in one: a count is a source's,
-            // whichever widget asked for it.
-            remembering: RememberedCounts(file: caches.appending(path: "TinyCache/counts.json")),
-            onCount: { WidgetLog.counted($0) })
+    /// What a folder the person chose is opened through: the bookmark the app
+    /// left in the App Group container, whose name this extension's
+    /// `Info.plist` states. One for the life of the process, since what it
+    /// has opened stays open from one wake to the next. Without it a folder
+    /// is read by its path, which the privacy system refuses for a folder it
+    /// protects.
+    static let bookmarks: BookmarkedSources? = {
+        guard
+            let group = Bundle.main.object(forInfoDictionaryKey: "PGRWidgetAppGroup") as? String,
+            let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: group)
+        else {
+            WidgetLog.note("no App Group container, so no bookmarks")
+            return nil
+        }
+        return BookmarkedSources(
+            directory: container.appending(path: "WidgetSource", directoryHint: .isDirectory),
+            note: { WidgetLog.note($0) })
+    }()
+
+    /// Where every widget's cache is, in the extension's own caches.
+    static var caches: URL {
+        URL.cachesDirectory.appending(path: "Widgets", directoryHint: .isDirectory)
     }
 
-    private static var caches: URL {
-        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
-    }
-
-    /// `2 folders, 3 Photos collections`, for the log and for the widget's face
-    /// when it has nothing to show.
-    static func describe(_ specs: [SourceSpec]) -> String {
-        let folders = specs.filter { $0.kind == .folder }.count
-        let collections = specs.filter { $0.kind == .photosCollection }.count
-        let others = specs.count - folders - collections
-        return "\(folders) folders, \(collections) Photos collections"
-            + (others > 0 ? ", \(others) of other kinds not shown" : "")
-    }
-
-    /// This widget's TinyCache.
-    ///
-    /// **One per size, for now.** Each widget is to have its own, found by its
-    /// name, and how a placed widget keeps a name is still to be found out. Two
-    /// widgets of one size share a cache until then.
-    static func cache(for context: TimelineProviderContext, showing specs: [SourceSpec]) -> TinyCache {
-        let scale = context.environmentVariants.displayScale?.max() ?? 2
-        let family = "\(context.family)"
-        let box = CGSize(
-            width: context.displaySize.width * scale, height: context.displaySize.height * scale)
-        // Kept per list of sources, so that a source taken off the list stops
-        // being shown: the pictures cached while it was on are deleted.
-        let ours = caches.appending(path: "TinyCache/\(context.family)", directoryHint: .isDirectory)
-        let names = specs.map { "\($0.kind.rawValue)|\($0.locator)|\($0.recursive)" }
-        let directory = (try? CacheFolders.folder(in: ours, forSources: names)) ?? ours
-        return TinyCache(
-            directory: directory,
-            source: source(for: specs), fitting: box,
-            onFetch: { WidgetLog.fetched($0, for: family) })
+    /// Where every widget's cache was, one for each size, before each widget
+    /// had settings of its own. Cleared away.
+    static var formerCaches: URL {
+        URL.cachesDirectory.appending(path: "TinyCache", directoryHint: .isDirectory)
     }
 }

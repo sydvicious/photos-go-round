@@ -1,11 +1,19 @@
 import AppKit
 import PhotosGoRoundAgentAPI
 import PhotosGoRoundDisplay
+import PhotosGoRoundWidgetSettings
 import os
 import SwiftUI
+import TinyCache
 import UniformTypeIdentifiers
+import WidgetKit
 
 /// The Settings panel: what is configured, and the four things you can do to it.
+///
+/// **Drawn like the iOS app's.** Syd, 2026-10-28: "the settings window should
+/// look a lot like the ios window". From the top: the widget preview, how the
+/// widgets' pictures sit, the screensaver, the wallpaper, and the sources.
+/// `Plans/Widget Settings.md`, *The Mac's Settings window*.
 ///
 /// A standard Mac list with `+` and `−` beneath its bottom-left corner, which is
 /// the shape every list-of-things panel on this platform has. The list is the
@@ -36,50 +44,66 @@ struct SourcesSettingsView: View {
     /// either, and neither domain rings anything this view could hear.
     @State private var screensaverInterval = ScreensaverPreferences.defaultInterval
     @State private var wallpaperInterval = WallpaperPreferences.defaultInterval
+    /// How the photographs sit in every widget left at "As in the app", as
+    /// last read, when the window appears.
+    @State private var widgetFraming = Framing.fill
+    /// The widget preview at the top, which is the iOS app's.
+    @State private var preview = Self.makePreview()
+    /// How tall each list's rows are drawn, as last measured: its content's
+    /// height over its rows. Nil until it has been drawn.
+    @State private var collectionRowHeight: CGFloat?
+    @State private var fileRowHeight: CGFloat?
 
     /// The screensaver's domain, which this window writes and the saver reads.
     private static let screensaver = ScreensaverPreferences()
     /// The wallpaper's, which this window writes and the wallpaper extension
     /// reads at each change of picture.
     private static let wallpaper = WallpaperPreferences()
+    /// The app's own domain, which carries the build variant, and which the
+    /// widget reads its sources and this from.
+    private static let widgets = Preferences(suiteName: MacHostEnvironment.preferenceDomain())
+
+    /// The gap either side of the widest size, which is the Extra Large.
+    private static let previewMargin: CGFloat = 20
+    /// How tall the size shapes are in the toolbar.
+    private static let shapeHeight: CGFloat = 18
 
     var body: some View {
         // Syd, 2026-09-14: "There should be THREE panels. One for the sources;
         // one for screensaver-specific settings; one for wallpaper-specific
-        // settings."
-        VStack(spacing: 12) {
-            sourcesPanel
-            screensaverPanel
-            wallpaperPanel
-            // Only when Settings was chosen with Option held.
-            if DashboardDisclosure.shared.inSettings {
-                supportPanel
+        // settings." The preview and the widgets' panel came on top of them,
+        // 2026-10-28, in the iOS app's order.
+        //
+        // **The whole window scrolls.** Syd, 2026-10-28: "make the entire
+        // window scrollable".
+        ScrollView(.vertical) {
+            VStack(spacing: 12) {
+                previewArea
+                picturesPanel
+                screensaverPanel
+                wallpaperPanel
+                sourcesPanel
+                // Only when Settings was chosen with Option held.
+                if DashboardDisclosure.shared.inSettings {
+                    supportPanel
+                }
             }
+            .padding(12)
         }
-        .padding(12)
         // Everything here goes to the agent, which an install may be restarting.
         .disabled(Installer.shared.isBusy)
         .overlay(alignment: .bottomTrailing) {
             InstallingBadge()
         }
-        // The width floor is what this was pinned at. The height floor grew
-        // with the second panel: 360 was the list on its own, and keeping it
-        // would have let the window shrink until the list it encloses was a
-        // couple of rows tall.
-        //
-        // **480 once the collections became a list of their own.** Four
-        // collection rows and five folder rows are 306 points between them
-        // before either heading, the buttons beside the collections, or the
-        // controls under the folders — and at 440 the two lists were squeezing
-        // each other rather than scrolling, which is the whole thing bounding
-        // them was for.
-        //
-        // **640 since the screensaver and wallpaper panels, 2026-09-14.** The
-        // two of them and the Sources panel's own heading and inset are about
-        // 160 points the lists must not be squeezed to pay for.
+        // **At least as wide as the widest size, with a margin.** Syd,
+        // 2026-10-28. Any height, since it scrolls; it opens tall enough for
+        // most of it.
         .frame(
-            minWidth: 520, idealWidth: 520, maxWidth: .infinity,
-            minHeight: 640, idealHeight: 640, maxHeight: .infinity)
+            minWidth: minimumWidth, idealWidth: minimumWidth, maxWidth: .infinity,
+            minHeight: 300, idealHeight: 900, maxHeight: .infinity)
+        .toolbar {
+            ToolbarItemGroup(placement: .primaryAction) { sizes }
+        }
         // Both, and deliberately: the first is the panel being opened, the
         // second is this app starting up with it already open. Neither can be
         // assumed from the other.
@@ -88,6 +112,14 @@ struct SourcesSettingsView: View {
             model.beginPolling()
             screensaverInterval = Self.screensaver.interval
             wallpaperInterval = Self.wallpaper.interval
+            widgetFraming = Self.widgets.widgetFraming
+            preview.use(framing: widgetFraming)
+            showChosenSources()
+        }
+        // What the agent says is chosen has changed: the preview shows what
+        // the widgets will.
+        .onChange(of: model.photoCollections.map(\.uuid) + model.fileSources.map(\.uuid)) {
+            showChosenSources()
         }
         .onDisappear { model.endPolling() }
         // A change made in this app's own picker, rather than one the timer
@@ -118,6 +150,120 @@ struct SourcesSettingsView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
+    // MARK: - The preview
+
+    /// The iOS app's preview, with the Mac widget's sizes.
+    ///
+    /// **Its pictures come from the sources, as a widget's do**, and not from
+    /// the agent. Syd, 2026-10-28: "the preview gets pictures from the
+    /// sources. the app, screensaver, wallpaper from the agent. the widgets
+    /// don't need the agent". Judged by a widget's memory, as on iOS, so what
+    /// a widget would pass over is passed over here.
+    ///
+    /// **Kept beside the agent's cache, not in it**:
+    /// `MacHostEnvironment.widgetPreviewCache`.
+    private static func makePreview() -> PreviewModel {
+        let screen = NSScreen.main
+        return PreviewModel(
+            pictures: CachedPreviewPictures(
+                directory: MacHostEnvironment.widgetPreviewCache(), resizer: .asAWidget),
+            device: .mac,
+            // A Mac's widgets are the same size on every display; the screen
+            // is only for the scale.
+            screen: screen?.frame.size ?? CGSize(width: 1440, height: 900),
+            scale: screen?.backingScaleFactor ?? 2,
+            // What the widgets have been handed, which the table gives way to.
+            recorded: RecordedWidgetSizes(suiteName: BuildVariant.current.widgetAppGroup))
+    }
+
+    /// The window's least width: the widest size, its margins, and the
+    /// window's own padding.
+    private var minimumWidth: CGFloat {
+        max(520, preview.widest + 2 * Self.previewMargin + 24)
+    }
+
+    /// The widget at its real size, in an area as tall as the size being
+    /// shown. Syd, 2026-10-28: "adjust the height of the preview based on
+    /// widget size", once the whole window scrolled. It starts on the
+    /// largest size no taller than a Large, which is the Extra Large.
+    private var previewArea: some View {
+        WidgetPreviewView(
+            model: preview, viewport: CGSize(width: preview.widest, height: preview.boundsHeight)
+        ) {
+            NSWorkspace.shared.open(Self.photosPrivacy)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: preview.size.height)
+    }
+
+    /// The toolbar's sizes: a shape for each, in that size's proportions,
+    /// as the iOS app's bar has. Syd, 2026-10-28, over a segmented control
+    /// under the preview.
+    @ViewBuilder private var sizes: some View {
+        ForEach(preview.families) { family in
+            let isShowing = preview.family == family
+            Button {
+                preview.family = family
+            } label: {
+                SizeShape(size: preview.shape(of: family, height: Self.shapeHeight), isShowing: isShowing)
+                    .padding(.horizontal, 2)
+            }
+            .help(family.title)
+            .accessibilityLabel(family.title)
+            .accessibilityAddTraits(isShowing ? .isSelected : [])
+        }
+    }
+
+    /// The sources the widgets show: those switched on, as the widget reads
+    /// them.
+    private func showChosenSources() {
+        preview.show(Self.widgets.sources.filter(\.enabled))
+    }
+
+    /// Where Photos access is turned on, for the face that says it is off.
+    private static let photosPrivacy = URL(
+        string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Photos")!
+
+    // MARK: - The widgets
+
+    /// Fit, Fill or Actual Size for every widget left at "As in the app".
+    /// Above the sources, as on iOS; Syd, 2026-10-25, over below them and
+    /// over a tab of its own. `Plans/Widget Settings.md`, *On the Mac*.
+    ///
+    /// **The widgets are reloaded at once**, as they are when the sources
+    /// change. Syd, 2026-10-25, over reloading when this window closes.
+    private var picturesPanel: some View {
+        Panel("Pictures") {
+            HStack {
+                Text("Widgets")
+                Spacer(minLength: 12)
+                Picker(
+                    "Widgets",
+                    selection: Binding(
+                        get: { widgetFraming },
+                        set: { choice in
+                            Log.sources.notice(
+                                "panel: widget framing set to \(choice.rawValue, privacy: .public)")
+                            widgetFraming = choice
+                            Self.widgets.setWidgetFraming(choice)
+                            preview.use(framing: choice)
+                            WidgetCenter.shared.reloadAllTimelines()
+                        })
+                ) {
+                    ForEach(Framing.allCases, id: \.self) { framing in
+                        Text(framing.title).tag(framing)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
     // MARK: - The screensaver and the wallpaper
 
     /// Syd, 2026-09-14: "One sources panel, with subpanels for apple photos,
@@ -130,6 +276,7 @@ struct SourcesSettingsView: View {
             }
             .padding(10)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     private var screensaverPanel: some View {
@@ -198,7 +345,7 @@ struct SourcesSettingsView: View {
             // whole `HStack` inset the list from the box as well, which read as
             // the first collection row being taller than the rest. The list
             // wants to reach the border; the buttons beside it do not.
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -275,21 +422,36 @@ struct SourcesSettingsView: View {
         return collections.contains { $0.scannedAt == nil } ? "\(held) so far" : held
     }
 
-    /// How tall a row is, near enough: a 24-point icon with two points of
-    /// padding either side, plus what `List` adds around it.
+    /// How tall a row is taken to be until a list has been drawn and its rows
+    /// measured: a 24-point icon with two points of padding either side, plus
+    /// what `List` adds around it.
     private static let rowHeight: CGFloat = 34
 
-    /// **Four collections at the smallest the window goes**, and a scroll bar
-    /// past that. Between three and five was the ask; four is the middle of it.
-    /// It is a floor rather than a height — dragging the window taller shows
-    /// more collections, not a taller empty box.
-    private static let collectionRows = 4
+    /// **Each list is as tall as its rows, up to five, and scrolls past
+    /// that.** Syd, 2026-10-28: "shrink the number of rows in the sources to
+    /// adapt to the number of rows to a maximum of five each before
+    /// scrolling". Until then each list had a floor, four collections and five
+    /// folders, and grew with the window.
+    private static let mostRows = 5
 
-    /// **Five folders at the smallest the window goes**, and a scroll bar past
-    /// that. A floor is what stops the number of sources deciding how much
-    /// window everything else gets; before this the folder list simply grew
-    /// until it had pushed the rest off the bottom.
-    private static let fileRows = 5
+    /// How tall a list of `rows` rows is drawn: one row at least, for the
+    /// words an empty list shows, and `mostRows` at most.
+    ///
+    /// **Whole rows only.** Syd, 2026-10-28: "these lists should never have
+    /// partial rows showing". A guessed row height showed two and a half of
+    /// the folders, whose rows are two lines. So each list's rows are
+    /// measured as drawn (`measuredRow`), and every row of a list is the same
+    /// height: one line in the collections, two in the files.
+    private static func listHeight(rows: Int, rowHeight measured: CGFloat?) -> CGFloat {
+        (measured ?? rowHeight) * CGFloat(min(max(rows, 1), mostRows))
+    }
+
+    /// A list's row height: its content's height over its rows, which is
+    /// what a row takes with what the list puts around it.
+    private static func measuredRow(contentHeight: CGFloat, rows: Int) -> CGFloat? {
+        guard rows > 0, contentHeight > 0 else { return nil }
+        return contentHeight / CGFloat(rows)
+    }
 
     /// The collections in play, each saying where it stands.
     ///
@@ -331,12 +493,10 @@ struct SourcesSettingsView: View {
             // it, and `alternatingRowBackgrounds` gives those to a plain list.
             .listStyle(.plain)
             .alternatingRowBackgrounds()
-            // **A floor, not a height.** Four rows is what it must never drop
-            // below; past that the window's own height decides, and dragging it
-            // taller shows more collections rather than more empty box.
-            .frame(
-                minHeight: Self.rowHeight * CGFloat(Self.collectionRows),
-                maxHeight: .infinity)
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
+                collectionRowHeight = Self.measuredRow(contentHeight: height, rows: model.collectionRows.count)
+            }
+            .frame(height: Self.listHeight(rows: model.collectionRows.count, rowHeight: collectionRowHeight))
         }
     }
 
@@ -441,7 +601,6 @@ struct SourcesSettingsView: View {
                     .frame(height: 1)
                 controls
             }
-            .frame(maxHeight: .infinity)
         }
     }
 
@@ -467,10 +626,10 @@ struct SourcesSettingsView: View {
         .listStyle(.plain)
         .alternatingRowBackgrounds()
         .disabled(model.isWorking)
-        // A floor rather than a height, for the same reason the collections
-        // list has one: five rows is the least it may be, and a taller window
-        // spends its extra height on both lists rather than on padding.
-        .frame(minHeight: Self.rowHeight * CGFloat(Self.fileRows), maxHeight: .infinity)
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
+            fileRowHeight = Self.measuredRow(contentHeight: height, rows: model.fileSources.count)
+        }
+        .frame(height: Self.listHeight(rows: model.fileSources.count, rowHeight: fileRowHeight))
         .overlay { if model.fileSources.isEmpty { empty } }
     }
 
@@ -480,7 +639,11 @@ struct SourcesSettingsView: View {
                 .resizable()
                 .frame(width: 24, height: 24)
             VStack(alignment: .leading, spacing: 1) {
+                // One line, as the path is, so every row is as tall as the
+                // next and the list shows whole rows.
                 Text(source.name)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
                 Text(source.locator)
                     .font(.caption)
                     .foregroundStyle(.secondary)

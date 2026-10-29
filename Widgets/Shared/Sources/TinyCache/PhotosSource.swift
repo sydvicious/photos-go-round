@@ -53,10 +53,16 @@ public struct LibraryPictureFile: Sendable {
     /// The name of the photograph's file as it was taken, when Photos knows.
     public let name: String?
     public let taken: Date?
+    /// The photograph's local identifier, by which it can be asked for again.
+    public let identifier: String?
 
-    public init(originalWidth: Int, originalHeight: Int, name: String? = nil, taken: Date? = nil) {
+    public init(
+        originalWidth: Int, originalHeight: Int, name: String? = nil, taken: Date? = nil,
+        identifier: String? = nil
+    ) {
         self.originalWidth = originalWidth
         self.originalHeight = originalHeight
+        self.identifier = identifier
         self.name = name
         self.taken = taken
     }
@@ -127,6 +133,22 @@ public protocol PhotoLibraryPictures: Sendable {
     func selectedPictureFile(
         fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
     ) throws -> LibraryPictureFile?
+
+    /// One photograph, by its local identifier, written to `file` as it is
+    /// kept: the one on screen, to be drawn again at another size. Nil when
+    /// it is gone.
+    func pictureFile(
+        identifiedBy identifier: String, fitting box: CGSize, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile?
+}
+
+extension PhotoLibraryPictures {
+    /// A library that cannot be asked for one photograph has none to give.
+    public func pictureFile(
+        identifiedBy identifier: String, fitting box: CGSize, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
+        nil
+    }
 }
 
 /// A library that hands back pictures and not files, as a test's does, writes
@@ -213,7 +235,7 @@ private func photograph(
                 originalType: "photos", originalWidth: photograph.originalWidth,
                 originalHeight: photograph.originalHeight, originalBytes: resize.originalBytes,
                 writtenWidth: resize.writtenWidth, writtenHeight: resize.writtenHeight,
-                writtenBytes: resize.writtenBytes)
+                writtenBytes: resize.writtenBytes, origin: photograph.identifier.map { .photo($0) })
         } catch PictureResizer.Failure.tooLarge(let file, let ever) {
             if ever { skipped?() } else { forNow = .tooLarge(file, ever: false) }
         } catch PictureResizer.Failure.notAPicture {
@@ -222,6 +244,20 @@ private func photograph(
     }
     if let forNow { throw forNow }
     return nil
+}
+
+/// The photograph `origin` names, written again: one that came from Photos, by
+/// its identifier, and waited for from iCloud if it has to be. Nil for a file.
+private func photograph(
+    _ origin: PictureOrigin, library: any PhotoLibraryPictures, fitting box: CGSize, to destination: URL,
+    resizer: PictureResizer
+) throws -> PictureResizer.Resize? {
+    guard case .photo(let identifier) = origin else { return nil }
+    return try photograph(
+        attempts: 1, fitting: box, to: destination, resizer: resizer, skipped: nil, waitsAtOnce: true
+    ) { file, reach in
+        try library.pictureFile(identifiedBy: identifier, fitting: box, to: file, reach: reach)
+    }
 }
 
 /// The photographs a person picked for the app, when they gave it limited
@@ -261,6 +297,12 @@ public struct SelectedPhotosSource: CountedSource {
         ) { file, reach in
             try library.selectedPictureFile(fitting: box, pick: pick, to: file, reach: reach)
         }
+    }
+
+    public func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        try photograph(origin, library: library, fitting: box, to: destination, resizer: resizer)
     }
 }
 
@@ -307,6 +349,12 @@ public struct PhotosSource: CountedSource {
         ) { file, reach in
             try library.pictureFile(inCollection: collection, fitting: box, pick: pick, to: file, reach: reach)
         }
+    }
+
+    public func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        try photograph(origin, library: library, fitting: box, to: destination, resizer: resizer)
     }
 }
 
@@ -410,6 +458,19 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
     }
 
     public func pictureFile(
+        identifiedBy identifier: String, fitting box: CGSize, to file: URL, reach: PhotoReach
+    ) throws -> LibraryPictureFile? {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        guard status == .authorized || status == .limited else {
+            throw Refused(status: Self.name(of: status))
+        }
+        guard
+            let asset = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: Self.imagesOnly).firstObject
+        else { return nil }
+        return try self.file(of: asset, fitting: box, to: file, reach: reach)
+    }
+
+    public func pictureFile(
         inCollection identifier: String, fitting box: CGSize, pick: PicturePick, to file: URL, reach: PhotoReach
     ) throws -> LibraryPictureFile? {
         guard let assets = try pictures(inCollection: identifier), assets.count > 0 else { return nil }
@@ -475,7 +536,7 @@ public struct SystemPhotoLibraryPictures: PhotoLibraryPictures {
         }
         return LibraryPictureFile(
             originalWidth: asset.pixelWidth, originalHeight: asset.pixelHeight, name: name,
-            taken: asset.creationDate)
+            taken: asset.creationDate, identifier: asset.localIdentifier)
     }
 
     /// The edited photograph when there is one, and the original when not.

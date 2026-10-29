@@ -191,4 +191,32 @@ struct CachedPreviewPicturesTests {
 
         #expect(file == nil)
     }
+
+    // MARK: The same picture again
+
+    @Test("The picture showing is drawn again at another size, from the same file")
+    func again() throws {
+        let pictures = try ScratchFolder()
+        let cache = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let sources = [SourceSpec.folder(pictures.url.path(percentEncoded: false))]
+        let preview = CachedPreviewPictures(directory: cache.url)
+        let shown = try #require(try preview.next(from: sources, fitting: CGSize(width: 200, height: 200)))
+
+        let again = try #require(try preview.again(shown, for: sources, fitting: CGSize(width: 400, height: 400)))
+
+        #expect(pixels(of: again) == CGSize(width: 400, height: 300))
+        #expect(TinyCache.origin(of: again) == TinyCache.origin(of: shown))
+    }
+
+    @Test("A picture whose origin is not known is not drawn again")
+    func notAgain() throws {
+        let cache = try ScratchFolder()
+        let preview = CachedPreviewPictures(directory: cache.url)
+
+        #expect(
+            try preview.again(
+                URL(filePath: "/nowhere/shown/0000000001-ABCD.jpg"), for: [.folder("/nowhere")],
+                fitting: CGSize(width: 40, height: 40)) == nil)
+    }
 }

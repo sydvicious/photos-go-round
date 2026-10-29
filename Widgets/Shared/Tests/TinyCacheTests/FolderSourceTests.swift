@@ -209,4 +209,52 @@ struct FolderSourceTests {
         #expect(undecodable.resize == nil)
         #expect(undecodable.pictures == 1)
     }
+
+    // MARK: Where a picture came from
+
+    @Test("A file's picture says it came from that file")
+    func origin() throws {
+        let scratch = try ScratchFolder()
+        let file = try scratch.picture("pictures/only.jpg")
+
+        let resize = try FolderSource(folder: scratch.url.appending(path: "pictures"))
+            .writePicture(fitting: CGSize(width: 40, height: 40), to: scratch.url.appending(path: "written.jpg"))
+
+        // The path walking the folder finds, which may be spelled through
+        // `/private`: the same file either way.
+        guard case .file(let path) = resize?.origin else {
+            Issue.record("expected a file origin, got \(String(describing: resize?.origin))")
+            return
+        }
+        #expect(URL(filePath: path).resolvingSymlinksInPath() == file.resolvingSymlinksInPath())
+    }
+
+    @Test("A file in the folder is written again from its path, at another size")
+    func writtenAgain() throws {
+        let scratch = try ScratchFolder()
+        let file = try scratch.picture("pictures/only.jpg", width: 400, height: 300)
+        let source = FolderSource(folder: scratch.url.appending(path: "pictures"))
+
+        let resize = try source.writePicture(
+            .file(file.path(percentEncoded: false)), fitting: CGSize(width: 200, height: 200),
+            to: scratch.url.appending(path: "written.jpg"))
+
+        #expect(resize?.writtenWidth == 200)
+        #expect(resize?.origin == .file(file.path(percentEncoded: false)))
+    }
+
+    @Test("A file outside the folder, or a photograph, is not this folder's to write again")
+    func notWrittenAgain() throws {
+        let scratch = try ScratchFolder()
+        let outside = try scratch.picture("elsewhere/other.jpg")
+        _ = try scratch.picture("pictures/only.jpg")
+        let source = FolderSource(folder: scratch.url.appending(path: "pictures"))
+        let box = CGSize(width: 40, height: 40)
+
+        #expect(
+            try source.writePicture(
+                .file(outside.path(percentEncoded: false)), fitting: box,
+                to: scratch.url.appending(path: "a.jpg")) == nil)
+        #expect(try source.writePicture(.photo("ABC"), fitting: box, to: scratch.url.appending(path: "b.jpg")) == nil)
+    }
 }

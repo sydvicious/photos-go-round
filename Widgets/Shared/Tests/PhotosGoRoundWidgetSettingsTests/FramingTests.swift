@@ -22,9 +22,11 @@ struct FramingTests {
 
     // MARK: What is kept
 
-    @Test("With nothing chosen, the widgets fit")
-    func fitByDefault() {
-        #expect(chosen.framing == .fit)
+    /// Syd, 2026-10-28: "for widgets, the default should be "Fill". It's so
+    /// nice."
+    @Test("With nothing chosen, the widgets fill")
+    func fillByDefault() {
+        #expect(chosen.framing == .fill)
     }
 
     @Test("What is chosen is kept, with the sources")
@@ -35,15 +37,21 @@ struct FramingTests {
         #expect(chosen.framing == .actualSize)
     }
 
-    @Test("What cannot be read is taken as Fit", arguments: ["crop", "", "FILL"])
+    @Test("What cannot be read is taken as the default, Fill", arguments: ["crop", "", "FIT"])
     func unreadable(_ stored: String) {
         UserDefaults(suiteName: suite)?.set(stored, forKey: Preferences.Key.widgetFraming.rawValue)
-        #expect(chosen.framing == .fit)
+        #expect(chosen.framing == .fill)
     }
 
-    @Test("A number where a name belongs is taken as Fit")
+    @Test("A number where a name belongs is taken as the default, Fill")
     func notAName() {
         UserDefaults(suiteName: suite)?.set(2, forKey: Preferences.Key.widgetFraming.rawValue)
+        #expect(chosen.framing == .fill)
+    }
+
+    @Test("Fit, once chosen, is kept")
+    func fitKept() {
+        chosen.frame(.fit)
         #expect(chosen.framing == .fit)
     }
 
@@ -81,8 +89,10 @@ struct FramingTests {
 
     // MARK: The preview
 
-    @Test("Changing to Fill starts the preview over")
-    func fillStartsOver() async {
+    /// Syd, 2026-10-28: "what i want is for the current picture to show the
+    /// new setting".
+    @Test("Changing to Fill draws the picture showing again, filled")
+    func fillDrawsAgain() async {
         let preview = PreviewModel(
             pictures: ScriptedPictures([.picture("a.jpg")]), device: .phone, screen: phone, scale: 3)
         preview.show([cats])
@@ -90,9 +100,10 @@ struct FramingTests {
         #expect(preview.content == picture("a.jpg"))
 
         preview.use(framing: .fill)
+        await preview.advance()
 
         #expect(preview.framing == .fill)
-        #expect(preview.content == .scanning)
+        #expect(preview.content == picture("again-a.jpg"))
     }
 
     @Test("Changing from Fit to Actual Size keeps the picture: only its drawing changes")

@@ -52,6 +52,8 @@ public struct PictureResizer: Sendable {
         public let writtenWidth: Int
         public let writtenHeight: Int
         public let writtenBytes: Int
+        /// Where the picture came from, so that it can be written again.
+        public var origin: PictureOrigin? = nil
 
         /// `public.tiff 6000x4500, 54.1 MB → 438x328, 41 KB`, for a log. The
         /// original's size in pixels is what a full decode of it costs, at
@@ -219,8 +221,13 @@ public struct PictureResizer: Sendable {
     /// cropped to the box's shape at its own size, and drawn larger where it
     /// is shown.
     ///
-    /// **One that covering would make too large is fitted instead**, with
-    /// black around it, rather than passed over. Syd, 2026-10-25.
+    /// **One that covering at full size would make too large is covered
+    /// smaller**: at the largest size that fits what is left, cropped to the
+    /// box's shape, and drawn larger where it is shown. Softer, and never
+    /// fitted with black around it. Syd, 2026-10-28, of a portrait photograph
+    /// fitted into an Extra Large: "when "fill" is set this should not
+    /// happen", and "its precisely these portrait pics that need it the
+    /// most". Until then it was fitted instead, Syd's choice of 2026-10-25.
     ///
     /// - Parameters:
     ///   - name: What the log calls the picture: the file's own name unless
@@ -264,17 +271,29 @@ public struct PictureResizer: Sendable {
                 fraction: Self.fraction(of: max(width, height), for: covering.longestSide, type: type),
                 inBands: inBands, wanted: covering, fitted: fitted, cropped: Self.cropped(covering, to: box))
             if let reading, let left = reading.left, coveringNeeds > left {
+                let smaller = Self.largestCovering(
+                    width: width, height: height, from: Self.fitScale(width, height, box),
+                    to: Self.fillScale(width, height, box)
+                ) { candidate in
+                    needs(
+                        type: type, storedWidth: storedWidth, storedHeight: storedHeight,
+                        fraction: Self.fraction(of: max(width, height), for: candidate.longestSide, type: type),
+                        inBands: inBands, wanted: candidate, fitted: fitted,
+                        cropped: Self.cropped(candidate, to: box)) <= left
+                }
                 Log.widget.notice(
                     """
-                    \(Log.widgetsTag, privacy: .public) fitted a picture rather than fill: \
+                    \(Log.widgetsTag, privacy: .public) covered smaller to fill: \
                     \(Self.naming(named, taken), privacy: .public)covering \
                     \(Int(box.width))x\(Int(box.height)) needs about \(coveringNeeds / 1_048_576) MB, \
+                    so it is covered at \(smaller.width)x\(smaller.height) and drawn larger, \
                     \(Footprint.againstLimit(reading), privacy: .public)
                     """)
+                wanted = smaller
             } else {
                 wanted = covering
-                fills = true
             }
+            fills = true
         }
 
         let longestSide = wanted.longestSide
@@ -356,7 +375,8 @@ public struct PictureResizer: Sendable {
             originalWidth: Int(width), originalHeight: Int(height),
             originalBytes: Self.byteCount(of: original),
             writtenWidth: image.width, writtenHeight: image.height,
-            writtenBytes: Self.byteCount(of: destination))
+            writtenBytes: Self.byteCount(of: destination),
+            origin: .file(original.path(percentEncoded: false)))
     }
 
     /// A picture's size once it is shrunk, in whole pixels.
@@ -376,6 +396,21 @@ public struct PictureResizer: Sendable {
     /// The scale that fits a picture inside `box`, and never enlarges it.
     static func fitScale(_ width: Double, _ height: Double, _ box: CGSize) -> Double {
         min(1, min(box.width / width, box.height / height))
+    }
+
+    /// The largest picture, between the fitted scale `lowest` and the covering
+    /// scale `highest`, that `fits` says there is room for; the fitted size
+    /// when none is. Found by halving, to a pixel or so.
+    static func largestCovering(
+        width: Double, height: Double, from lowest: Double, to highest: Double, fits: (Sized) -> Bool
+    ) -> Sized {
+        var low = lowest
+        var high = highest
+        for _ in 0..<24 {
+            let middle = (low + high) / 2
+            if fits(sized(width: width, height: height, scale: middle)) { low = middle } else { high = middle }
+        }
+        return sized(width: width, height: height, scale: low)
     }
 
     /// The scale that has a picture cover `box`, and never enlarges it.

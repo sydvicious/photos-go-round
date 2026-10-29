@@ -64,7 +64,7 @@ It is the last item on the *Before Photos-Go-Round's first release* checklist.
 - **The uninstaller's icon is the app's with a red circle-slash over its lower-right corner.** Syd, 2026-09-27. `Artwork/Uninstaller.icon`: the app icon's two layers, and a third on top, `1 Circle Slash.svg`, opaque, with a white edge so it reads against both the background and the photographs.
 - **It installs nothing at launch.** It does not link the app's launch-time install, so opening it cannot restart the agent it is about to remove.
 - **It trashes the app only if it is in `/Applications`.** Syd, 2026-09-27: "I think you should only delete the app itself if it is /Applications." A build in DerivedData, or a copy kept elsewhere, is left where it is; it is still asked to quit.
-- **The app it trashes is the one the agent's plist points into**, not whatever LaunchServices finds by bundle identifier, which every build shares. *Claude's.*
+- **The app it trashes is the one the agent's plist points into**, not whatever LaunchServices finds by bundle identifier: a copy of the same build kept elsewhere is left alone. *Claude's.*
 - **The About document is RTF.** It opens in TextEdit on every Mac, and needs no generator in the build. *Claude's.*
 - **An Xcode target makes the release: `Release DMG`, wrapping `release-build.sh`.** When it finishes, Finder shows the image in its folder — Syd: "it would be great if the build target would open the enclosing folder in the finder." Syd, 2026-09-27: "I also want an Xcode target. It could just wrap the script." An aggregate target with one script phase, run with a cleared environment so the build's own settings do not reach the archive inside it; its scheme only builds. Syd's to build, since it uploads to Apple.
 - **The DMG step is its own script**, `Scripts/make-dmg.sh`, so it can wrap any exported app, including one from Organizer. *Claude's.*
@@ -176,9 +176,8 @@ launched, and a Finder alias cannot pass arguments anyway.
    only "Photos-Go-Round has been removed.", with an OK button; the report in a
    console font appears only when something was refused.
 2. **Quits the app if it is running.** `NSRunningApplication` for the app's
-   bundle identifier, filtered to the one at the path it is about to trash —
-   every build shares the identifier, so a running Debug app must not be asked
-   to quit. `terminate()`, then a wait of a few seconds. **If it has not quit, an
+   build's own bundle identifier, filtered to the one at the path it is about
+   to trash, so a copy of the same build kept elsewhere is not asked to quit. `terminate()`, then a wait of a few seconds. **If it has not quit, an
    alert says the app did not shut down and offers Force Quit or Cancel**;
    Force Quit is `forceTerminate()`. Syd, 2026-09-27: "the uninstaller should
    put up an alert explaining the running service did not shutdown, and should

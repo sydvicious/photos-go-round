@@ -27,10 +27,10 @@ Open `Photos-Go-Round.xcodeproj`. Everything below is the Debug configuration; R
 | Run the agent under the debugger | **Photos-Go-Round Server** | ⌘R |
 | Run every test | **Package Tests** | ⌘U |
 
-`Package Tests` covers the package's five test targets. From a terminal, note that it takes no `-project`, because a scheme whose targets are the package's is a package scheme:
+`Package Tests` covers the package's eight test targets. From a terminal it takes the package's workspace and not `-project`, because a scheme whose targets are the package's is a package scheme; through the project it finds no test bundles. `LM_SKIP_METADATA_EXTRACTION=YES` stops each test bundle that does not use App Intents from warning that it skipped extracting their metadata:
 
 ```
-xcodebuild test -scheme "Package Tests" -destination "platform=macOS,arch=arm64"
+xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" LM_SKIP_METADATA_EXTRACTION=YES
 ```
 
 The app's own bundle, `Photos-Go-RoundTests`, is not in it: it wants a running agent. Run it through the **Photos-Go-Round** scheme.

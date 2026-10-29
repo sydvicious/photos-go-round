@@ -1,4 +1,5 @@
 import Foundation
+import PhotosGoRoundAgentAPI
 import Testing
 
 @testable import PhotosGoRoundInstall
@@ -146,7 +147,8 @@ struct AgentInstallTests {
     /// argued for somewhere; `ProcessType` most of all.
     @Test("The job description carries exactly the fields launchd is given")
     func jobDescriptionShape() throws {
-        let job = JobDescription(label: "com.sydpolk.photosgoround.server.debug", program: binary)
+        let job = JobDescription(
+            label: "com.sydpolk.photosgoround.server.debug", program: binary, app: "com.sydpolk.photosgoround.debug")
         let decoded =
             try PropertyListSerialization.propertyList(from: job.encodedPlist(), format: nil)
             as? [String: Any]
@@ -162,7 +164,15 @@ struct AgentInstallTests {
         #expect(values["ProcessType"] as? String != "Background")
         // Filed under the app in Login Items rather than under the signing
         // certificate's name. Checked 2026-09-23 with `sfltool dumpbtm`.
-        #expect(values["AssociatedBundleIdentifiers"] as? [String] == ["com.sydpolk.photosgoround"])
+        #expect(values["AssociatedBundleIdentifiers"] as? [String] == ["com.sydpolk.photosgoround.debug"])
+    }
+
+    /// Each build's app has an identifier of its own, so each build's agent is
+    /// filed under its own app.
+    @Test("A job belongs to the app of the build that installs it")
+    func jobBelongsToItsBuildsApp() {
+        let job = JobDescription(label: "com.sydpolk.photosgoround.server", program: binary)
+        #expect(job.associatedBundleIdentifiers == [BuildVariant.current.appIdentifier])
     }
 
     /// The agent's build decides its storage, so a job passes nothing but the

@@ -169,6 +169,14 @@ final class StubSource: CountedSource, @unchecked Sendable {
         (try writePicture(fitting: box, to: destination), found)
     }
 
+    /// Writes a picture again from where it came from: one of its own files.
+    func writePicture(
+        _ origin: PictureOrigin, fitting box: CGSize, to destination: URL
+    ) throws -> PictureResizer.Resize? {
+        guard case .file(let path) = origin, files.contains(URL(filePath: path)) else { return nil }
+        return try PictureResizer().write(URL(filePath: path), fitting: box, to: destination)
+    }
+
     func writePicture(fitting box: CGSize, to destination: URL) throws -> PictureResizer.Resize? {
         let file: URL? = try lock.withLock {
             asked += 1

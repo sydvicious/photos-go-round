@@ -34,6 +34,9 @@ public struct TinyCache: Sendable {
 
     private let waitingFolder: URL
     private let shownFolder: URL
+    /// Where each picture came from, by its file's name. Hidden, so that a
+    /// listing of the pictures never takes it for one.
+    private let originsFile: URL
     private let source: any PictureSource
     private let box: CGSize
     private let fillLimit: Int
@@ -51,6 +54,7 @@ public struct TinyCache: Sendable {
     ) {
         waitingFolder = directory.appending(path: "waiting", directoryHint: .isDirectory)
         shownFolder = directory.appending(path: "shown", directoryHint: .isDirectory)
+        originsFile = directory.appending(path: ".origins.json")
         self.source = source
         self.box = box
         self.fillLimit = fillLimit
@@ -126,7 +130,47 @@ public struct TinyCache: Sendable {
         return try waiting().first
     }
 
+    /// Where a picture this cache wrote came from, read beside it. Nil for
+    /// one written before origins were kept, or by a source that does not
+    /// say.
+    public static func origin(of file: URL) -> PictureOrigin? {
+        let directory = file.deletingLastPathComponent().deletingLastPathComponent()
+        return origins(in: directory.appending(path: ".origins.json"))[file.lastPathComponent]
+    }
+
+    /// The picture `origin` names, written again at this cache's size and
+    /// shown now: the one on screen, drawn again for another size or another
+    /// framing. Nil when the source cannot write it again.
+    public func showAgain(_ origin: PictureOrigin) throws -> URL? {
+        try FileManager.default.createDirectory(at: shownFolder, withIntermediateDirectories: true)
+        let destination = shownFolder.appending(path: try nextName())
+        guard
+            let resize = try autoreleasepool(invoking: {
+                try source.writePicture(origin, fitting: box, to: destination)
+            })
+        else { return nil }
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date.now], ofItemAtPath: destination.path(percentEncoded: false))
+        try keep(resize.origin ?? origin, for: destination)
+        onFetch?(resize)
+        return destination
+    }
+
     // MARK: -
+
+    private static func origins(in file: URL) -> [String: PictureOrigin] {
+        guard let data = try? Data(contentsOf: file) else { return [:] }
+        return (try? JSONDecoder().decode([String: PictureOrigin].self, from: data)) ?? [:]
+    }
+
+    /// Records where a picture came from, and forgets the pictures that are
+    /// gone.
+    private func keep(_ origin: PictureOrigin, for file: URL) throws {
+        let present = Set(try (pictures(in: waitingFolder) + pictures(in: shownFolder)).map(\.lastPathComponent))
+        var origins = Self.origins(in: originsFile).filter { present.contains($0.key) }
+        origins[file.lastPathComponent] = origin
+        try JSONEncoder().encode(origins).write(to: originsFile, options: .atomic)
+    }
 
     /// One picture from the source into `waiting`.
     /// - Returns: Whether a picture was added.
@@ -139,6 +183,7 @@ public struct TinyCache: Sendable {
         let destination = try nextWaitingFile()
         guard let resize = try autoreleasepool(invoking: { try source.writePicture(fitting: box, to: destination) })
         else { return false }
+        if let origin = resize.origin { try? keep(origin, for: destination) }
         onFetch?(resize)
         return true
     }
@@ -181,10 +226,14 @@ public struct TinyCache: Sendable {
     /// sorting by arrival, and end with something unique so that a name is
     /// never used twice even after the folders have emptied.
     private func nextWaitingFile() throws -> URL {
+        waitingFolder.appending(path: try nextName())
+    }
+
+    private func nextName() throws -> String {
         let names = try (pictures(in: waitingFolder) + pictures(in: shownFolder)).map(\.lastPathComponent)
         let last = names.compactMap { Int($0.prefix { $0.isNumber }) }.max() ?? 0
         let count = String(last + 1)
         let padded = String(repeating: "0", count: max(0, 10 - count.count)) + count
-        return waitingFolder.appending(path: "\(padded)-\(UUID().uuidString.suffix(4)).jpg")
+        return "\(padded)-\(UUID().uuidString.suffix(4)).jpg"
     }
 }

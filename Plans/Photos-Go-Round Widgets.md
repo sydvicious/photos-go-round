@@ -326,8 +326,9 @@ The peak waits for the iOS app, where it is listed in *Phases*.
 
 - *A source is chosen in proportion to how many pictures it holds*, and the picture inside it at
   random. Each Photos collection is a source of its own.
-- *The counts are remembered*, in `Caches/TinyCache/counts.json` in the extension's container, one
-  file for widgets of every size. Syd chose that over counting every source on every pick. A
+- *The counts are remembered*, in `counts.json` in each widget's cache in the extension's
+  container, as on iOS (`Plans/Widget Settings.md`, *On the Mac*). Syd chose remembering them
+  over counting every source on every pick. A
   source is counted when it has no count, or one an hour old.
 - *A folder is counted by the walk that chooses from it.* Syd chose that over a walk of every
   folder each hour. A folder that goes on being chosen is walked once a pick and never just to be

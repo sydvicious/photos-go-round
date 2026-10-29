@@ -53,8 +53,8 @@ public protocol HostEnvironment: Sendable {
 /// library, and you shouldn't." A new build starts a library of its own; the
 /// old container is `Scrub`'s to empty. `Plans/Release DMG.md`.
 public enum Storage {
-    /// The bundle identifier, and the root every build's storage name grows
-    /// from. Public so the surfaces' own domains are spelled from this rather
+    /// The Release app's bundle identifier, and the root every build's
+    /// storage name grows from. Public so the surfaces' own domains are spelled from this rather
     /// than from a second copy of it — see `WallpaperPreferences`.
     public static let identifier = "com.sydpolk.photosgoround"
 
@@ -63,14 +63,10 @@ public enum Storage {
     public static let databaseFilename = "photosgoround.sqlite"
 
     /// The name of a build's storage — its container, its cache and its
-    /// preference domain — which is the bundle identifier plus the build
-    /// variant's suffix.
-    ///
-    /// **Not the bundle identifier.** That stays one value across all three
-    /// configurations because TCC grants hang off it, and Syd, 2026-09-19,
-    /// asked for Photos to be answered once rather than once per build. This is
-    /// the other half of the same decision: the three can run at the same time,
-    /// so they cannot share one database. `BuildVariant.swift`.
+    /// preference domain — which is the root plus the build variant's suffix,
+    /// and so the same as the build's app identifier
+    /// (`BuildVariant.appIdentifier`). The three can run at the same time, so
+    /// they cannot share one database.
     ///
     /// Defaults to the build that is asking. `pgr_ctl` passes another — it is
     /// never shipped, and Syd, 2026-09-19: "it should be able to completely
@@ -185,6 +181,16 @@ public struct MacHostEnvironment: HostEnvironment {
     /// The file `containermanagerd` leaves in a folder it has claimed, which is
     /// macOS's and is never moved or deleted.
     public static let containerMetadata = ".com.apple.containermanagerd.metadata.plist"
+
+    /// Where the Settings window's widget preview keeps its pictures: beside
+    /// the agent's cache and not in it, since the agent's sweep takes any
+    /// folder there it does not know. `Plans/Widget Settings.md`, *The Mac's
+    /// Settings window*.
+    public static func widgetPreviewCache(
+        variant: BuildVariant = .current, home: URL = URL.homeDirectory
+    ) -> URL {
+        home.appending(path: "Library/Caches/\(preferenceDomain(variant: variant)).widget-preview")
+    }
 
     static func defaultCacheRoot(
         container: URL, origin: ContainerOrigin, variant: BuildVariant = .current

@@ -38,6 +38,10 @@ public protocol PreviewPictures: Sendable {
 
     /// The same pictures, made for `framing`. `Plans/Widget Settings.md`.
     func framed(_ framing: Framing) -> any PreviewPictures
+
+    /// The picture `shown` drawn again for `box`: the same photograph, at
+    /// another size or framed another way. Nil when it cannot be. May block.
+    func again(_ shown: URL, for sources: [SourceSpec], fitting box: CGSize) throws -> URL?
 }
 
 extension PreviewPictures {
@@ -47,6 +51,8 @@ extension PreviewPictures {
 
     /// Pictures that are the same however they are framed, as a test's are.
     public func framed(_ framing: Framing) -> any PreviewPictures { self }
+
+    public func again(_ shown: URL, for sources: [SourceSpec], fitting box: CGSize) throws -> URL? { nil }
 }
 
 @MainActor
@@ -58,8 +64,34 @@ public final class PreviewModel {
     public var family: WidgetFamily {
         get { showing }
         set {
-            showing = newValue
+            showSize(newValue)
             personChose = true
+        }
+    }
+
+    /// Shows another size. **The photograph showing is drawn again at it**, as
+    /// for another framing, and what was being fetched for the old size is
+    /// let go. Syd, 2026-10-28: "what i want is for the current picture to
+    /// show the new setting and all pictures in flight to be discarded".
+    private func showSize(_ family: WidgetFamily) {
+        guard family != showing else { return }
+        showing = family
+        drawAgainOrStartOver()
+    }
+
+    /// Draws the photograph showing again at the next fetch; with none
+    /// showing, starts the preview over. A fetch under way is given up on.
+    private func drawAgainOrStartOver() {
+        guard !sources.isEmpty else { return }
+        givingUp = isFetching
+        backoff.answered()
+        nothingFound.answered()
+        switch content {
+        case .picture(let shown), .scanningOver(let shown):
+            redrawing = shown
+        default:
+            started = false
+            content = .scanning
         }
     }
     /// The sizes this device's Home Screen offers, and any other a widget
@@ -82,6 +114,12 @@ public final class PreviewModel {
     /// asked for meanwhile.
     private var isFetching = false
     private var askedMeanwhile = false
+    /// Which fetch's answer counts: each run of fetches takes the next
+    /// number, and one given up on answers nobody.
+    private var fetchNumber = 0
+    /// Whether the fetch under way is for a size or framing no longer
+    /// showing, and is to be given up on rather than waited for.
+    private var givingUp = false
     /// Whether these sources have had their quick first picture.
     private var started = false
     /// The wait before Photos is asked again, when it has not answered.
@@ -99,6 +137,9 @@ public final class PreviewModel {
     private var showing: WidgetFamily
     /// Whether the person has picked a size for themselves.
     private var personChose = false
+    /// The picture to draw again at the next fetch: the one that was showing
+    /// when the size or the framing changed.
+    private var redrawing: URL?
     private let recorded: RecordedWidgetSizes?
     /// Whether the sizes have been written to the log since the app started:
     /// the first look logs them even when nothing is new.
@@ -192,7 +233,7 @@ public final class PreviewModel {
             guard let size = size(of: family) else { return false }
             return size.width <= viewport.width && size.height <= viewport.height
         }
-        showing = fits ?? families.first ?? .small
+        showSize(fits ?? families.first ?? .small)
     }
 
     /// The shape that stands for a size in the bar: the widget's own
@@ -231,25 +272,23 @@ public final class PreviewModel {
         guard sources != self.sources else { return }
         self.sources = sources
         started = false
+        redrawing = nil
         // Other sources have not gone unanswered, nor found empty.
         backoff.answered()
         nothingFound.answered()
         content = sources.isEmpty ? .nothingChosen : .scanning
     }
 
-    /// How the pictures are to sit in the widget. A change starts the preview
-    /// over, as other sources do: a picture made to fit is not one made to
-    /// fill. Actual Size is drawn from the same pictures as Fit, so only the
-    /// drawing changes between those two.
+    /// How the pictures are to sit in the widget. **The photograph showing is
+    /// drawn again framed the new way**: a picture made to fit is not one
+    /// made to fill. Actual Size is drawn from the same pictures as Fit, so
+    /// only the drawing changes between those two.
     public func use(framing: Framing) {
         guard framing != self.framing else { return }
         let differ = Self.picturesDiffer(self.framing, framing)
         self.framing = framing
-        guard differ, !sources.isEmpty else { return }
-        started = false
-        backoff.answered()
-        nothingFound.answered()
-        content = .scanning
+        guard differ else { return }
+        drawAgainOrStartOver()
     }
 
     /// Whether a picture made for one framing is not one for the other.
@@ -302,25 +341,39 @@ public final class PreviewModel {
     /// ask at once, so a change asked for while one is under way waits, and
     /// however many ask, one more fetch follows. A widget's timeline holds a
     /// lock for the same reason.
+    ///
+    /// **Except for another size or framing: the fetch under way is given up
+    /// on**, and the picture showing is drawn again at once. Seen in a
+    /// simulator, 2026-10-29: a Large fetch took more than two minutes, and
+    /// all that time the Large picture stood in the Medium chosen meanwhile.
+    /// Syd: "if i change the fillfit or the preview size, and the fetch is
+    /// stuck, kill it and getch a new picture". It cannot be stopped inside
+    /// Photos, so it runs on, on its own thread, and its answer is dropped.
     public func advance() async {
         guard !sources.isEmpty else {
             content = .nothingChosen
             return
         }
-        guard !isFetching else {
+        guard !isFetching || givingUp else {
             askedMeanwhile = true
             return
         }
+        givingUp = false
+        askedMeanwhile = false
+        fetchNumber += 1
+        let number = fetchNumber
         isFetching = true
-        await fetch()
-        while askedMeanwhile {
+        await fetch(number)
+        while askedMeanwhile, number == fetchNumber {
             askedMeanwhile = false
-            await fetch()
+            await fetch(number)
         }
-        isFetching = false
+        if number == fetchNumber {
+            isFetching = false
+        }
     }
 
-    private func fetch() async {
+    private func fetch(_ number: Int) async {
         guard !sources.isEmpty else {
             content = .nothingChosen
             return
@@ -330,9 +383,26 @@ public final class PreviewModel {
         let box = CGSize(width: size.width * scale, height: size.height * scale)
         guard box != .zero else { return }
         let pictures = pictures.framed(framed)
-        // Chosen again, or framed another way, while this one was being
-        // fetched: it is not theirs.
-        func stillWanted() -> Bool { asked == sources && !Self.picturesDiffer(framed, framing) }
+        // Chosen again, framed another way, or another size chosen, while
+        // this one was being fetched, or the fetch given up on: it is not
+        // theirs.
+        func stillWanted() -> Bool {
+            number == fetchNumber && asked == sources && !Self.picturesDiffer(framed, framing)
+                && box == CGSize(width: size.width * scale, height: size.height * scale)
+        }
+        // The size or the framing changed: the photograph showing, drawn
+        // again for it. One that cannot be starts the preview over.
+        if let shown = redrawing {
+            redrawing = nil
+            let again = try? await BlockingWork.run { try pictures.again(shown, for: asked, fitting: box) }
+            guard stillWanted() else { return }
+            if let again = again ?? nil {
+                content = .picture(again)
+                return
+            }
+            started = false
+            content = .scanning
+        }
         if !started {
             // Nothing is showing yet, and the usual pick counts every source
             // before it fetches. So first what costs least: the picture kept

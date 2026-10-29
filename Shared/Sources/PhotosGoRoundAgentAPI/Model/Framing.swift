@@ -3,11 +3,13 @@ import Foundation
 /// How a photograph sits in the place it is shown. `Plans/Widget Settings.md`,
 /// *Fit or fill*.
 ///
-/// **Three, and Fit is the default.** Syd, 2026-10-25: "Fit and fill are better
-/// terms" than "crop vs fill", and Fit, as everywhere in Photos-Go-Round until
-/// then, is what a place shows until someone changes it. Then, the same day:
-/// "we should also have an option not to expand the picture at all of it
-/// fits", as a third choice.
+/// **Three.** Syd, 2026-10-25: "Fit and fill are better terms" than "crop vs
+/// fill", and then, the same day: "we should also have an option not to
+/// expand the picture at all of it fits", as a third choice.
+///
+/// **The widgets fill until someone changes it**, since 2026-10-28
+/// (`Preferences.widgetFraming`). Everywhere else fits, as everywhere in
+/// Photos-Go-Round did until then.
 ///
 /// Stored by its raw value, so the names are kept once anything has been
 /// written with them.

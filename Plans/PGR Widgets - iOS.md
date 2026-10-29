@@ -1271,7 +1271,7 @@ bookmark made while the app was let in is what opens it again. So:
 
 **The risk is the widget reading what the app chose.** A sandboxed app is given a folder only
 because the person chose it, and keeps that with a bookmark. The widget is another process. On the
-Mac a bookmark the app leaves is what the widget opens today (`Widgets/macOS/Sources/OpenedFolders`).
+Mac a bookmark the app leaves is what the widget opens today (`BookmarkedSources`, as on iOS).
 From memory, not checked: iOS bookmarks are made without the Mac's security-scope option, and
 whether an extension can open one its app made is not something I know. If it can't, a folder's
 pictures would have to be copied into the App Group container, or folders would work only in the
@@ -1708,8 +1708,9 @@ settings drawn across its face, and the log read.
 500 milliseconds, "and for now, we add that delay to the default". Then, the same day, the fixed
 list in its place, for the tick.
 
-- `PhotoWidgetSettings.swift`, in the extension: the one setting, *Change Every*, and
-  `ChangeEvery`, the durations it offers, each by its length in seconds.
+- `PhotoWidgetSettings.swift`, in the extension: the one setting, *Change Every*; and
+  `ChangeEvery`, the durations it offers, each by its length in seconds, kept since 2026-10-28 in
+  `EditWidgetChoices.swift`, shared with the Mac's widget.
 - The cache's folder is named for the size and the duration, as in `systemSmall-300`.
 - **The extension target extracts App Intents metadata**, which the project otherwise switches
   off; without it the system cannot find the settings. `Plans/Build Plan.md`. On a simulator the

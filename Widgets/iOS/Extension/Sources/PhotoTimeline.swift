@@ -260,10 +260,8 @@ private struct Wake: Sendable {
         URL.cachesDirectory.appending(path: "Widgets", directoryHint: .isDirectory)
     }
 
-    /// One cache for each setting at each size, which is as near as there is
-    /// to one for each widget: `systemSmall-300`, and `systemSmall-300-fill`
-    /// for a widget whose pictures fill it.
+    /// This widget's cache. `WidgetPictures.folder(forFamily:every:framing:)`.
     static func folder(for family: WidgetKit.WidgetFamily, every: ChangeEvery, framing: Framing) -> String {
-        "\(family)-\(every.rawValue)" + CachedPreviewPictures.suffix(for: framing)
+        WidgetPictures.folder(forFamily: String(describing: family), every: every, framing: framing)
     }
 }

@@ -28,11 +28,15 @@ scheme, so it takes the package's workspace rather than `-project`; through the
 project it finds no test bundles:
 
 ```bash
-xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" -derivedDataPath "$HOME/.claude/build/photos-go-round/DerivedData"
+xcodebuild test -workspace .swiftpm/xcode/package.xcworkspace -scheme "Package Tests" -destination "platform=macOS,arch=arm64" -derivedDataPath "$HOME/.claude/build/photos-go-round/DerivedData" LM_SKIP_METADATA_EXTRACTION=YES
 ```
 
 That covers all eight package test targets. `Package Tests.xctestplan` is
-what lists them.
+what lists them. **`LM_SKIP_METADATA_EXTRACTION=YES` keeps the run
+warning-free**: Xcode extracts App Intents metadata from every bundle, and each
+test bundle that does not link App Intents says "Metadata extraction skipped".
+The project turns it off for its own targets; a package's targets cannot carry
+the setting, so it is passed here. ⌘U in Xcode still prints the warning.
 
 **Nothing generated goes in the repository.** Syd, 2026-09-19: "I really don't
 want build artifacts in the repo directory", and "I would prefer ALL generated
@@ -61,7 +65,22 @@ installed on one Mac at once and none can be mistaken for another:
 | LaunchAgent label | `…photosgoround.server` | `….server.debug` | `….server.claude` |
 | Screensaver bundle | `Photos-Go-Round Screensaver.saver` | `… (Debug).saver` | `… (Claude).saver` |
 | Wallpaper extension | `…wallpaper.extension` | `…wallpaper.debug.extension` | `…wallpaper.claude.extension` |
-| Widget extension | `…photosgoround.widget` | `….widget.debug` | `….widget.claude` |
+| App | `com.sydpolk.photosgoround` | `….debug` | `….claude` |
+| Agent bundle | `…photosgoround.server` | `….debug.server` | `….claude.server` |
+| Widget extension | `…photosgoround.widget` | `….debug.widget` | `….claude.widget` |
+| Uninstaller | `…photosgoround.uninstaller` | `….uninstaller.debug` | `….uninstaller.claude` |
+| `pgr_ctl` | `…photosgoround.pgr-ctl` | `….pgr-ctl.debug` | `….pgr-ctl.claude` |
+| iOS Widgets app | `…photosgoround.widgets` | `….widgets.debug` | `….widgets.claude` |
+
+**Every product has its own bundle ID in each configuration**, on the Mac and
+on iOS. Syd, 2026-10-28: "all products should have a separate bundle id per
+config". Until then the app, the agent, the uninstaller and `pgr_ctl` shared one,
+and the system read the Release app's App Intents metadata for a Debug build's
+widget, which then had no settings. What the app carries is named under the
+app's own ID, as an extension has to be. Each build's own user defaults follow
+its ID. `BuildVariantTests` fails when a product shares one across
+configurations, or an `Info.plist` writes one in by hand. A new product gets
+its suffix from the start.
 
 `-configuration Claude` sets all of it. The three settings that used to be
 passed by hand — `PGR_AGENT_CONDITION`, `WALLPAPER_ID_SUFFIX`,
@@ -100,8 +119,8 @@ pluginkit -r "$HOME/.claude/build/photos-go-round/DerivedData/Build/Products/Cla
 well.** The app carries the proof-of-concept widget in `Contents/PlugIns`, and
 Xcode registers an app's extensions when it builds the app. Measured that day: a
 `Claude` build of the `Photos-Go-Round` scheme took the widget's registration
-count from none to one. It registers `…widget.claude` beside Syd's
-`…widget.debug`, so it cannot replace his, but it does put a *Photos-Go-Round
+count from none to one. It registers `…claude.widget` beside Syd's
+`…debug.widget`, so it cannot replace his, but it does put a *Photos-Go-Round
 (Claude)* widget in his widget gallery. Unregister afterwards:
 
 ```bash
