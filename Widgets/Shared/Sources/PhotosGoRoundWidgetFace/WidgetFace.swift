@@ -16,9 +16,15 @@
 // with "No Photos found" when sources are chosen and no picture is to be had.
 // And, 2026-10-10, with "No Photos Access" when Photos access is off.
 //
-// **A photograph greyed over with "Scanning…"**, when Photos has not answered
-// for the next one. Syd, 2026-10-11: "put the scanning overlay over whatever
-// is showing so the user knows something is wrong".
+// **A photograph greyed over with "Scanning…"**, in the app's preview, when
+// Photos has not answered for the next one. Syd, 2026-10-11: "put the
+// scanning overlay over whatever is showing so the user knows something is
+// wrong".
+//
+// **A widget never says "Scanning…".** It shows its last picture plainly, or
+// "No Photos found" until it has one. Syd, 2026-10-30: "I don't want to show
+// the user 'Scanning...' in the widgets themselves." The two Scanning faces
+// are the preview's.
 
 import ImageIO
 import SwiftUI
@@ -34,9 +40,10 @@ public struct WidgetFace: View {
         /// A photograph, as a file.
         case picture(URL)
         /// A photograph that has stayed up because Photos did not answer for
-        /// the next, with "Scanning…" over it.
+        /// the next, with "Scanning…" over it. The app's preview only.
         case scanningOver(URL)
         case nothingChosen
+        /// The app's preview only.
         case scanning
         case noPhotos
         /// Photos access is off, and there is no picture from anywhere else.

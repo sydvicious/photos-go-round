@@ -176,11 +176,25 @@ Syd, 2026-10-10: `TODO.md` "takes the iOS to-dos once this is in `main`".
   picture is fetched, with "No Photos found" when sources are chosen and no picture is to be
   had, and with "No Photos Access" when Photos access is off and nothing else can be shown.** On
   the preview the last opens the system's settings when tapped. Syd, 2026-10-09 and 2026-10-10.
+  "Scanning…" is the preview's only; a widget says "No Photos found" until it has a picture.
 - **The app carries a full-resolution picture of its icon, and the faces draw it from a copy no
   bigger than it is shown.** Syd, 2026-10-10.
 - **A photograph greyed over with "Scanning…", when Photos has not answered for the next one.**
-  In the preview and on a widget. Syd, 2026-10-11: "put the scanning overlay over whatever is
-  showing so the user knows something is wrong". *When Photos does not answer*.
+  In the preview only. Syd, 2026-10-11: "put the scanning overlay over whatever is showing so
+  the user knows something is wrong". *When Photos does not answer*.
+- **A widget never says "Scanning…".** It shows the picture it had, plainly, whatever has gone
+  wrong; with none yet, "No Photos found". Syd, 2026-10-25: "if the widget had a picture before,
+  show it plainly", and 2026-10-30: "I don't want to show the user 'Scanning...' in the widgets
+  themselves. I would rather show 'No Photos' until we find one." Nothing a person can do makes
+  it go away.
+- **A placeholder shows the last picture put in the cache**, by any size, whatever its sources;
+  "No Photos found" with none. The system asks for a placeholder while it builds a widget's
+  first timeline, after an install or after the extension was ended, and gives it the widget's
+  size and not its settings. Syd, 2026-10-30, choosing that over "No Photos found" and over the
+  plain icon, once his phone's widgets had all said "No Photos found" for 11 seconds with
+  pictures in the cache; and then "just use the last picture in the cache", "because we know
+  that the last pic in the cache won't trigger memory problems". It was shrunk to a widget's
+  size when it was fetched, and has been drawn already. `WidgetPictures.placeholder(in:)`.
 
 *The collections*
 
@@ -350,9 +364,11 @@ Syd, 2026-10-10: `TODO.md` "takes the iOS to-dos once this is in `main`".
   seconds and the first wait 5; both figures are Claude's. *When Photos does not answer*.
 - **The app's preview waits a minute at most.** Syd, 2026-10-11: "Previews in the app wait for
   1 minute max".
-- **Meanwhile what is showing stays, with "Scanning…" over it.** Syd, 2026-10-11: "If there is
-  already a photo loaded just keep displaying it. If not use the scanning… overlay on the app
-  icon". The picture kept is the file already in the cache, on disk, and so is a widget's wait.
+- **Meanwhile what is showing stays: in the preview with "Scanning…" over it, on a widget as
+  it is.** Syd, 2026-10-11: "If there is already a photo loaded just keep displaying it. If not
+  use the scanning… overlay on the app icon"; a widget with nothing shown yet says "No Photos
+  found" instead, 2026-10-30. The picture kept is the file already in the cache, on disk, and
+  so is a widget's wait.
 - **A widget starts as the preview does: the first source's first picture, then the weighed
   picks.** Syd, 2026-10-10: "of course, each widget will be doing this as well".
 - **In the gallery, a size with no picture of its own shows another size's; with no picture
@@ -1037,8 +1053,8 @@ person chose. The same holds for the rest of Photos-Go-Round, and is written in
   Photos-Go-Round." Asked on 2026-10-09 whether the Mac's widget shows the icon too, Syd chose the
   icon on iOS only.
 - **It is the plain icon, in full colour, with no words.** Syd, 2026-10-09. A widget waiting for
-  its first photograph shows the icon greyed over, with "Scanning…", so the two faces can't be
-  mistaken for each other.
+  its first photograph shows the icon greyed over, with "No Photos found", and the preview with
+  "Scanning…", so the faces can't be mistaken for each other.
 
 **When Photos access is refused, no sheet comes up.** Syd, 2026-10-09. Files and folders still
 work, since they need no Photos access. With the lists sometimes out of sight under the preview,
@@ -1178,6 +1194,8 @@ answered was waited on for ever, by the preview and by a widget.
   new process. A wake inside the wait asks Photos nothing. The timeline it hands over is due
   again when the wait is over, whatever the widget is set to; the system reloads a widget no
   sooner than five minutes on, so the short waits come to five minutes there.
+- **During the wait a widget shows its last picture as it is**, or "No Photos found" with none
+  yet; the preview puts "Scanning…" over its picture, or over the icon. Syd, 2026-10-30.
 - **The preview keeps its wait in memory**, and other sources chosen end it. During it a
   picture kept from last time is still looked for, so another size chosen shows its own.
 - **No other source is asked when one goes unanswered.** Passing over a source in trouble is
@@ -1199,8 +1217,8 @@ answered was waited on for ever, by the preview and by a widget.
   the plain `SystemPhotoLibrary`, with no limit, though the bounded one is in a target the app
   already links. Not tried against the collections sheet: *Claude iPhone* has limited access,
   where the Photos button opens the system's own picker.
-- **The Mac's widget gets the limit and not the waits.** It shares the request. It shows "Can't
-  get a picture" with the reason, and asks again at its own time, as for any other failure.
+- **The Mac's widget does as the iOS widgets do**, since 2026-10-28, when its timeline was
+  brought onto `WidgetPictures`: the limit, the waits, and the picture kept as it is.
 
 **How it was tried.** On *Claude iPhone*, with a build whose limit was a billionth of a second,
 so that every request was given up on. Both widgets kept their own pictures with "Scanning…"
@@ -1807,7 +1825,7 @@ xcrun simctl spawn booted log show --last 10m --info --style compact --predicate
   what reading its first bytes gave. The file is not named.
 - `snapshot, systemLarge, 350x365 points, picture …, memory now …` — the extension, each time
   the gallery asks for a preview, with the face it was given: a picture and whether its file
-  was still there, or the plain icon, or scanning. A notice while the memory is measured,
+  was still there, or the plain icon, or no photos. A notice while the memory is measured,
   since a device does not keep an info line; *Info* otherwise.
 - `placeholder, systemLarge, memory now …` and `drawing, systemLarge, picture …, memory now …` —
   the extension, when the system asks for a placeholder, and each time it has a face drawn.
@@ -2434,7 +2452,7 @@ picture. Where the kernel tells of no limit, as on a Mac and in the app, nothing
   - **Never for good.** The reckoning says nothing about any one photograph, so nothing is
     recorded and no note or triangle goes up.
   - **The picture showing stays, with nothing over it**, and the next wake asks again. With
-    nothing shown yet the widget says it is scanning. Unlike Photos not answering, there is
+    nothing shown yet the widget says "No Photos found". Unlike Photos not answering, there is
     no wait.
   - **Not in the app's preview.** It stands in for a 30 MB widget so that a file no widget
     could shrink is found there too; a refusal for now is about the process making the
@@ -2444,6 +2462,11 @@ picture. Where the kernel tells of no limit, as on a Mac and in the app, nothing
   being shrunk when a process ended, and passing that file over afterwards, would catch it,
   and is Syd's "recover from an attempt" done across two processes. Not built, and it would
   have to tell a process ended for memory from one the system ended for its own reasons.
+- **A process ended while it shrank a photograph from Photos leaves its copy behind.** The
+  original is copied beside the cache, as a hidden `.photograph-` file, and deleted once it is
+  shrunk; ended in between, the deletion never runs. Each wake deletes any it finds, at every
+  size, before it fetches: `LeftCopies`. Syd, 2026-10-30, choosing that each wake do it. The
+  app's preview keeps its own cache and does not.
 - **Not tried on a device.** The figures are a Mac's. A PNG of twelve million pixels is
   reckoned at 25 MB for an iPad's largest widget, which is all a fresh extension has left, so
   it may be passed over there more often than not.
@@ -2543,7 +2566,8 @@ configuration: nothing for Release, `.debug` and `.claude`. So:
   reloads the widgets when a person leaves it. It declares all five families; the system offers what the
   device has.
 - **In the gallery, a size with no picture of its own shows another size's.** Until a widget of a
-  size has been placed, that size has shown nothing, and its preview said "Scanning…". It borrows
+  size has been placed, that size has shown nothing, and its preview said "Scanning…" (since
+  2026-10-30 that would be "No Photos found"). It borrows
   the last picture another size showed, the one made for the most pixels. Syd, 2026-10-10.
   With no widget placed at all there is nothing to borrow, and the previews show the plain app
   icon: "just the app icon without an overlay", which he chose over a neutral photograph of his
