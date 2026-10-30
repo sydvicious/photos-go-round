@@ -49,7 +49,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(Log.widgetsTag, privacy: .public) placeholder, \
             \(String(describing: context.family), privacy: .public), \(Wake.memory(), privacy: .public)
             """)
-        return PhotoEntry(date: .now, face: .scanning)
+        return PhotoEntry(date: .now, face: WidgetPictures.placeholder(in: Wake.caches))
     }
 
     func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {

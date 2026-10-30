@@ -44,7 +44,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
     private static let wakes = SerialWork(label: "com.sydpolk.photosgoround.widget.wakes")
 
     func placeholder(in context: Context) -> PhotoEntry {
-        PhotoEntry(date: .now, face: .scanning)
+        PhotoEntry(date: .now, face: WidgetPictures.placeholder(in: Settings.caches))
     }
 
     func snapshot(for settings: PhotoWidgetSettings, in context: Context) async -> PhotoEntry {

@@ -185,6 +185,28 @@ extension PhotoLibraryPictures {
     }
 }
 
+/// The copies of photographs that a process ended while it shrank one left
+/// behind: the deletion after the shrink never ran. Each is a whole original.
+/// Syd, 2026-10-30, choosing that each wake delete them.
+public enum LeftCopies {
+    /// How the copy beside the cache is named, hidden so that a cache listing
+    /// its pictures never takes it for one.
+    static let prefix = ".photograph-"
+
+    /// Deletes every copy under `folder`, at any depth, and says how many.
+    /// Only for a folder no fetch is writing in just now.
+    @discardableResult
+    public static func clearAway(under folder: URL) -> Int {
+        let manager = FileManager.default
+        guard let all = manager.enumerator(at: folder, includingPropertiesForKeys: nil) else { return 0 }
+        var cleared = 0
+        for case let file as URL in all where file.lastPathComponent.hasPrefix(prefix) {
+            if (try? manager.removeItem(at: file)) != nil { cleared += 1 }
+        }
+        return cleared
+    }
+}
+
 /// A photograph from Photos written to a file beside `destination`, shrunk from
 /// it as a file is, and the file let go.
 ///
@@ -215,7 +237,7 @@ private func photograph(
     var attempt = 0
     while attempt < max(attempts, 1) {
         // Hidden, so that a cache listing its pictures never takes it for one.
-        let file = destination.deletingLastPathComponent().appending(path: ".photograph-\(UUID().uuidString)")
+        let file = destination.deletingLastPathComponent().appending(path: "\(LeftCopies.prefix)\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: file) }
         let reach: PhotoReach = waitsAtOnce || inICloud >= inICloudAtMost ? .iCloudToo : .thisDevice
         let fetched: LibraryPictureFile?

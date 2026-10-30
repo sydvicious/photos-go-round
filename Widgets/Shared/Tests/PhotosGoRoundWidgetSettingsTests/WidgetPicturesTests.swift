@@ -89,19 +89,19 @@ struct WidgetPicturesTests {
 
     // MARK: When Photos does not answer
 
-    @Test("When Photos does not answer and nothing has been shown, it says it is scanning, and asks once")
+    @Test("When Photos does not answer and nothing has been shown, it says No Photos found, and asks once")
     func timedOutWithNothing() throws {
         let cache = try ScratchFolder()
         let library = ScriptedLibrary([.timeout])
         let widget = WidgetPictures(directory: cache.url, library: library)
 
-        #expect(widget.turn(from: [album], fitting: box, at: start) == .scanning)
+        #expect(widget.turn(from: [album], fitting: box, at: start) == .noPhotos)
 
         #expect(library.timesAsked == 1)
         #expect(widget.wait(at: start) == 5)
     }
 
-    @Test("When Photos does not answer, the picture already showing stays, with Scanning… over it")
+    @Test("When Photos does not answer, the picture already showing stays, with nothing over it")
     func timedOutWithAPicture() throws {
         let cache = try ScratchFolder()
         let widget = WidgetPictures(directory: cache.url, library: ScriptedLibrary([.picture, .timeout]))
@@ -110,18 +110,21 @@ struct WidgetPicturesTests {
         let held = widget.turn(from: [album], fitting: box, at: start + 300)
 
         #expect(isPicture(shown))
-        #expect(scanningOver(held) == file(shown))
+        #expect(isPicture(held))
+        #expect(file(held) == file(shown))
         #expect(widget.wait(at: start + 300) == 5)
     }
 
-    @Test("Scanning… stays over the picture through the wait, and goes when Photos answers")
-    func scanningOverUntilAnswered() throws {
+    @Test("The picture stays as it is through the wait, and the next comes when Photos answers")
+    func heldUntilAnswered() throws {
         let cache = try ScratchFolder()
         let widget = WidgetPictures(directory: cache.url, library: ScriptedLibrary([.picture, .timeout]))
         let shown = widget.turn(from: [album], fitting: box, at: start)
         _ = widget.turn(from: [album], fitting: box, at: start + 300)
 
-        #expect(scanningOver(widget.turn(from: [album], fitting: box, at: start + 302)) == file(shown))
+        let during = widget.turn(from: [album], fitting: box, at: start + 302)
+        #expect(isPicture(during))
+        #expect(file(during) == file(shown))
         #expect(isPicture(widget.turn(from: [album], fitting: box, at: start + 305)))
     }
 
@@ -131,8 +134,8 @@ struct WidgetPicturesTests {
         let library = ScriptedLibrary([.timeout, .picture])
         let widget = WidgetPictures(directory: cache.url, library: library)
 
-        #expect(widget.turn(from: [album], fitting: box, at: start) == .scanning)
-        #expect(widget.turn(from: [album], fitting: box, at: start + 2) == .scanning)
+        #expect(widget.turn(from: [album], fitting: box, at: start) == .noPhotos)
+        #expect(widget.turn(from: [album], fitting: box, at: start + 2) == .noPhotos)
         #expect(library.timesAsked == 1)
 
         #expect(isPicture(widget.turn(from: [album], fitting: box, at: start + 5)))
@@ -219,7 +222,7 @@ struct WidgetPicturesTests {
         #expect(widget.wait(at: start + 300) == nil)
     }
 
-    @Test("With nothing shown yet and no room for a photograph, it says it is scanning")
+    @Test("With nothing shown yet and no room for a photograph, it says No Photos found")
     func noRoomAndNothingShown() throws {
         let cache = try ScratchFolder()
         let megabyte: Int64 = 1_048_576
@@ -229,7 +232,7 @@ struct WidgetPicturesTests {
                 Footprint.Reading(footprint: 28 * megabyte, resident: 28 * megabyte, left: 2 * megabyte)
             }))
 
-        #expect(widget.turn(from: [album], fitting: CGSize(width: 1590, height: 757), at: start) == .scanning)
+        #expect(widget.turn(from: [album], fitting: CGSize(width: 1590, height: 757), at: start) == .noPhotos)
     }
 
     @Test("A picture no wake could shrink is passed over, and whoever is listening is told which source it was in")
@@ -267,12 +270,6 @@ struct WidgetPicturesTests {
     func isPicture(_ face: WidgetFace.Content) -> Bool {
         if case .picture = face { return true }
         return false
-    }
-
-    /// The file of a picture that has "Scanning…" over it, by name.
-    func scanningOver(_ face: WidgetFace.Content) -> String? {
-        if case .scanningOver(let file) = face { return file.lastPathComponent }
-        return nil
     }
 
     /// The picture's file by name: the same file can be spelled two ways as a
@@ -337,7 +334,7 @@ struct WidgetPicturesTests {
         let cache = try ScratchFolder()
         try pictures.picture("coin.png", width: 800, height: 600)
         let widget = WidgetPictures(directory: cache.url)
-        #expect(widget.last(from: [folder(pictures)], fitting: box) == .scanning)
+        #expect(widget.last(from: [folder(pictures)], fitting: box) == .noPhotos)
         #expect(widget.last(from: [], fitting: box) == .nothingChosen)
 
         let shown = widget.turn(from: [folder(pictures)], fitting: box)
@@ -407,10 +404,10 @@ struct WidgetPicturesTests {
         let (small, large) = sizes(in: root)
         _ = small.turn(from: [folder(pictures)], fitting: box)
 
-        #expect(large.last(from: [folder(others)], fitting: CGSize(width: 600, height: 600)) == .scanning)
+        #expect(large.last(from: [folder(others)], fitting: CGSize(width: 600, height: 600)) == .noPhotos)
     }
 
-    @Test("In the gallery, with no picture from any size, it shows the plain icon and not Scanning")
+    @Test("In the gallery, with no picture from any size, it shows the plain icon and not No Photos found")
     func galleryWithNothing() throws {
         let pictures = try ScratchFolder()
         let root = try ScratchFolder()
@@ -421,6 +418,69 @@ struct WidgetPicturesTests {
 
         let shown = small.turn(from: [folder(pictures)], fitting: box)
         #expect(file(large.last(from: [folder(pictures)], fitting: box, inGallery: true)) == file(shown))
+    }
+
+    @Test("A placeholder shows the last picture put in the cache by any size, whatever its sources")
+    func placeholderBorrows() throws {
+        let pictures = try ScratchFolder()
+        let others = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        try others.picture("stamp.png", width: 800, height: 600)
+        let (small, large) = sizes(in: root)
+        let big = large.turn(from: [folder(others)], fitting: CGSize(width: 600, height: 600))
+        let latest = small.turn(from: [folder(pictures)], fitting: box)
+        // An hour apart, so the order does not rest on how fine the file
+        // system's clock is.
+        try written(big, at: start)
+        try written(latest, at: start + 3600)
+
+        let face = WidgetPictures.placeholder(in: root.url)
+
+        #expect(file(latest) != nil)
+        #expect(file(face) == file(latest))
+    }
+
+    /// Dates a picture's file as written at `date`.
+    func written(_ face: WidgetFace.Content, at date: Date) throws {
+        guard case .picture(let url) = face else { throw CocoaError(.fileNoSuchFile) }
+        try FileManager.default.setAttributes(
+            [.modificationDate: date], ofItemAtPath: url.path(percentEncoded: false))
+    }
+
+    @Test("With no picture from any size, a placeholder says No Photos found")
+    func placeholderWithNothing() throws {
+        let root = try ScratchFolder()
+
+        #expect(WidgetPictures.placeholder(in: root.url) == .noPhotos)
+        #expect(WidgetPictures.placeholder(in: root.url.appending(path: "not there")) == .noPhotos)
+    }
+
+    /// A photograph from Photos is copied beside the cache before it is
+    /// shrunk, and the copy is deleted after. A process ended in between, as
+    /// one is when it runs out of memory, leaves the copy behind.
+    @Test("A wake deletes the copies of photographs a process left behind, at every size, and keeps the pictures")
+    func leftCopies() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let (small, _) = sizes(in: root)
+        let shown = small.turn(from: [folder(pictures)], fitting: box)
+        let manager = FileManager.default
+        let deep = root.url.appending(path: "systemLarge/600x600/some sources")
+        try manager.createDirectory(at: deep, withIntermediateDirectories: true)
+        let left = [
+            root.url.appending(path: "systemSmall/.photograph-\(UUID().uuidString)"),
+            deep.appending(path: ".photograph-\(UUID().uuidString)"),
+        ]
+        for file in left { try Data(count: 1024).write(to: file) }
+
+        let next = small.turn(from: [folder(pictures)], fitting: box)
+
+        for file in left { #expect(!manager.fileExists(atPath: file.path(percentEncoded: false))) }
+        #expect(isPicture(next))
+        #expect(file(small.last(from: [folder(pictures)], fitting: box)) == file(next))
+        #expect(file(shown) != nil)
     }
 
     @Test("Its own last picture comes before another size's")

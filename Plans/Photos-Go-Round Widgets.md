@@ -117,8 +117,8 @@ design that works the same on the Mac and on devices that never had an agent.
   the original rule exactly. It replaces filling toward 20 while the extension stayed running,
   which made a wake's memory follow how much the wake did. See *A longer run*. Since 2026-10-11
   the picture on show is cleared away only once the next is in hand, on both platforms: it used
-  to be deleted first, so a fetch that failed left nothing to show. The iOS widgets keep it up,
-  with "Scanning…" over it, while Photos is not answering.
+  to be deleted first, so a fetch that failed left nothing to show. The widgets keep it up, as
+  it is, while Photos is not answering.
 - **So every change of picture is a reload.** How often a widget changes is how often the system
   will reload it, whatever interval is asked for.
 - **The interval is five minutes for now.** Syd, 2026-10-09: "set the value for widget refresh to
@@ -137,8 +137,10 @@ design that works the same on the Mac and on devices that never had an agent.
   never takes a picture from the queue the widgets draw from. Syd, 2026-10-08.
 - **Widgets in every Home Screen size the platform offers.** The Lock Screen's own sizes on iPhone
   and iPad, a circle, a rectangle and a line of text, are left out. Syd, 2026-10-09.
-- **A widget waiting for its first photograph shows the app's icon, greyed over, and
-  "Scanning…".** Syd, 2026-10-09. When something has gone wrong it says what instead.
+- **A widget waiting for its first photograph shows the app's icon, greyed over, and "No Photos
+  found".** Syd, 2026-10-30: "I don't want to show the user 'Scanning...' in the widgets
+  themselves. I would rather show 'No Photos' until we find one." It was "Scanning…" from
+  2026-10-09. When something else has gone wrong it says what instead.
 - **One photograph fades into the next.** Syd, 2026-10-08: "I want the fade transition". Later, a
   person chooses the transition in the widget's settings, from whatever the system actually
   supports.
@@ -627,10 +629,15 @@ reloaded one interval after its last entry. With nothing to show it asks again i
 **While a widget waits.** Syd, 2026-10-09: "I want the app icon with a grey overlay, with
 'Scanning...' in the widgets while they wait for their first pictures." Seen on 2026-10-09, with
 0.7 (5) freshly installed: "I saw the starting... graphic in the widgets... looked good".
+Since 2026-10-30 the words are "No Photos found": Syd, "there is literally nothing the user can
+do to make 'Scanning...' go away when it appears".
 
-- *When it shows.* In the system's placeholder, which is what stands in a widget's place while its
-  first timeline is being built, and for any entry that has no photograph and no trouble to
-  report. With Photos allowed to download, that first wait can be long.
+- *When it shows.* For any entry that has no photograph and no trouble to report. With Photos
+  allowed to download, that first wait can be long. The system's placeholder, which stands in a
+  widget's place while its first timeline is being built, shows it only when no size has a
+  picture yet; otherwise it shows the last picture put in the cache, by any size, whatever its
+  sources. Syd, 2026-10-30. `Plans/PGR Widgets - iOS.md`, *Design
+  Decisions*, *The preview*.
 - *When it does not.* "No sources are set", "Photos access is denied" and the like are still said
   in words, since those want something done.
 - *Where the icon comes from.* The extension asks the system for the icon of the app that carries

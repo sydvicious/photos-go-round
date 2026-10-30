@@ -14,13 +14,14 @@
 // **A face, not a sentence.** What comes back is what `WidgetFace` draws: a
 // picture, or one of the faces without one.
 //
-// **When Photos does not answer, what is showing stays, with "Scanning…" over
+// **When Photos does not answer, what is showing stays, with nothing over
 // it**, and Photos is not asked again until a wait is over: `RequestBackoff`.
-// Syd, 2026-10-11: "If there is already a photo loaded just keep displaying
-// it. If not use the scanning… overlay on the app icon", and then "put the
-// scanning overlay over whatever is showing so the user knows something is
-// wrong". The wait is kept in a file beside the pictures, since the next wake
-// may be a new process.
+// With nothing shown yet, the widget says "No Photos found". **A widget never
+// says "Scanning…"**; the app's preview still does. Syd, 2026-10-25: "if the
+// widget had a picture before, show it plainly", and 2026-10-30: "I don't
+// want to show the user 'Scanning...' in the widgets themselves. I would
+// rather show 'No Photos' until we find one." The wait is kept in a file
+// beside the pictures, since the next wake may be a new process.
 
 import CoreGraphics
 import Foundation
@@ -30,6 +31,7 @@ import TinyCache
 
 public struct WidgetPictures: Sendable {
     private let pictures: CachedPreviewPictures
+    private let directory: URL
     private let root: URL?
     /// How the pictures sit in the widget. `Plans/Widget Settings.md`.
     private let framing: Framing
@@ -65,6 +67,7 @@ public struct WidgetPictures: Sendable {
         pictures = CachedPreviewPictures(
             directory: directory, library: library, bookmarks: bookmarks, onFetch: onFetch,
             resizer: resizer, onSkip: onSkip, framing: framing)
+        self.directory = directory
         self.root = root
         self.framing = framing
         asking = directory.appending(path: "asking.json")
@@ -78,6 +81,9 @@ public struct WidgetPictures: Sendable {
         from sources: [SourceSpec], fitting box: CGSize, at now: @autoclosure () -> Date = .now
     ) -> WidgetFace.Content {
         guard !sources.isEmpty else { return .nothingChosen }
+        // Left by a process ended while it shrank a photograph, at any size.
+        // A process does one wake at a time, so no fetch is writing one now.
+        LeftCopies.clearAway(under: root ?? directory)
         var backoff = RequestBackoff.read(from: asking)
         // Photos did not answer last time, and it is not yet time to ask.
         guard backoff.wait(at: now()) == nil else { return held(for: sources, fitting: box) }
@@ -94,9 +100,8 @@ public struct WidgetPictures: Sendable {
             return held(for: sources, fitting: box)
         } catch PictureResizer.Failure.tooLarge {
             // No room just now for what a fetch would take: the picture
-            // showing stays as it is, and the next wake asks again. Nothing
-            // is wrong, so nothing is put over it.
-            return pictures.last(for: sources, fitting: box).map { .picture($0) } ?? .scanning
+            // showing stays as it is, and the next wake asks again.
+            return held(for: sources, fitting: box)
         } catch {
             return Self.face(for: error)
         }
@@ -123,10 +128,10 @@ public struct WidgetPictures: Sendable {
         return .noPhotos
     }
 
-    /// What shows while Photos is not answering: the picture shown last with
-    /// "Scanning…" over it, or the icon with it when there has been none.
+    /// What shows while no new picture can be had: the picture shown last,
+    /// as it is, or "No Photos found" when there has been none.
     private func held(for sources: [SourceSpec], fitting box: CGSize) -> WidgetFace.Content {
-        pictures.last(for: sources, fitting: box).map { .scanningOver($0) } ?? .scanning
+        pictures.last(for: sources, fitting: box).map { .picture($0) } ?? .noPhotos
     }
 
     /// What it showed last, with nothing asked of any source: for the widget
@@ -140,8 +145,8 @@ public struct WidgetPictures: Sendable {
     ///
     /// **With no picture from any size, the gallery shows the plain icon.**
     /// Syd, 2026-10-10: "just the app icon without an overlay". Nothing is
-    /// being scanned there; a widget fetches once it is placed. Anywhere
-    /// else it is "Scanning…", since a picture is on its way.
+    /// being fetched there; a widget fetches once it is placed. Anywhere
+    /// else it is "No Photos found" until a picture comes.
     public func last(
         from sources: [SourceSpec], fitting box: CGSize, inGallery: Bool = false
     ) -> WidgetFace.Content {
@@ -150,7 +155,7 @@ public struct WidgetPictures: Sendable {
         if let another = lastOfAnySize(from: sources) { return .picture(another) }
         // The plain icon is the face for nothing chosen, and is what is
         // wanted here too.
-        return inGallery ? .nothingChosen : .scanning
+        return inGallery ? .nothingChosen : .noPhotos
     }
 
     /// The last picture shown for these sources by any size under `root`,
@@ -163,15 +168,10 @@ public struct WidgetPictures: Sendable {
     /// Fit and Actual Size share pictures.
     private func lastOfAnySize(from sources: [SourceSpec]) -> URL? {
         guard let root else { return nil }
-        let manager = FileManager.default
-        func folders(in folder: URL) -> [URL] {
-            (try? manager.contentsOfDirectory(
-                at: folder, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])) ?? []
-        }
         let name = CacheFolders.name(forSources: CachedPreviewPictures.names(of: sources))
         var best: (pixels: Int, file: URL)?
         let suffix = CachedPreviewPictures.suffix(for: framing)
-        for sized in folders(in: root).flatMap(folders(in:)) {
+        for sized in Self.folders(in: root).flatMap(Self.folders(in:)) {
             // Named for its pixels, as in "600x600", and "600x600-fill" for
             // pictures made to fill.
             let named = sized.lastPathComponent
@@ -180,7 +180,7 @@ public struct WidgetPictures: Sendable {
             let sides = measure.split(separator: "x").compactMap { Int($0) }
             guard sides.count == 2 else { continue }
             let shown = sized.appending(path: name).appending(path: "shown")
-            guard let last = folders(in: shown).max(by: { $0.lastPathComponent < $1.lastPathComponent })
+            guard let last = Self.folders(in: shown).max(by: { $0.lastPathComponent < $1.lastPathComponent })
             else { continue }
             let pixels = sides[0] * sides[1]
             if best == nil || pixels > best!.pixels {
@@ -188,6 +188,35 @@ public struct WidgetPictures: Sendable {
             }
         }
         return best?.file
+    }
+
+    /// What a widget shows while the system builds its first timeline: the
+    /// last picture put in the cache by any size under `root`, for whatever
+    /// sources; "No Photos found" when there is none.
+    ///
+    /// **A placeholder knows only the widget's size**, not what it is set
+    /// to, so the picture may be from other sources than this widget's.
+    /// Syd, 2026-10-30, choosing that over "No Photos found" and over the
+    /// plain icon, after his phone's widgets all said "No Photos found" for
+    /// 11 seconds with pictures in the cache; and then "just use the last
+    /// picture in the cache", "because we know that the last pic in the
+    /// cache won't trigger memory problems": it was shrunk to a widget's size
+    /// when it was fetched, and has been drawn already.
+    public static func placeholder(in root: URL) -> WidgetFace.Content {
+        let shown = folders(in: root).flatMap(folders(in:)).flatMap(folders(in:))
+            .flatMap { folders(in: $0.appending(path: "shown")) }
+        func written(_ file: URL) -> Date {
+            (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate)
+                ?? .distantPast
+        }
+        return shown.max(by: { written($0) < written($1) }).map { .picture($0) } ?? .noPhotos
+    }
+
+    /// What is in a folder; nothing when it is not there.
+    private static func folders(in folder: URL) -> [URL] {
+        (try? FileManager.default.contentsOfDirectory(
+            at: folder, includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles])) ?? []
     }
 
     /// Fetches the next wake's picture now, so that wake has it without
