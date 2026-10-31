@@ -55,6 +55,20 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
 - **Include the app package on the release DMG for now, until there is TestFlight or the App
   Store.** Syd, 2026-10-10. The image is built by `Scripts/release-build.sh`, which knows nothing
   of the iOS app yet; `Plans/Release DMG.md`.
+- **Swiping left or right on the preview shows the next or the previous widget size.** Syd,
+  2026-10-31: "in the iOS app, have swiping left and right on the preview change the size
+  displayed to the next or previous size". The bar's size control stays; the swipe is a second
+  way to move through it, and it redraws the photograph showing at the new size, as choosing
+  the size in the bar does (`Plans/Widget Settings.md`, "In the preview, a change of size or
+  setting redraws the photograph showing").
+- **A placed widget keeps its picture when its Fit, Fill or Actual Size is changed.** Syd,
+  2026-10-31: "try to display the same pic in a widget when changing widget fit/fill/actual
+  size settings". The preview already does this (`PreviewPictures.again`,
+  `TinyCache.showAgain`); a widget given a new setting through Edit Widget, or following a
+  change to the app's, starts on another picture. Fetch the same photograph again from its
+  origin for the widget's new setting, and fall back to the next picture when it cannot be.
+  Whether a timeline reload can know the setting changed, and has the time and the 30 MB to
+  fetch it, is to be found out.
 - **The sheet reads the whole library again every second while it counts.** Each read is a
   round trip to Photos for every collection. The Mac's picker asks its agent every three seconds.
   Look at whether that makes the sheet slow on a real library.
