@@ -19,6 +19,7 @@ Syd, 2026-10-26: "Pgr widgets is first release and highest priority. English onl
 
     The crop is then the widget's shape around that rectangle, centred on it and kept inside the photograph; a group wider than the crop can hold keeps its middle.
   - [ ] **A default for each widget size.** Fill is the default for every size, and it sometimes goes wrong on iOS at Medium and Extra Large. Syd, 2026-10-28: "it does mess up sometimes on ios medium and extra large, so add to the TODO.md separate defaults for each widget size."
+  - [ ] **A placed widget keeps its picture when its Fit, Fill or Actual Size is changed, on iOS and on the Mac.** Syd, 2026-10-31: "try to display the same pic in a widget when changing widget fit/fill/actual size settings", and, of the Mac: "That last point applies to Mac widgets as well". The app's preview already does this (`PreviewPictures.again`, `TinyCache.showAgain`). A placed widget given a new setting, through Edit Widget or by following the app's, should do the same rather than move on to another picture: fetch the same photograph again from its origin for the new setting, and fall back to the next picture when it cannot be. Whether a timeline reload can know the setting changed, and has the time and the 30 MB to fetch it, is to be found out on each.
 - [ ] **The Mac's menu bar app**, PhotosGoRound Widgets.app on the Mac App Store. Syd, 2026-10-26: "Mac: PhotosGoRound Widgets menu bar app". It carries the widget, and writes its sources into the App Group container as the iOS app already does, since the Store does not accept the entitlement by which the Mac widget reads the app's preferences today. Its questions were to wait for a good version of the iOS app; `Plans/PGR Widgets - iOS.md`, *The menubar app's questions wait*. Related: *A menu-bar app for shipping*, below, which is the existing product's.
   - [ ] **The proof-of-concept widget comes out of `Photos-Go-Round.app`** once the menu bar app carries it. `Plans/Photos-Go-Round Widgets.md`, *The proof of concept, in the existing app*.
 - [ ] **Cloud storage such as Dropbox, as a source, everywhere.** Syd, 2026-10-26: "All: support for cloud services like Dropbox. This is the biggest win that nobody else supports. If it's possible we have to do it."
@@ -61,14 +62,6 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
   way to move through it, and it redraws the photograph showing at the new size, as choosing
   the size in the bar does (`Plans/Widget Settings.md`, "In the preview, a change of size or
   setting redraws the photograph showing").
-- **A placed widget keeps its picture when its Fit, Fill or Actual Size is changed.** Syd,
-  2026-10-31: "try to display the same pic in a widget when changing widget fit/fill/actual
-  size settings". The preview already does this (`PreviewPictures.again`,
-  `TinyCache.showAgain`); a placed widget given a new setting, through Edit Widget or by
-  following the app's, should do the same rather than move on to another picture. Fetch the same photograph again from its
-  origin for the widget's new setting, and fall back to the next picture when it cannot be.
-  Whether a timeline reload can know the setting changed, and has the time and the 30 MB to
-  fetch it, is to be found out.
 - **The sheet reads the whole library again every second while it counts.** Each read is a
   round trip to Photos for every collection. The Mac's picker asks its agent every three seconds.
   Look at whether that makes the sheet slow on a real library.
