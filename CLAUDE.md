@@ -231,3 +231,13 @@ a clean build succeeded. `Plans/Build Plan.md`.
   extension begin every line with `[PGR-Widgets]`, and a simulator's log is
   read with `xcrun simctl spawn <device> log show`.
   `Plans/PGR Widgets - iOS.md`, *Reading the logs*.
+
+# Working with Syd
+
+## Choices are numbered
+
+When Syd has a decision to make, give the options as a numbered list, each with
+a short bold name and a line on what it means, so he can answer with a number.
+Syd, 2026-10-31: "give me numbered choices". When he answers with a number, record
+what he chose, and what he chose it over, where the decision is kept — a plan or
+`TODO.md` — in words, not as the number.
