@@ -64,8 +64,8 @@ Moved from `Plans/PGR Widgets - iOS.md` when its work reached `main`, 2026-10-16
 - **A placed widget keeps its picture when its Fit, Fill or Actual Size is changed.** Syd,
   2026-10-31: "try to display the same pic in a widget when changing widget fit/fill/actual
   size settings". The preview already does this (`PreviewPictures.again`,
-  `TinyCache.showAgain`); a widget given a new setting through Edit Widget, or following a
-  change to the app's, starts on another picture. Fetch the same photograph again from its
+  `TinyCache.showAgain`); a placed widget given a new setting, through Edit Widget or by
+  following the app's, should do the same rather than move on to another picture. Fetch the same photograph again from its
   origin for the widget's new setting, and fall back to the next picture when it cannot be.
   Whether a timeline reload can know the setting changed, and has the time and the 30 MB to
   fetch it, is to be found out.
