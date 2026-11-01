@@ -7,7 +7,9 @@
 // the screen it is on gives it its bounds, and lets it be scrolled when they
 // are smaller than it is.
 //
-// **Which size is in the bar, not here.** Syd, 2026-10-10.
+// **Which size is in the bar, not here.** Syd, 2026-10-10. A sideways swipe
+// also moves through them, and the screen it is on sees to that, since it is
+// a swipe on what holds the preview: `SizeSwipe`.
 //
 // **A small slideshow.** Its picture changes by itself every few seconds, and
 // on a tap. It stops while the app is not in front.
@@ -58,6 +60,15 @@ public struct WidgetPreviewView: View {
             .accessibilityLabel("Widget preview")
             .accessibilityHint(face == .noAccess ? "Opens Settings" : "Shows the next photograph")
             .accessibilityAddTraits(.isButton)
+            // The swipe's next and previous size, for VoiceOver, which takes
+            // a swipe for itself. `SizeSwipe`.
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: model.showNextSize()
+                case .decrement: model.showPreviousSize()
+                @unknown default: break
+                }
+            }
             // Where it starts: the largest size that fits its bounds with no
             // scrolling. Asked whenever the bounds or the sizes become known;
             // the model leaves a size the person chose alone.

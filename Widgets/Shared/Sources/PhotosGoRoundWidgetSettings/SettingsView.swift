@@ -21,6 +21,9 @@ import UniformTypeIdentifiers
 public struct SettingsView: View {
     @State private var model: SettingsModel
     @State private var showsFileBrowser = false
+    /// How far the swipe under way has gone past the widget's sideways edge,
+    /// at most, as `SizeSwipe` counts it; nil while no swipe is under way.
+    @State private var pastTheEdge: CGFloat?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     /// How tall the tallest size's shape is in the bar. It grows with the
@@ -261,13 +264,47 @@ public struct SettingsView: View {
             // to scroll to.
             .frame(minWidth: bounds.width, minHeight: bounds.height, alignment: alignment)
         }
-        .scrollBounceBehavior(.basedOnSize, axes: [.horizontal, .vertical])
+        .scrollBounceBehavior(.basedOnSize, axes: .vertical)
+        // **A swipe on past the widget's edge shows the next size or the
+        // previous.** Syd, 2026-11-01. So sideways it always gives, even with
+        // nothing to scroll, and how far past an edge it is pulled is
+        // watched. `SizeSwipe`.
+        .scrollBounceBehavior(.always, axes: .horizontal)
+        .onScrollGeometryChange(for: CGFloat.self, of: Self.travelPastTheEdge) { _, travel in
+            guard let furthest = pastTheEdge, abs(travel) > abs(furthest) else { return }
+            pastTheEdge = travel
+        }
+        // Only while the finger is down: a flick whose momentum carries it to
+        // the edge has not been pulled past it.
+        .onScrollPhaseChange { old, new in
+            if new == .interacting {
+                pastTheEdge = 0
+            } else if old == .interacting {
+                switch SizeSwipe.step(for: pastTheEdge ?? 0) {
+                case .next: model.preview.showNextSize()
+                case .previous: model.preview.showPreviousSize()
+                case nil: break
+                }
+                pastTheEdge = nil
+            }
+        }
         .frame(width: bounds.width, height: bounds.height)
         // Nothing of the widget shows outside its bounds. Without this a
         // scroll view at the top of the screen draws on under the bar. Syd,
         // 2026-10-11: "the preview widget scrolling should not bleed into
         // the navigation bar".
         .clipped()
+    }
+
+    /// How far the preview is pulled past its sideways edge, as a swipe's
+    /// travel: positive past the left edge, where the fingers moved right,
+    /// and negative past the right.
+    private static func travelPastTheEdge(_ geometry: ScrollGeometry) -> CGFloat {
+        let left = -(geometry.visibleRect.minX + geometry.contentInsets.leading)
+        let right = geometry.visibleRect.maxX - geometry.contentInsets.trailing - geometry.contentSize.width
+        if left > 0 { return left }
+        if right > 0 { return -right }
+        return 0
     }
 
     /// What is chosen, under the preview or beside it. Any row leaves by a

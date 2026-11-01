@@ -396,6 +396,13 @@ widgets working as they do today until the setting is changed.
   agent".
 - **The size is chosen in the window's toolbar**, five shapes with the chosen one marked, as iOS
   puts them in its bar. Syd, 2026-10-28, over a segmented control under the preview.
+- **A sideways swipe on the trackpad shows the next size or the previous**, as a swipe on the
+  preview does on iOS: fingers left the next, right the previous, stopping at the first and the
+  last. Syd, 2026-11-01: "go ahead and implement this in the Settings window for the existing mac
+  app". Only with the pointer over the preview, and only a trackpad's or a Magic Mouse's swipe,
+  not a mouse wheel or the momentum after the fingers lift. The window scrolls only up and down,
+  so sideways is free, and the window still sees every scroll. One swipe is one size
+  (`SizeSwipe`).
 - **The whole window scrolls, and the preview is as tall as the size it shows.** Syd,
   2026-10-28: "make the entire window scrollable. adjust the height of the preview based on
   widget size." That replaced the iOS app's way, a preview area as tall as a Large that scrolls

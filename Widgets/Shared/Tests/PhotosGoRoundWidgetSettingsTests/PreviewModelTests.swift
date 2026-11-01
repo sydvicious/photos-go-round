@@ -786,6 +786,70 @@ struct PreviewModelTests {
         #expect(preview.content == picture("again-a.jpg"))
     }
 
+    // MARK: The next or the previous size, by a swipe
+
+    /// Syd, 2026-10-31: "have swiping left and right on the preview change
+    /// the size displayed to the next or previous size".
+    @Test("The next size is the one after it in the bar, and the previous the one before")
+    func nextAndPrevious() {
+        let preview = preview(ScriptedPictures([]))
+        #expect(preview.family == .small)
+
+        preview.showNextSize()
+        #expect(preview.family == .medium)
+        preview.showNextSize()
+        #expect(preview.family == .large)
+
+        preview.showPreviousSize()
+        #expect(preview.family == .medium)
+    }
+
+    @Test("There is no size after the last nor before the first: it stays where it is")
+    func stopsAtTheEnds() {
+        let preview = preview(ScriptedPictures([]))
+        preview.showPreviousSize()
+        #expect(preview.family == .small)
+
+        preview.family = .extraLargePortrait
+        preview.showNextSize()
+        #expect(preview.family == .extraLargePortrait)
+    }
+
+    @Test("On a Mac it goes through all five sizes")
+    func nextOnAMac() {
+        let preview = onAMac()
+        preview.settle(within: CGSize(width: 744, height: 344))
+        #expect(preview.family == .extraLarge)
+
+        preview.showPreviousSize()
+        #expect(preview.family == .large)
+    }
+
+    @Test("A size reached by a swipe is the person's choice, and stays when the room changes")
+    func swipeIsTheirChoice() {
+        let preview = preview(ScriptedPictures([]))
+        preview.settle(within: CGSize(width: 361, height: 400))
+        #expect(preview.family == .large)
+
+        preview.showPreviousSize()
+        preview.settle(within: CGSize(width: 361, height: 400))
+
+        #expect(preview.family == .medium)
+    }
+
+    @Test("A size reached by a swipe draws the picture showing again at that size, as the bar does")
+    func swipeDrawsAgain() async {
+        let preview = preview(ScriptedPictures([.picture("a.jpg"), .picture("b.jpg")]))
+        preview.show([.folder("/pictures")])
+        await preview.advance()
+        #expect(preview.content == picture("a.jpg"))
+
+        preview.showNextSize()
+        await preview.advance()
+
+        #expect(preview.content == picture("again-a.jpg"))
+    }
+
     /// Shows `a.jpg`, then starts a fetch that is stuck until `pictures` lets
     /// it go, and gives back that fetch's task.
     func stuckFetch(_ pictures: StuckPictures, in preview: PreviewModel) async -> Task<Void, Never> {
