@@ -49,6 +49,12 @@ struct SourcesSettingsView: View {
     @State private var widgetFraming = Framing.fill
     /// The widget preview at the top, which is the iOS app's.
     @State private var preview = Self.makePreview()
+    /// The sideways swipe under way on the preview, and whether the pointer
+    /// is over it, so that a swipe elsewhere in the window is left alone.
+    @State private var sizeSwipe = SizeSwipe()
+    @State private var overPreview = false
+    /// What hears the window's scrolling while it is open.
+    @State private var swipeMonitor: Any?
     /// How tall each list's rows are drawn, as last measured: its content's
     /// height over its rows. Nil until it has been drawn.
     @State private var collectionRowHeight: CGFloat?
@@ -194,6 +200,45 @@ struct SourcesSettingsView: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: preview.size.height)
+        .onHover { overPreview = $0 }
+        // **A sideways swipe on the trackpad shows the next size or the
+        // previous**, as a swipe does on iOS. Syd, 2026-11-01. The window
+        // scrolls only up and down, so sideways is free. Heard, not taken:
+        // every scroll still goes on to the window.
+        .onAppear {
+            swipeMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+                swiped(event)
+                return event
+            }
+        }
+        .onDisappear {
+            swipeMonitor.map(NSEvent.removeMonitor)
+            swipeMonitor = nil
+        }
+    }
+
+    /// One scroll of a swipe. Only a trackpad's or a Magic Mouse's own, which
+    /// has a beginning and an end, and not its momentum after the fingers
+    /// have lifted; a plain mouse wheel's has neither, and is not a swipe.
+    private func swiped(_ event: NSEvent) {
+        if event.phase.contains(.began) || event.phase.contains(.mayBegin) {
+            sizeSwipe.ended()
+        }
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            sizeSwipe.ended()
+            return
+        }
+        guard overPreview, event.phase.contains(.changed), event.momentumPhase.isEmpty,
+            abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY)
+        else { return }
+        // Which way the fingers moved. With natural scrolling the content
+        // follows them, and so does the delta; without, it is the other way.
+        let fingers = event.isDirectionInvertedFromDevice ? event.scrollingDeltaX : -event.scrollingDeltaX
+        switch sizeSwipe.moved(by: fingers) {
+        case .next: preview.showNextSize()
+        case .previous: preview.showPreviousSize()
+        case nil: break
+        }
     }
 
     /// The toolbar's sizes: a shape for each, in that size's proportions,

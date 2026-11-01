@@ -91,6 +91,10 @@ Syd, 2026-10-10: `TODO.md` "takes the iOS to-dos once this is in `main`".
   showing.** No words to translate. Syd, 2026-10-10. On a phone each is a name and a picture, so
   the system can move it; on an iPad each group is one item drawn close together, so the bar fits
   the narrowest window.
+- **A swipe on past the preview's sideways edge shows the next size or the previous**: left the
+  next, right the previous, stopping at the first and the last. Syd, 2026-10-31, and 2026-11-01
+  for the edge, over a swipe only when the widget fits and over giving up sideways scrolling.
+  *The screen: controls in the bar*.
 - **The Photos button is the photo-library symbol and the Files button a folder.** What the Photos
   button brings up goes by the access there is: the collections sheet, the system's picker with
   limited access, or the "No Photos Access" alert. The Files button brings up the Files browser.
@@ -700,6 +704,20 @@ system folded what did not fit into a "…" menu. Syd chose drawing them closer 
 wider smallest window and over the menu. So on an iPad each group is one bar item, and the two
 smallest shapes are narrower to press than a bar button. At the largest text sizes the shapes grow
 and may not fit again; see `TODO.md`, *The iOS app*.
+
+**A swipe on past the preview's sideways edge shows the next size or the previous.** Syd,
+2026-10-31: "in the iOS app, have swiping left and right on the preview change the size displayed
+to the next or previous size". The bar's sizes stay; the swipe is a second way through them, and
+it redraws the photograph showing at the new size, as choosing one in the bar does. Fingers
+moving left bring the next size, as the next page does, and there is none after the last or
+before the first. The preview already scrolled sideways when the widget is wider than its bounds,
+so a swipe scrolls it until its edge shows, and one that pulls it on past the edge changes the
+size. Syd, 2026-11-01, chose that over a swipe that changes the size only when the widget fits,
+and over giving up the sideways scrolling. So the preview always gives a little sideways, even
+with nothing to scroll. It changes when the finger lifts, having pulled the widget 40 points past
+the edge, about 80 of the finger's; a flick whose momentum reaches the edge does not count
+(`SizeSwipe`). VoiceOver, which keeps a sideways swipe for itself, has the same as the preview's
+adjustable action: swipe up for the next size, down for the previous.
 
 **The screen has no title.** The bar is the controls'.
 

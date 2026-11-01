@@ -69,6 +69,21 @@ public final class PreviewModel {
         }
     }
 
+    /// The size after the one showing, as the bar has them, chosen as the bar
+    /// chooses it. A swipe's: Syd, 2026-10-31, "have swiping left and right
+    /// on the preview change the size displayed to the next or previous
+    /// size". The last size has none after it, and stays.
+    public func showNextSize() {
+        guard let index = families.firstIndex(of: family), index + 1 < families.count else { return }
+        family = families[index + 1]
+    }
+
+    /// The size before the one showing; the first has none, and stays.
+    public func showPreviousSize() {
+        guard let index = families.firstIndex(of: family), index > 0 else { return }
+        family = families[index - 1]
+    }
+
     /// Shows another size. **The photograph showing is drawn again at it**, as
     /// for another framing, and what was being fetched for the old size is
     /// let go. Syd, 2026-10-28: "what i want is for the current picture to
