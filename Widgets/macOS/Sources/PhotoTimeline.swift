@@ -20,6 +20,12 @@
 // the iOS extension's timeline is this one's pattern. Syd, 2026-10-28: "please
 // try to share code between mac and ios if possible". `Plans/Widget
 // Settings.md`, *On the Mac*.
+//
+// **A widget whose settings have just changed shows the same photograph
+// again**, drawn for its new setting, and not the next, whatever was changed,
+// as on iOS.
+// Which setting it had is worked out from the settings placed now:
+// `WokenSettings`.
 
 import Foundation
 import PhotosGoRoundAgentAPI
@@ -64,8 +70,16 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(wake.sources.count) sources, every \(wake.every.rawValue) seconds, \(wake.framing.rawValue)
             """)
 
+        let placed = await Self.placedSettings()
+        // The gallery's widgets are not placed, and had no setting before.
+        let inGallery = context.isPreview
         let turned = try? await Self.wakes.run {
-            wake.pictures.turn(from: wake.sources, fitting: wake.box)
+            let former = inGallery ? nil : placed.flatMap { WokenSettings(in: Settings.caches).woke(wake.setting, placed: $0) }
+            if let former {
+                WidgetLog.note(
+                    "was every \(former.every.rawValue) seconds, \(former.framing.rawValue), showing its photograph again")
+            }
+            return wake.pictures.turn(from: wake.sources, fitting: wake.box, after: former.map(wake.formerly))
         }
         let face = turned ?? .noPhotos
         let showsPicture = if case .picture = face { true } else { false }
@@ -81,7 +95,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             Self.wakes.detached { wake.pictures.makeReady(from: wake.sources, fitting: wake.box) }
         }
         // And nobody waits for the tidying.
-        Task.detached { await Self.clearAway() }
+        Task.detached { Self.clearAway(placed: placed) }
         // Photos did not answer: due again when the wait is over, and not at
         // the widget's own time.
         let wait = wake.pictures.wait()
@@ -107,26 +121,33 @@ struct PhotoTimeline: AppIntentTimelineProvider {
 }
 
 extension PhotoTimeline {
+    /// What every placed widget is set to, with "As in the app" resolved.
+    /// Nil when that cannot be had, or one's settings cannot be read: it
+    /// could be set to anything.
+    fileprivate static func placedSettings() async -> Set<WidgetSetting>? {
+        guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return nil }
+        let app = Settings.preferences.widgetFraming
+        var settings: Set<WidgetSetting> = []
+        for widget in placed where widget.kind == Settings.kind {
+            guard let intent = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return nil }
+            settings.insert(
+                WidgetSetting(
+                    family: String(describing: widget.family), every: intent.every,
+                    framing: intent.framing.resolved(app: app)))
+        }
+        return settings
+    }
+
     /// Clears away the caches of settings no placed widget has: a widget set
     /// to something else, or taken off the desktop, leaves its folder behind.
     /// Each is named for what its settings come to, so a widget following the
-    /// app and one set to the same keep one folder. And the caches from
-    /// before there were settings, once.
-    fileprivate static func clearAway() async {
-        guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return }
-        let app = Settings.preferences.widgetFraming
-        var keeping: Set<String> = []
-        for widget in placed where widget.kind == Settings.kind {
-            // One whose settings cannot be read could be set to anything, so
-            // nothing is cleared.
-            guard let settings = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return }
-            keeping.insert(
-                WidgetPictures.folder(
-                    forFamily: String(describing: widget.family), every: settings.every,
-                    framing: settings.framing.resolved(app: app)))
-        }
-        let kept = keeping
+    /// app and one set to the same keep one folder. **One just changed from
+    /// is kept** until the widget has drawn its picture again. And the caches
+    /// from before there were settings, once.
+    fileprivate static func clearAway(placed: Set<WidgetSetting>?) {
+        guard let placed else { return }
         wakes.detached {
+            let kept = WokenSettings(in: Settings.caches).folders(placed: placed)
             if (try? FileManager.default.removeItem(at: Settings.formerCaches)) != nil {
                 WidgetLog.note("cleared away the caches from before each widget had settings")
             }
@@ -146,6 +167,8 @@ private struct Wake: Sendable {
     let every: ChangeEvery
     let framing: Framing
     let pictures: WidgetPictures
+    /// What it comes to as a setting, which `WokenSettings` keeps.
+    let setting: WidgetSetting
 
     init(_ context: TimelineProviderContext, _ settings: PhotoWidgetSettings) {
         every = settings.every
@@ -155,6 +178,7 @@ private struct Wake: Sendable {
         self.framing = framing
 
         let family = String(describing: context.family)
+        setting = WidgetSetting(family: family, every: every, framing: framing)
         // The size the system hands a widget is the only place its real size
         // can be learned, so it is written where the app's preview reads it.
         // The gallery asks for every size it offers.
@@ -174,5 +198,13 @@ private struct Wake: Sendable {
             bookmarks: Settings.bookmarks,
             onFetch: { WidgetLog.fetched($0, for: family) },
             framing: framing)
+    }
+
+    /// The cache of the setting this widget had before, to draw its picture
+    /// again from.
+    func formerly(_ former: WidgetSetting) -> WidgetPictures {
+        WidgetPictures(
+            directory: Settings.caches.appending(path: former.folder, directoryHint: .isDirectory),
+            among: Settings.caches, framing: former.framing)
     }
 }

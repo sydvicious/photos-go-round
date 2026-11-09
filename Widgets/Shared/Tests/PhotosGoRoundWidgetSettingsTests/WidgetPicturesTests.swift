@@ -357,6 +357,129 @@ struct WidgetPicturesTests {
         #expect(isPicture(widget.turn(from: [folder(pictures)], fitting: box)))
     }
 
+    // MARK: Another Fit, Fill or Actual Size
+
+    /// A widget's cache for one setting, under one folder, as the extension
+    /// keeps them.
+    func widget(_ framing: Framing, in root: ScratchFolder) -> WidgetPictures {
+        WidgetPictures(
+            directory: root.url.appending(
+                path: WidgetPictures.folder(forFamily: "systemSmall", every: .fiveMinutes, framing: framing)),
+            among: root.url, framing: framing)
+    }
+
+    func origin(_ face: WidgetFace.Content) -> PictureOrigin? {
+        if case .picture(let file) = face { return TinyCache.origin(of: file) }
+        return nil
+    }
+
+    /// Syd, 2026-10-31: "try to display the same pic in a widget when
+    /// changing widget fit/fill/actual size settings".
+    @Test("A widget given another framing shows the photograph it was showing, drawn again for it")
+    func sameAfterAnotherFraming() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        let earlier = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let sources = [folder(earlier), folder(pictures)]
+        let fit = widget(.fit, in: root)
+        let shown = fit.turn(from: sources, fitting: box)
+        #expect(origin(shown) != nil)
+        // A first wake with no setting before shows the first source's.
+        try earlier.picture("dime.png", width: 600, height: 800)
+        #expect(origin(widget(.fill, in: try ScratchFolder()).turn(from: sources, fitting: box)) != origin(shown))
+
+        let filled = widget(.fill, in: root).turn(from: sources, fitting: box, after: fit)
+
+        #expect(origin(filled) == origin(shown))
+        #expect(file(filled) != file(shown))
+    }
+
+    /// Syd, 2026-11-01: "please make it where changing the interval keeps
+    /// the same picture as well". Each interval has a cache of its own.
+    @Test("A widget given another interval shows the photograph it was showing")
+    func sameAfterAnotherInterval() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        let earlier = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        let sources = [folder(earlier), folder(pictures)]
+        let fiveMinutes = widget(.fit, in: root)
+        let shown = fiveMinutes.turn(from: sources, fitting: box)
+        try earlier.picture("dime.png", width: 600, height: 800)
+        let hourly = WidgetPictures(
+            directory: root.url.appending(
+                path: WidgetPictures.folder(forFamily: "systemSmall", every: .oneHour, framing: .fit)),
+            among: root.url, framing: .fit)
+
+        let again = hourly.turn(from: sources, fitting: box, after: fiveMinutes)
+
+        #expect(origin(again) == origin(shown))
+    }
+
+    /// The other widget with those settings shares the timeline, so it shows
+    /// the same. Syd, 2026-11-01.
+    @Test("A widget changed to settings another widget has shows its own photograph, not the other's")
+    func ownOverAnothers() throws {
+        let theirs = try ScratchFolder()
+        let ours = try ScratchFolder()
+        let root = try ScratchFolder()
+        try theirs.picture("coin.png", width: 800, height: 600)
+        let sources = [folder(ours), folder(theirs)]
+        let filled = widget(.fill, in: root)
+        let other = filled.turn(from: sources, fitting: box)
+        try ours.picture("dime.png", width: 600, height: 800)
+        let fit = widget(.fit, in: root)
+        let shown = fit.turn(from: sources, fitting: box)
+        #expect(origin(shown) != origin(other))
+
+        let changed = filled.turn(from: sources, fitting: box, after: fit)
+
+        #expect(origin(changed) == origin(shown))
+    }
+
+    @Test("Between Fit and Actual Size, which share their pictures, the same file is shown again")
+    func sameFileFitAndActualSize() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+        try pictures.picture("dime.png", width: 600, height: 800)
+        let fit = widget(.fit, in: root)
+        let shown = fit.turn(from: [folder(pictures)], fitting: box)
+
+        let actual = widget(.actualSize, in: root).turn(from: [folder(pictures)], fitting: box, after: fit)
+
+        #expect(file(actual) == file(shown))
+    }
+
+    @Test("When the photograph cannot be had again, the next picture is shown")
+    func nextWhenItCannotBe() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        let coin = try pictures.picture("coin.png", width: 800, height: 600)
+        let fit = widget(.fit, in: root)
+        let shown = fit.turn(from: [folder(pictures)], fitting: box)
+        try FileManager.default.removeItem(at: coin)
+        try pictures.picture("dime.png", width: 600, height: 800)
+
+        let filled = widget(.fill, in: root).turn(from: [folder(pictures)], fitting: box, after: fit)
+
+        #expect(isPicture(filled))
+        #expect(origin(filled) != origin(shown))
+    }
+
+    @Test("With nothing shown before, it is any first wake")
+    func nothingBefore() throws {
+        let pictures = try ScratchFolder()
+        let root = try ScratchFolder()
+        try pictures.picture("coin.png", width: 800, height: 600)
+
+        let filled = widget(.fill, in: root).turn(
+            from: [folder(pictures)], fitting: box, after: widget(.fit, in: root))
+
+        #expect(isPicture(filled))
+    }
+
     /// Two sizes of widget, each with a cache of its own under one folder,
     /// as the extension keeps them.
     func sizes(in root: ScratchFolder) -> (small: WidgetPictures, large: WidgetPictures) {
