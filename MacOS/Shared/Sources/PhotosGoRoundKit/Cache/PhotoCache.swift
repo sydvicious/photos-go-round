@@ -494,6 +494,9 @@ public struct PhotoCache {
                 log(.cacheFailed(photo: card.spokenName, source: card.sourceID, because: reason))
             }
             return false
+        case .notYet(let reason, let card):
+            log(.cacheFailed(photo: card.spokenName, source: card.sourceID, because: reason))
+            return false
         }
     }
 
@@ -505,6 +508,9 @@ public struct PhotoCache {
         case unnecessary(String)
         /// Nothing fetched, and why — with the card, when it could be read.
         case failed(String, DeckCard?)
+        /// Nothing fetched yet: the provider has asked for the bytes, and they
+        /// are on their way.
+        case notYet(String, DeckCard)
     }
 
     /// The work of `cache(photoID:)`, answering why when nothing landed.
@@ -565,6 +571,11 @@ public struct PhotoCache {
         do {
             file = try await provider.materialize(
                 externalID: card.externalID, from: source, to: temporary)
+        } catch SourceProviderError.notDownloadedYet(let externalID) {
+            // Not a question about the photograph: its source has it, and is
+            // bringing it down.
+            try? FileManager.default.removeItem(at: temporary)
+            return .notYet("\(SourceProviderError.notDownloadedYet(externalID: externalID))", card)
         } catch {
             try? FileManager.default.removeItem(at: temporary)
             let gone = try await handleFailedDownload(card, source: source, provider: provider)
@@ -722,8 +733,16 @@ public struct PhotoCache {
         /// They are not, and why, in words for the console and the agent's
         /// error record.
         case failed(because: String)
+        /// They are on their way and not here yet, and why.
+        case notYet(because: String)
 
         public var didLand: Bool { self == .landed }
+
+        /// Whether the bench hears of it. A file on its way down is not a
+        /// source that has stopped answering.
+        public var countsAgainstSource: Bool {
+            if case .failed = self { true } else { false }
+        }
     }
 
     /// Fetches a queued card's bytes, and says why on the console when they are
@@ -735,6 +754,10 @@ public struct PhotoCache {
             case .landed: return .landed
             case .unnecessary(let why): reason = why
             case .failed(let why, _): reason = why
+            case .notYet(let why, _):
+                if await store.contains(photo: card.uuid) { return .landed }
+                log(.cacheFailed(photo: card.spokenName, source: card.sourceID, because: why))
+                return .notYet(because: why)
             }
         } catch {
             reason = "\(error)"

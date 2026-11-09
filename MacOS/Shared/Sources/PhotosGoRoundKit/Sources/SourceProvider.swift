@@ -219,10 +219,13 @@ public struct MaterializedFile: Sendable, Equatable {
     }
 }
 
-public enum SourceProviderError: Error, CustomStringConvertible, Sendable {
+public enum SourceProviderError: Error, CustomStringConvertible, Sendable, Equatable {
     case wrongProvider(expected: SourceKind, got: SourceKind)
     case photoMissing(externalID: String)
     case notMaterializable(externalID: String)
+    /// In iCloud and not on this Mac yet. iCloud has been asked for it; this is
+    /// a file on its way, not a source that has stopped answering.
+    case notDownloadedYet(externalID: String)
 
     public var description: String {
         switch self {
@@ -232,6 +235,8 @@ public enum SourceProviderError: Error, CustomStringConvertible, Sendable {
             "no file for \(externalID)"
         case .notMaterializable(let externalID):
             "\(externalID) cannot be materialized"
+        case .notDownloadedYet(let externalID):
+            "\(externalID) is still downloading from iCloud"
         }
     }
 }

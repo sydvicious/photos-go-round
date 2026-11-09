@@ -4,7 +4,8 @@ Launching `Photos-Go-Round.app` stops restarting and reinstalling services that
 are already there and running. A launch compares version numbers: an installed
 agent, wallpaper extension or screensaver whose version is equal or greater is
 left alone, and one that is lesser, missing, unreadable or not running is
-installed again.
+installed again. In Debug, an agent older than its own rebuilt program is
+installed again too.
 
 # Rationale
 
@@ -46,9 +47,14 @@ What is left is on Syd's Mac, since launching the app is his.
   app replaced at the same path has the new version on disk under an agent
   still running the old code, so the bundle would always read as equal.
   *Claude's choice.*
-- **A rebuild that keeps its version and build is left alone.** It follows from
-  the rule. After a ⌘R that changes the agent, the running agent is the old
-  one until the build number moves or the Help menu installs it.
+- **A rebuild that keeps its version and build is left alone, except the
+  agent in Debug.** It follows from the rule, and in Release and Claude it
+  still holds. In Debug, an agent at the carried version whose process started
+  before its program was last built — the newest file in its `Contents/MacOS`,
+  since a Debug build's code is in a `.debug.dylib` beside it — is installed
+  again. On 2026-11-09 a ⌘R left the old Debug agent running and a fix was
+  tried against the code from before it. Syd chose the Debug exception that day
+  over keeping the rule and installing from the Help menu after each ⌘R.
 - **A chosen wallpaper with no extension process counts as not running.** A
   rebuild makes `pkd` drop the running extension and the desktop goes grey;
   this replaces the date test that caught it. Syd, 2026-10-08: "chose but not
@@ -103,6 +109,7 @@ and the version of the saver at its name for the screensaver.
 | Its program is no longer on disk | Install |
 | Not loaded | Install |
 | Equal or greater, loaded, no process | Start |
+| Equal, running, started before its program was last built — Debug only | Install |
 | Equal or greater, running | Nothing |
 
 **Wallpaper**

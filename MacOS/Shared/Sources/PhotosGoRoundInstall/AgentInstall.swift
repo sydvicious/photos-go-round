@@ -203,17 +203,26 @@ public enum AgentInstall {
         public var pid: @Sendable (String) -> Int32?
         /// Whether the program a job names is still on disk.
         public var programExists: @Sendable (String) -> Bool
+        /// When this process started, or nil when that cannot be read.
+        public var processStarted: @Sendable (Int32) -> Date?
+        /// When the program a job names was last built, or nil when that cannot
+        /// be read.
+        public var programBuilt: @Sendable (String) -> Date?
 
         public init(
             job: @escaping @Sendable (URL) -> JobDescription?,
             isJobLoaded: @escaping @Sendable (String) -> Bool,
             pid: @escaping @Sendable (String) -> Int32?,
-            programExists: @escaping @Sendable (String) -> Bool
+            programExists: @escaping @Sendable (String) -> Bool,
+            processStarted: @escaping @Sendable (Int32) -> Date? = { _ in nil },
+            programBuilt: @escaping @Sendable (String) -> Date? = { _ in nil }
         ) {
             self.job = job
             self.isJobLoaded = isJobLoaded
             self.pid = pid
             self.programExists = programExists
+            self.processStarted = processStarted
+            self.programBuilt = programBuilt
         }
 
         public static let live = Installed(
@@ -223,7 +232,26 @@ public enum AgentInstall {
             },
             isJobLoaded: { Launchctl.isLoaded($0) },
             pid: { Launchctl.pid(of: $0) },
-            programExists: { FileManager.default.isExecutableFile(atPath: $0) }
+            programExists: { FileManager.default.isExecutableFile(atPath: $0) },
+            processStarted: { pid in
+                var info = kinfo_proc()
+                var size = MemoryLayout<kinfo_proc>.stride
+                var name: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+                guard sysctl(&name, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+                let start = info.kp_proc.p_un.__p_starttime
+                return Date(
+                    timeIntervalSince1970: Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000)
+            },
+            programBuilt: { program in
+                // **Everything beside the program**, not the program alone: a
+                // Debug build puts its code in a `.debug.dylib` next to it.
+                let folder = URL(filePath: program).deletingLastPathComponent()
+                let files = (try? FileManager.default.contentsOfDirectory(
+                    at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+                return files.compactMap {
+                    try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate
+                }.max()
+            }
         )
     }
 
@@ -240,6 +268,11 @@ public enum AgentInstall {
     /// 4. Equal or greater, loaded, with no process: stopped, and started.
     /// 5. Greater and running: newer. Equal and running: current. Both left
     ///    alone.
+    /// 6. **Except in Debug**, equal and running from a process older than its
+    ///    program on disk: differs, and is installed again. A ⌘R that changed
+    ///    the agent keeps its version, and on 2026-11-09 a fix was tested
+    ///    against the agent from before it. Syd chose that day to replace one
+    ///    in Debug; elsewhere the version rule is the whole of it.
     ///
     /// **Which copy of the app the job runs is not asked.** Syd, 2026-10-08,
     /// of another copy at the same version and build: "leave them alone".
@@ -254,7 +287,8 @@ public enum AgentInstall {
         of bundle: URL,
         launchAgents: URL = URL.homeDirectory.appending(path: "Library/LaunchAgents"),
         surroundings: Surroundings = .live,
-        installed: Installed = .live
+        installed: Installed = .live,
+        variant: BuildVariant = .current
     ) throws -> Standing {
         let plan = try plan(for: bundle, launchAgents: launchAgents, surroundings: surroundings)
         guard let job = installed.job(plan.plist) else { return .missing }
@@ -267,7 +301,15 @@ public enum AgentInstall {
             return .differs("the job's program is gone: \(job.programArguments.first ?? "it names none")")
         }
         guard installed.isJobLoaded(plan.label) else { return .differs("the job is not loaded") }
-        guard installed.pid(plan.label) != nil else { return .stopped }
+        guard let pid = installed.pid(plan.label) else { return .stopped }
+
+        if variant == .debug, standing == .current,
+            let started = installed.processStarted(pid),
+            let built = installed.programBuilt(program),
+            started < built
+        {
+            return .differs("its program was rebuilt after it started")
+        }
         return standing
     }
 
