@@ -17,6 +17,11 @@
 // left at "As in the app" follows what the app says, read at each wake as the
 // sources are. A filled widget has a cache of its own.
 // `Plans/Widget Settings.md`, *In Edit Widget*.
+//
+// **A widget whose settings have just changed shows the same photograph
+// again**, drawn for its new setting, and not the next, whatever was changed.
+// Which setting it had is worked out from the settings placed now:
+// `WokenSettings`.
 
 import Foundation
 import OSLog
@@ -107,8 +112,19 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             \(wake.framing.rawValue, privacy: .public)
             """)
 
+        let placed = await Self.placedSettings()
+        // The gallery's widgets are not placed, and had no setting before.
+        let inGallery = context.isPreview
         let turned = try? await Self.wakes.run {
-            wake.pictures.turn(from: wake.sources, fitting: wake.box)
+            let former = inGallery ? nil : placed.flatMap { WokenSettings(in: Wake.caches).woke(wake.setting, placed: $0) }
+            if let former {
+                Log.widget.notice(
+                    """
+                    \(Log.widgetsTag, privacy: .public) was every \(former.every.rawValue) seconds, \
+                    \(former.framing.rawValue, privacy: .public), showing its photograph again
+                    """)
+            }
+            return wake.pictures.turn(from: wake.sources, fitting: wake.box, after: former.map(wake.formerly))
         }
         let face = turned ?? .noPhotos
         let showsPicture = if case .picture = face { true } else { false }
@@ -129,7 +145,7 @@ struct PhotoTimeline: AppIntentTimelineProvider {
             Self.wakes.detached { wake.pictures.makeReady(from: wake.sources, fitting: wake.box) }
         }
         // And nobody waits for the tidying.
-        Task.detached { await Self.clearAway() }
+        Task.detached { Self.clearAway(placed: placed) }
         // Photos did not answer: due again when the wait is over, and not at
         // the widget's own time.
         let wait = wake.pictures.wait()
@@ -150,25 +166,32 @@ struct PhotoTimeline: AppIntentTimelineProvider {
 }
 
 extension PhotoTimeline {
+    /// What every placed widget is set to, with "As in the app" resolved.
+    /// Nil when that cannot be had, or one's settings cannot be read: it
+    /// could be set to anything.
+    fileprivate static func placedSettings() async -> Set<WidgetSetting>? {
+        guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return nil }
+        let app = Wake.preferences.widgetFraming
+        var settings: Set<WidgetSetting> = []
+        for widget in placed where widget.kind == PhotoWidget.kind {
+            guard let intent = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return nil }
+            settings.insert(
+                WidgetSetting(
+                    family: String(describing: widget.family), every: intent.every,
+                    framing: intent.framing.resolved(app: app)))
+        }
+        return settings
+    }
+
     /// Clears away the caches of settings no placed widget has: a widget set
     /// to something else, or taken off the Home Screen, leaves its folder
     /// behind. Each is named for what its settings come to, so a widget
-    /// following the app and one set to the same keep one folder.
-    fileprivate static func clearAway() async {
-        guard let placed = try? await WidgetCenter.shared.currentConfigurations() else { return }
-        let app = Wake.preferences.widgetFraming
-        var keeping: Set<String> = []
-        for widget in placed where widget.kind == PhotoWidget.kind {
-            // One whose settings cannot be read could be set to anything, so
-            // nothing is cleared.
-            guard let settings = widget.widgetConfigurationIntent(of: PhotoWidgetSettings.self) else { return }
-            keeping.insert(
-                Wake.folder(
-                    for: widget.family, every: settings.every,
-                    framing: settings.framing.resolved(app: app)))
-        }
-        let kept = keeping
+    /// following the app and one set to the same keep one folder. **One just
+    /// changed from is kept** until the widget has drawn its picture again.
+    fileprivate static func clearAway(placed: Set<WidgetSetting>?) {
+        guard let placed else { return }
         wakes.detached {
+            let kept = WokenSettings(in: Wake.caches).folders(placed: placed)
             let cleared = WidgetPictures.clearAway(in: Wake.caches, keeping: kept)
             guard !cleared.isEmpty else { return }
             Log.widget.info(
@@ -188,6 +211,8 @@ private struct Wake: Sendable {
     let every: ChangeEvery
     let framing: Framing
     let pictures: WidgetPictures
+    /// What it comes to as a setting, which `WokenSettings` keeps.
+    let setting: WidgetSetting
 
     /// The App Group's preferences, which the app writes. The group's name is
     /// in `Info.plist` because it differs by configuration.
@@ -212,6 +237,7 @@ private struct Wake: Sendable {
             .record(context.displaySize, forFamily: String(describing: context.family))
 
         let family = String(describing: context.family)
+        setting = WidgetSetting(family: family, every: every, framing: framing)
         let scale = context.environmentVariants.displayScale?.max() ?? 3
         box = CGSize(
             width: context.displaySize.width * scale, height: context.displaySize.height * scale)
@@ -228,6 +254,14 @@ private struct Wake: Sendable {
             // For the app's note that some pictures may not appear in widgets.
             onSkip: { SkippedPictures(suiteName: group).record($0) },
             framing: framing)
+    }
+
+    /// The cache of the setting this widget had before, to draw its picture
+    /// again from.
+    func formerly(_ former: WidgetSetting) -> WidgetPictures {
+        WidgetPictures(
+            directory: Self.caches.appending(path: former.folder, directoryHint: .isDirectory),
+            among: Self.caches, framing: former.framing)
     }
 
     /// What the extension holds, against the limit it is held to: about

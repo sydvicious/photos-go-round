@@ -75,10 +75,14 @@ public struct WidgetPictures: Sendable {
 
     /// The face for this wake. May block: it reads Photos or walks a folder.
     ///
-    /// - Parameter now: The time, read when it is needed: a wait starts when
-    ///   Photos is given up on, which is some seconds after the wake began.
+    /// - Parameters:
+    ///   - now: The time, read when it is needed: a wait starts when Photos
+    ///     is given up on, which is some seconds after the wake began.
+    ///   - former: The cache of the setting this widget had, when its Fit,
+    ///     Fill or Actual Size has just changed. `WokenSettings`.
     public func turn(
-        from sources: [SourceSpec], fitting box: CGSize, at now: @autoclosure () -> Date = .now
+        from sources: [SourceSpec], fitting box: CGSize, at now: @autoclosure () -> Date = .now,
+        after former: WidgetPictures? = nil
     ) -> WidgetFace.Content {
         guard !sources.isEmpty else { return .nothingChosen }
         // Left by a process ended while it shrank a photograph, at any size.
@@ -88,7 +92,7 @@ public struct WidgetPictures: Sendable {
         // Photos did not answer last time, and it is not yet time to ask.
         guard backoff.wait(at: now()) == nil else { return held(for: sources, fitting: box) }
         do {
-            let face = try asked(of: sources, fitting: box)
+            let face = try again(after: former, for: sources, fitting: box) ?? asked(of: sources, fitting: box)
             if backoff.failures > 0 {
                 backoff.answered()
                 backoff.write(to: asking)
@@ -112,6 +116,28 @@ public struct WidgetPictures: Sendable {
     /// due again when the wait is over, whatever the widget is set to.
     public func wait(at now: Date = .now) -> TimeInterval? {
         RequestBackoff.read(from: asking).wait(at: now)
+    }
+
+    /// **The photograph the widget was showing, for its new setting**, and
+    /// not the next. Syd, 2026-10-31: "try to display the same pic in a
+    /// widget when changing widget fit/fill/actual size settings". Fit and
+    /// Actual Size share their pictures, so between them it is the same file;
+    /// to or from Fill it is fetched again from where it came from. Nil when
+    /// there was nothing showing, or it cannot be had again: then the next
+    /// picture is shown. Only Photos not answering is thrown, so that the
+    /// wait starts.
+    private func again(
+        after former: WidgetPictures?, for sources: [SourceSpec], fitting box: CGSize
+    ) throws -> WidgetFace.Content? {
+        guard let former, let shown = former.pictures.last(for: sources, fitting: box) else { return nil }
+        if pictures.last(for: sources, fitting: box) == shown { return .picture(shown) }
+        do {
+            return try pictures.again(shown, for: sources, fitting: box).map { .picture($0) }
+        } catch let late as TimedOut {
+            throw late
+        } catch {
+            return nil
+        }
     }
 
     private func asked(of sources: [SourceSpec], fitting box: CGSize) throws -> WidgetFace.Content {
