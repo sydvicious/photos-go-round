@@ -234,7 +234,8 @@ struct RunCommand {
                         let answer = await worker.fetch(card)
                         switch answer {
                         case .landed: await note.landed()
-                        case .failed(let because): await note.failed(because)
+                        case .failed(let because), .notYet(let because):
+                            await note.failed(because, countsAgainstSource: answer.countsAgainstSource)
                         }
                         // Whatever happened, the claim must not outlive the
                         // work: a photograph left claimed is sidelined for the
@@ -259,6 +260,14 @@ struct RunCommand {
                     return .timedOut
                 }
                 guard await note.didLand else {
+                    // **A file on its way down is not told to the bench.** Its
+                    // card leaves the queue like any other that came to
+                    // nothing, and the next deal of it finds the bytes here.
+                    guard await note.countsAgainstSource else {
+                        cache.dropUnfetched(card, because: await note.reason ?? "it is not here yet")
+                        tally.record(fetch: .failed)
+                        return .failed
+                    }
                     // **Told to the bench, the same as a timeout is.** Which of
                     // the two bounds noticed says nothing about the source; a
                     // fetch that produced no bytes is what the bench counts.
@@ -1579,12 +1588,19 @@ actor Latch {
 actor FetchNote {
     private var did = false
     private var because: String?
+    private var counts = true
 
     func landed() { did = true }
 
-    func failed(_ words: String) { because = words }
+    func failed(_ words: String, countsAgainstSource: Bool = true) {
+        because = words
+        counts = countsAgainstSource
+    }
 
     var didLand: Bool { did }
+
+    /// Whether the bench hears of it. See `PhotoCache.FetchAnswer`.
+    var countsAgainstSource: Bool { counts }
 
     /// Why it did not land, when something said.
     var reason: String? { because }

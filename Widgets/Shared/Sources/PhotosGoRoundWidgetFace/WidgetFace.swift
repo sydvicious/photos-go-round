@@ -25,9 +25,17 @@
 // "No Photos found" until it has one. Syd, 2026-10-30: "I don't want to show
 // the user 'Scanning...' in the widgets themselves." The two Scanning faces
 // are the preview's.
+//
+// **The black is drawn only in full colour.** On the Mac's desktop, with an
+// app in front, the system draws widgets vibrant: no colour, and no container
+// background. A black fill under the photograph is content, so it stayed, and
+// took the whole widget to one flat grey. Syd, 2026-11-09: "when finder is in
+// front they look great. when anything else is in front they dont." The
+// pictures are marked full colour for the accented mode.
 
 import ImageIO
 import SwiftUI
+import WidgetKit
 
 #if canImport(UIKit)
     import UIKit
@@ -53,6 +61,7 @@ public struct WidgetFace: View {
     private let content: Content
     private let enlarges: Bool
     @Environment(\.displayScale) private var displayScale
+    @Environment(\.widgetRenderingMode) private var renderingMode
 
     /// - Parameter enlarges: Whether a picture smaller than the widget is
     ///   drawn larger to meet its edges. Not at Actual Size.
@@ -63,7 +72,9 @@ public struct WidgetFace: View {
 
     public var body: some View {
         ZStack {
-            Color.black
+            if renderingMode == .fullColor {
+                Color.black
+            }
             switch content {
             case .picture(let file), .scanningOver(let file):
                 FittedPicture(file: file, enlarges: enlarges)
@@ -96,6 +107,7 @@ public struct WidgetFace: View {
                 // No bigger than it is drawn. See `icon(side:scale:)`.
                 Self.icon(side: min(space.size.width, space.size.height) - 16, scale: displayScale)?
                     .resizable()
+                    .widgetAccentedRenderingMode(.fullColor)
                     .scaledToFit()
                     .padding(8)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -204,6 +216,7 @@ private struct FittedPicture: View {
     var body: some View {
         image?
             .resizable()
+            .widgetAccentedRenderingMode(.fullColor)
             .scaledToFit()
             // At Actual Size, no larger than its own pixels. It was made for
             // the widget's pixels, so one larger than the widget still fits.

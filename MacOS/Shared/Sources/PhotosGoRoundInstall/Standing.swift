@@ -12,8 +12,9 @@ import Foundation
 /// leave it alone. If it is lesser, or missing/unreadable, reinstall." It was
 /// decided by content, path and the age of a file until then, on the argument
 /// that a rebuild keeps its version; a rebuild that keeps its version and build
-/// is now left alone, and that is the rule. `Plans/Leave Running Services
-/// Alone.md`.
+/// is now left alone, and that is the rule — except the agent in Debug, which
+/// `AgentInstall.standing` replaces when it is older than its rebuilt program.
+/// `Plans/Leave Running Services Alone.md`.
 ///
 /// **The installed version is the one recorded when it was installed**, for the
 /// agent and the wallpaper: an app replaced at the same path has the new

@@ -205,7 +205,11 @@ public struct FolderSourceProvider: SourceProvider {
 
     /// The path relative to the source's own folder, which is what goes in
     /// `external_id`.
-    static func copy(_ fileURL: URL, to destination: URL, externalID: String) throws -> MaterializedFile {
+    static func copy(
+        _ fileURL: URL, to destination: URL, externalID: String,
+        copying: (URL, URL) throws -> Void = { try FileManager.default.copyItem(at: $0, to: $1) },
+        downloading: (URL) throws -> Void = { try FileManager.default.startDownloadingUbiquitousItem(at: $0) }
+    ) throws -> MaterializedFile {
         guard FileManager.default.fileExists(atPath: fileURL.path(percentEncoded: false)) else {
             throw SourceProviderError.photoMissing(externalID: externalID)
         }
@@ -217,11 +221,31 @@ public struct FolderSourceProvider: SourceProvider {
         if FileManager.default.fileExists(atPath: destination.path(percentEncoded: false)) {
             try FileManager.default.removeItem(at: destination)
         }
-        try FileManager.default.copyItem(at: fileURL, to: destination)
+        // **An evicted iCloud file is refused, not waited for.** The agent may
+        // not download one by reading it, so the copy fails at once with
+        // `EDEADLK`. iCloud is asked for it instead, and the fetch says *not
+        // yet*, which the bench does not count. Measured 2026-11-09: four of
+        // these in 0.2 seconds benched a new folder for a minute.
+        do {
+            try copying(fileURL, destination)
+        } catch where Self.isNotDownloaded(error) {
+            try? downloading(fileURL)
+            throw SourceProviderError.notDownloadedYet(externalID: externalID)
+        }
 
         let size =
             (try? destination.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
         return MaterializedFile(url: destination, byteSize: size)
+    }
+
+    /// Whether a copy failed because its file is in iCloud and this process may
+    /// not bring it down: `EDEADLK`, bare or under the Cocoa error `copyItem`
+    /// wraps it in.
+    static func isNotDownloaded(_ error: any Error) -> Bool {
+        let error = error as NSError
+        if error.domain == NSPOSIXErrorDomain, error.code == Int(EDEADLK) { return true }
+        guard let underlying = error.userInfo[NSUnderlyingErrorKey] as? NSError else { return false }
+        return underlying.domain == NSPOSIXErrorDomain && underlying.code == Int(EDEADLK)
     }
 }
 

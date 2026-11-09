@@ -1,4 +1,5 @@
 import Foundation
+import PhotosGoRoundAgentAPI
 import Testing
 
 @testable import PhotosGoRoundInstall
@@ -41,21 +42,31 @@ struct StandingTests {
     }
 
     private func installed(
-        job: JobDescription?, loaded: Bool = true, pid: Int32? = 501, programExists: Bool = true
+        job: JobDescription?, loaded: Bool = true, pid: Int32? = 501, programExists: Bool = true,
+        started: Date? = nil, built: Date? = nil
     ) -> AgentInstall.Installed {
         AgentInstall.Installed(
             job: { _ in job }, isJobLoaded: { _ in loaded }, pid: { _ in pid },
-            programExists: { _ in programExists })
+            programExists: { _ in programExists },
+            processStarted: { _ in started }, programBuilt: { _ in built })
     }
 
     private func job(_ version: BundleVersion?, program: URL? = nil) -> JobDescription {
         JobDescription(label: label, program: program ?? binary, version: version)
     }
 
-    private func agentStanding(_ installed: AgentInstall.Installed) throws -> Standing {
+    private func agentStanding(
+        _ installed: AgentInstall.Installed, variant: BuildVariant = .release
+    ) throws -> Standing {
         try AgentInstall.standing(
-            of: server, launchAgents: agents, surroundings: agentSurroundings, installed: installed)
+            of: server, launchAgents: agents, surroundings: agentSurroundings, installed: installed,
+            variant: variant)
     }
+
+    /// When the running agent started, and a minute either side of it.
+    private static let started = Date(timeIntervalSince1970: 1_800_000_000)
+    private static let builtAfter = started.addingTimeInterval(60)
+    private static let builtBefore = started.addingTimeInterval(-60)
 
     @Test("No job description is an agent not installed")
     func noPlistIsMissing() throws {
@@ -111,6 +122,41 @@ struct StandingTests {
         #expect(
             try agentStanding(installed(job: job(Self.carried), loaded: false))
                 == .differs("the job is not loaded"))
+    }
+
+    /// A ⌘R of a Debug build that changed the agent and kept its version.
+    /// 2026-11-09: the app left the old agent running, and a fix was tested
+    /// against code from before it. Syd chose that day to replace it in Debug.
+    @Test("In Debug, an agent that started before its program was rebuilt differs")
+    func aDebugAgentOlderThanItsProgramDiffers() throws {
+        let standing = try agentStanding(
+            installed(job: job(Self.carried), started: Self.started, built: Self.builtAfter),
+            variant: .debug)
+        #expect(standing == .differs("its program was rebuilt after it started"))
+    }
+
+    @Test("In Debug, an agent that started after its program was built is current")
+    func aDebugAgentNewerThanItsProgramIsCurrent() throws {
+        let standing = try agentStanding(
+            installed(job: job(Self.carried), started: Self.started, built: Self.builtBefore),
+            variant: .debug)
+        #expect(standing == .current)
+    }
+
+    /// Nothing to compare is no evidence of a rebuild.
+    @Test("In Debug, an agent whose times cannot be read is current")
+    func aDebugAgentWithoutTimesIsCurrent() throws {
+        #expect(try agentStanding(installed(job: job(Self.carried)), variant: .debug) == .current)
+    }
+
+    /// The version rule is the whole of it outside Debug. Syd, 2026-10-08:
+    /// "if the running thingie has an equal or greater version, leave it alone".
+    @Test("Outside Debug, a rebuilt program does not replace a running agent", arguments: [BuildVariant.release, .claude])
+    func elsewhereARebuildIsLeftAlone(_ variant: BuildVariant) throws {
+        let standing = try agentStanding(
+            installed(job: job(Self.carried), started: Self.started, built: Self.builtAfter),
+            variant: variant)
+        #expect(standing == .current)
     }
 
     /// Not running is acted on, and by starting it rather than installing.

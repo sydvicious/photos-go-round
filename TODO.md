@@ -492,3 +492,7 @@ Syd, 2026-10-26: "Don't start over in the photos display every time there is a c
 ## A defaults suite named for its own bundle ID
 
 Syd, 2026-10-29: "fix Using your own bundle identifier as an NSUserDefaults suite name does not make sense and will not work. Break on _NSUserDefaults_Log_Nonsensical_Suites to find this"
+
+## The agent dies of a stack overflow
+
+`EXC_BAD_ACCESS` (SIGBUS), "Could not determine thread index for stack guard region", on a lane's dispatch thread with only 28–46 frames on it — so one frame far too big for the thread, not deep recursion. Four reports on the Plex mini in `~/Library/Logs/DiagnosticReports/Photos-Go-Round Server-*.ips`: 0.9 (8) on 2026-11-08 at 18:44 and 19:17 (`refresh-1`) and 2026-11-09 at 00:24 (`evict`); 0.10 (9) Debug on 2026-11-09 at 07:40 (`refresh-3`), walking a Photos album: `PhotosCollectionSourceProvider.enumerate` → `SourceStore.applyRefresh` → `PhotoPool.upsert` → `Reporter.change` → `Console` → `os_log`. launchd restarts it each time.
