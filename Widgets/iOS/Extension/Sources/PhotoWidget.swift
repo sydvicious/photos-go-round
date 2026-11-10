@@ -56,9 +56,17 @@ struct PhotoWidget: Widget {
         .configurationDisplayName(Self.displayName)
         .description("Your photographs, one after another.")
         // "Widgets in every Home Screen size the platform offers."
-        .supportedFamilies([
-            .systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .systemExtraLargePortrait,
-        ])
+        .supportedFamilies(Self.families)
+        // Not on a Mac's desktop: the Mac has a widget of its own, and the
+        // phone's drawn there was handed the Mac's sizes, which the app then
+        // offered as the phone's. Syd, 2026-11-10: "would love it if the
+        // iphone app's widgets did not appear on the Mac, but did appear
+        // everywhere else".
+        .disfavoredLocations([.iPhoneWidgetsOnMac], for: Self.families)
         .contentMarginsDisabled()
     }
+
+    private static let families: [WidgetFamily] = [
+        .systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .systemExtraLargePortrait,
+    ]
 }

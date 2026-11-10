@@ -1050,13 +1050,66 @@ struct PreviewModelTests {
 
     @Test("A size a widget was handed is used in place of the table's")
     func recordedSize() {
-        let preview = preview(recorded: recorded(["systemSmall": CGSize(width: 164, height: 164)]))
+        let preview = preview(recorded: recorded(["systemSmall": CGSize(width: 160, height: 160)]))
 
         preview.family = .small
-        #expect(preview.size == CGSize(width: 164, height: 164))
+        #expect(preview.size == CGSize(width: 160, height: 160))
 
         preview.family = .medium
         #expect(preview.size == CGSize(width: 338, height: 158))
+    }
+
+    /// What a Mac's desktop hands a widget, whatever the display, as measured
+    /// 2026-10-28. A phone's widget put there is handed these, and the phone
+    /// keeps them with its own.
+    let macDesktop: [String: CGSize] = [
+        "systemSmall": CGSize(width: 164, height: 164), "systemMedium": CGSize(width: 344, height: 164),
+        "systemLarge": CGSize(width: 344, height: 344), "systemExtraLarge": CGSize(width: 704, height: 344),
+        "systemExtraLargePortrait": CGSize(width: 344, height: 704),
+    ]
+
+    @Test("On a phone, a size handed on a Mac's desktop is not offered")
+    func macDesktopSizeNotOffered() {
+        let preview = preview(recorded: recorded(macDesktop))
+
+        #expect(preview.families == [.small, .medium, .large, .extraLargePortrait])
+    }
+
+    @Test("On a phone, a size handed on a Mac's desktop does not take the place of the phone's own")
+    func macDesktopSizeNotUsed() {
+        let sizes = recorded([
+            "systemSmall": CGSize(width: 164.33, height: 164.33),
+            "systemMedium": CGSize(width: 349.67, height: 164.33),
+            "systemLarge": CGSize(width: 349.67, height: 365),
+        ])
+        for (family, size) in macDesktop { sizes.record(size, forFamily: family) }
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([]), device: .phone, screen: CGSize(width: 402, height: 874), scale: 3,
+            recorded: sizes)
+
+        preview.family = .small
+        #expect(preview.size == CGSize(width: 164.33, height: 164.33))
+        preview.family = .medium
+        #expect(preview.size == CGSize(width: 349.67, height: 164.33))
+        preview.family = .large
+        #expect(preview.size == CGSize(width: 349.67, height: 365))
+    }
+
+    @Test("On a phone, a wide size handed on its own screen is offered")
+    func phoneOwnWideSizeOffered() {
+        let preview = preview(recorded: recorded(["systemExtraLarge": CGSize(width: 700, height: 350)]))
+
+        #expect(preview.families == [.small, .medium, .large, .extraLarge, .extraLargePortrait])
+    }
+
+    @Test("On an iPad, a size that happens to be one a Mac's desktop hands is still used")
+    func padKeepsMacLikeSizes() {
+        let preview = PreviewModel(
+            pictures: ScriptedPictures([]), device: .pad, screen: CGSize(width: 820, height: 1180), scale: 2,
+            recorded: recorded(["systemSmall": CGSize(width: 164, height: 164)]))
+
+        preview.family = .small
+        #expect(preview.size == CGSize(width: 164, height: 164))
     }
 
     @Test("The tall size is offered before any widget has been handed it, at a size reckoned for the screen, and at the handed size after")

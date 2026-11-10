@@ -497,6 +497,22 @@ elsewhere is not going to be previewed here". From Apple's design guidelines, re
 small widget is also shown in StandBy and CarPlay on an iPhone and on the Lock Screen on an iPad,
 and every size is in Today View. None of those is previewed.
 
+**A phone's widget put on a Mac's desktop is handed the Mac's sizes, and they are left out.** A
+Mac can show a phone's widgets on its desktop, drawn by the phone. Syd added ours there by mistake
+on 2026-11-09, and the phone recorded the desktop's five sizes with its own: 164 square, 344 by
+164, 344 by 344, 704 by 344 and 344 by 704, the same set the Mac's own widget is handed whatever
+the display. The preview offered the wide one as a fifth size, and took the Mac's set for the
+phone's on a 402-point screen, where neither set leaves room and the narrowest is the one. No phone
+in Apple's table has any of those sizes, nor has the Duo, so on a phone a recorded size that is
+one of them is left out (`WidgetSizes.isMacDesktop`). Syd, 2026-11-10, chose leaving them all out,
+the wide one too, over keeping that one for want of another size to show for it. An iPad keeps
+every size it is handed.
+
+**The phone's widget is disfavored on a Mac's desktop** (`disfavoredLocations`, with
+`iPhoneWidgetsOnMac`). Syd, 2026-11-10: "would love it if the iphone app's widgets did not appear
+on the Mac, but did appear everywhere else". Whether that takes it out of the Mac's widget gallery,
+or only stops the gallery suggesting it, is not yet seen.
+
 **The Lock Screen's own sizes.** iPhone and iPad also have three accessory families for the Lock
 Screen: a circle, a rectangle, and a line of text. From memory: the system draws them in one tint,
 without colour, and the line of text can't hold a picture at all. Asked on 2026-10-09 whether they
@@ -671,10 +687,11 @@ mind". It is built; his notes are `Plans/ios main view revision 2.md`. His words
   library icon as things like messages do, and for Files and Folders, let's use a folder". What
   it does goes by the access there is; see *Photos access*. It is greyed out only until the app
   has found that out.
-- **The Files button**, the `folder` symbol, greyed out until adding files and folders is built.
-  Syd chose that over building it now and over taking the section off the screen.
-- **VoiceOver** is told "Choose collections", or "Select photos" with limited access, and "Add
-  files or folders".
+- **The Files button**, the `folder` symbol. It brings up the Files browser, where folders and
+  image files are chosen together, and an alert names anything chosen that could not be added.
+- **VoiceOver** is told "Choose Collections", or "Select Photos" with limited access, and "Add
+  Files or Folders". They are the buttons' names, which the bar does not show and the system's
+  "…" menu does.
 - **The two lists are one list under the preview**, with a "Photos" section and a "Files and
   Folders" section, scrolling under the pinned preview. An empty section says "No collections
   chosen." or "No files or folders chosen."
@@ -704,6 +721,20 @@ system folded what did not fit into a "…" menu. Syd chose drawing them closer 
 wider smallest window and over the menu. So on an iPad each group is one bar item, and the two
 smallest shapes are narrower to press than a bar button. At the largest text sizes the shapes grow
 and may not fit again; see `TODO.md`, *The iOS app*.
+
+**More sizes than a phone's four are drawn close together, as on an iPad, and stretch to the bar's
+leading edge.** A phone shows a fifth size only when its own widgets have been handed one. As five
+bar buttons on a 402-point phone they left no room for Photos and Files, which went into the
+system's "…" menu. Syd, 2026-11-10: with five, the sizes and both choosers are to fit; and then,
+"stretch the containing round rect with the views all the way left". The shapes share out the
+item's width, each in the middle of its share. With four sizes nothing changes, so the Duo's bar
+is as it was.
+
+**Where the bar is too narrow, the system's "…" menu holds what does not fit, and it works.** Photos
+and Files had only a picture, and the menu they were folded into did nothing; with names it lists
+both, and each brings up what its button does. The "…" stays the system's: there is no way to give
+it another picture, and Syd, 2026-11-10, chose leaving it as the system makes it over a plus menu
+of our own, "Don't want to mess up anything Duo-related".
 
 **A swipe on past the preview's sideways edge shows the next size or the previous.** Syd,
 2026-10-31: "in the iOS app, have swiping left and right on the preview change the size displayed
