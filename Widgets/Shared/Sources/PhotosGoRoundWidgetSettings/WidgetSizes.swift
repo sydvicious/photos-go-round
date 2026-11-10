@@ -77,6 +77,15 @@ public enum WidgetSizes {
         }
     }
 
+    /// Whether a size is one a Mac's desktop hands a widget of that family.
+    /// A phone's widget can be put on a Mac's desktop, and is handed these
+    /// there; no phone's Home Screen in Apple's table, nor the iPhone Duo's,
+    /// has one of them.
+    public static func isMacDesktop(_ size: CGSize, for family: WidgetFamily) -> Bool {
+        let mac = onAMac(family)
+        return abs(size.width - mac.width) < 0.01 && abs(size.height - mac.height) < 0.01
+    }
+
     /// The tall fourth size that goes with a large and a medium: as wide as
     /// they are, and as tall as one of each and the gap between two mediums.
     /// A large is two mediums and that gap, so the gap is known from them.

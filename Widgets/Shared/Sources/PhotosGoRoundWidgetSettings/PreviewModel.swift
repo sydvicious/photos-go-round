@@ -113,7 +113,7 @@ public final class PreviewModel {
     /// here has been handed.
     public var families: [WidgetFamily] {
         let listed = WidgetSizes.families(on: device)
-        return WidgetFamily.allCases.filter { listed.contains($0) || handed[$0] != nil }
+        return WidgetFamily.allCases.filter { listed.contains($0) || homeScreen[$0] != nil }
     }
 
     private let pictures: any PreviewPictures
@@ -161,9 +161,26 @@ public final class PreviewModel {
     private var hasLoggedSizes = false
     /// Every size the widgets have been handed, as last read.
     private var handed: [WidgetFamily: [CGSize]]
+    /// Of those, the ones handed on this device's Home Screen.
+    ///
+    /// **On a phone, a Mac desktop's sizes are left out.** A phone's widget
+    /// put on a Mac's desktop is drawn by the phone, which records the Mac's
+    /// sizes with its own. They were offered as a fifth size, and chosen over
+    /// the phone's own when neither left room on its screen. Syd, 2026-11-10,
+    /// chose leaving them all out, the wide one too, over keeping that one
+    /// for want of another: the preview is of the Home Screen.
+    private var homeScreen: [WidgetFamily: [CGSize]] {
+        guard device == .phone else { return handed }
+        var kept: [WidgetFamily: [CGSize]] = [:]
+        for (family, sizes) in handed {
+            let own = sizes.filter { !WidgetSizes.isMacDesktop($0, for: family) }
+            if !own.isEmpty { kept[family] = own }
+        }
+        return kept
+    }
     /// Of those, the ones for the screen the app is on.
     private var recordedSizes: [WidgetFamily: CGSize] {
-        RecordedWidgetSizes.chosen(from: handed, for: screen, on: device)
+        RecordedWidgetSizes.chosen(from: homeScreen, for: screen, on: device)
     }
 
     public init(
