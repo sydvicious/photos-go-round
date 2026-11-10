@@ -105,7 +105,24 @@ public struct SettingsView: View {
                     // and which the system can lay out its own way: on the
                     // iPhone Duo it is to move them to the side. Drawn as
                     // one view of ours they stayed where they were.
-                    ToolbarItemGroup(placement: .primaryAction) { sizes(compact: false) }
+                    //
+                    // **More sizes than a phone's four are drawn close
+                    // together, as on an iPad.** A phone whose widget was put
+                    // on a Mac's desktop is handed the Mac's wide size too,
+                    // and five as bar buttons pushed Photos and Files into
+                    // the "…" menu on a standard phone. Syd, 2026-11-10:
+                    // with five, the sizes and both choosers are to fit, and
+                    // the sizes' round rect is to stretch to the left edge.
+                    if model.preview.families.count > WidgetSizes.families(on: .phone).count {
+                        ToolbarItem(placement: .primaryAction) {
+                            HStack(spacing: 2) { sizes(compact: true, spread: true) }
+                                .buttonStyle(.plain)
+                                .padding(.horizontal, 4)
+                                .frame(maxWidth: .infinity)
+                        }
+                    } else {
+                        ToolbarItemGroup(placement: .primaryAction) { sizes(compact: false) }
+                    }
                     ToolbarSpacer(.fixed, placement: .primaryAction)
                     ToolbarItemGroup(placement: .primaryAction) { sources(compact: false) }
                 }
@@ -172,7 +189,10 @@ public struct SettingsView: View {
     /// `compact` is for an iPad's bar, where they are closer together than
     /// bar buttons are, and the two smallest narrower to press than one; Syd,
     /// 2026-10-10, chose that over a bar that does not fit.
-    @ViewBuilder private func sizes(compact: Bool) -> some View {
+    ///
+    /// `spread` shares out the width the item is given among the shapes, each
+    /// in the middle of its share, so the whole of it can be pressed.
+    @ViewBuilder private func sizes(compact: Bool, spread: Bool = false) -> some View {
         ForEach(model.preview.families) { family in
             let isShowing = model.preview.family == family
             let shape = model.preview.shape(of: family, height: shapeHeight)
@@ -183,7 +203,7 @@ public struct SettingsView: View {
                     SizeShape(size: shape, isShowing: isShowing)
                         .padding(.horizontal, 4)
                         // As tall to press as the bar is, whatever the shape.
-                        .frame(minHeight: 36)
+                        .frame(maxWidth: spread ? .infinity : nil, minHeight: 36)
                         .contentShape(Rectangle())
                 } else {
                     // A name and a picture, as the Photos and Files buttons
@@ -216,23 +236,30 @@ public struct SettingsView: View {
             }
         } label: {
             sourceSymbol(
-                "photo.on.rectangle.angled", compact: compact, refused: model.collectionsAreRefused)
+                "photo.on.rectangle.angled",
+                title: model.chooser == .selectedPhotos ? "Select Photos" : "Choose Collections",
+                compact: compact, refused: model.collectionsAreRefused)
         }
         // On a red background while the collections' rows are red. Syd,
         // 2026-10-11. An ordinary bar button takes it as its tint.
         .modifier(Refused(model.collectionsAreRefused && !compact))
-        .accessibilityLabel(model.chooser == .selectedPhotos ? "Select photos" : "Choose collections")
         .disabled(model.chooser == .nothing)
 
         Button {
             showsFileBrowser = true
         } label: {
-            sourceSymbol("folder", compact: compact)
+            sourceSymbol("folder", title: "Add Files or Folders", compact: compact)
         }
-        .accessibilityLabel("Add files or folders")
     }
 
-    @ViewBuilder private func sourceSymbol(_ name: String, compact: Bool, refused: Bool = false) -> some View {
+    /// A source button's picture, and its name. **A bar button shows only
+    /// the picture, and the "…" menu the name beside it**: a bar too narrow
+    /// for every control folds the last of them into that menu, which with
+    /// no name had nothing to show and did not open. Seen on a phone with
+    /// five sizes in its bar, 2026-11-09.
+    @ViewBuilder private func sourceSymbol(
+        _ name: String, title: String, compact: Bool, refused: Bool = false
+    ) -> some View {
         if compact {
             Image(systemName: name)
                 .font(.body.weight(.medium))
@@ -242,8 +269,9 @@ public struct SettingsView: View {
                     refused ? Color.trouble : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous)
                 )
                 .contentShape(Rectangle())
+                .accessibilityLabel(title)
         } else {
-            Image(systemName: name)
+            Label(title, systemImage: name)
         }
     }
 
