@@ -241,3 +241,18 @@ a short bold name and a line on what it means, so he can answer with a number.
 Syd, 2026-10-31: "give me numbered choices". When he answers with a number, record
 what he chose, and what he chose it over, where the decision is kept — a plan or
 `TODO.md` — in words, not as the number.
+
+## Plans go straight into the working checkout, with no branch of their own
+
+Changes to `Plans/` and `TODO.md` are made in the checkout as it is, on whatever
+branch it is on, and are not given a branch or a pull request of their own. Syd,
+2026-11-10: "changes to any of the plans don't need their own branches. they can
+always be applied locally".
+
+**Where the session runs decides where the change lands.** A session on Syd's Mac
+changes his checkout. A session in the cloud, which is what one started from the
+iPhone, the iPad or a browser is, has only its own clone; its changes reach Syd
+through its branch and a pull request, unless he says otherwise. Syd, 2026-11-10:
+"when running on a mac, all changes are local, and when running on iphone or
+ipad or browser, they will be in the cloud". A cloud session says so when it
+hands him a change, so he does not look for it in his checkout.

@@ -249,6 +249,14 @@ Nothing else changes: the Finder layout, the uninstaller, the About document and
 
 Syd, 2026-09-28: "we might need to make a separate repo for build/release scripts." `Scripts/release-build.sh` and `Scripts/bump-version.sh` exist here and, adapted, in `MarkdownPreviewApp`, and every new app gets another copy (the global `app-release` skill), so each fix has to be made once per app. Undecided: how an app consumes them — a submodule, a checkout at a known path, or copies synced from one source — and what stays per app: the name, project and scheme, the version-config path, the releases folder, and the post-export checks (here the helpers, the extensions, the Photos entitlement, and the Finder layout of the DMG). The same item is in `MarkdownPreviewApp`'s `TODO.md`; do it once for both, and after *Release the way every app now releases* above, so there is one flow to share.
 
+## The archive's "Any Mac is missing operatingSystemVersion" line
+
+Syd, 2026-11-10: "make this warning go away". `Scripts/release-build.sh` prints it at *Archiving Release*, from `xcodebuild archive … -destination "generic/platform=macOS"`:
+
+    [MT] IDESchemeActionsInvocationRecord: Device <IDEOSXSupportCore.IDEMacPlaceholder: … (Any Mac | undefined_arch)> is missing operatingSystemVersion, operatingSystemVersionWithBuildNumber.
+
+It is Xcode's own log line about the generic *Any Mac* destination, not a compiler warning, so the clean-build check in `CLAUDE.md`, which greps for `warning:`, does not catch it. Cause and fix not looked for. Find a destination, or another way of naming the archive's, that builds the same universal Release and says nothing, and check that the exported app's architectures (`lipo -archs`) do not change. Related: *Build for arm64 only*, below.
+
 ## A menu-bar app for shipping
 
 Syd, 2026-09-10: *"make a menubar app for final shipping of this. The full desktop app is useful, but we are probably not going to ship it."* **Needs its own plan document.**
